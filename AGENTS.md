@@ -9,12 +9,19 @@ que el usuario ponga debe validarse como viable o explicar por qué no.
 ## Estructura real del repositorio
 - `main.py` → app CustomTkinter (`App`): sidebar + `content_frame` + vistas con carga perezosa.
 - `logic/` → `interfaces.py` (`BalloonCalculator`), `models.py` (`BalloonInput`,
-  `BalloonCalculationResult`, `SectionResult`, `Point2D`), `utils.py`.
-- `ui/` → vistas (`vista_inicio`, `vista_moldes`, `vista_guardados`, `vista_diseñar`, `vista_info`)
+  `BalloonCalculationResult`, `SectionResult`, `Point2D`), `utils.py`,
+  `gestor_archivos.py` (`GestorArchivos`: guarda/carga/lista JSON en `guardados/`).
+- `logic/calculators/` → un módulo por tipo de globo (habrá más). La calculadora del trompo estrella
+  vive en `logic/calculators/trompo_estrella.py` (`TrompoEstrellaCalculator`).
+- `ui/` → vistas (`vista_inicio`, `vista_moldes`, `vista_guardados`, `vista_disenar`, `vista_info`)
   y `ui/modulos_moldes/vista_trompo_estrella.py`.
-- `widgets/` (p. ej. `sidebar_2`), `configuracion/constantes.py` (colores), `utils/`, `recursos/`.
+- `widgets/sidebar.py` (único sidebar; `sidebar_2.py` se renombra y el viejo se elimina),
+  `configuracion/constantes.py` (colores), `utils/gestor_imagenes.py`, `recursos/`.
 - `referencia/trompo_estrella.py` → prototipo autocontenido con la lógica CORRECTA y validada
-  (copiarlo al repo en esa carpeta; no forma parte de la app, es la referencia a portar).
+  (no forma parte de la app; es la referencia a portar y contra la que corren los tests).
+  `referencia/parche/` → versión ya portada de models/calculadora/test, solo como guía (revisar, no copiar).
+- `tests/` → pruebas con pytest (se corren desde la raíz; `pytest.ini` fija `pythonpath = .`).
+- `requirements.txt` → dependencias (customtkinter, pillow, matplotlib, pytest).
 
 ## Reglas de arquitectura
 - `logic/` NUNCA importa `customtkinter`, `flet` ni `tkinter`, y NUNCA imprime ni lee consola:
@@ -22,11 +29,25 @@ que el usuario ponga debe validarse como viable o explicar por qué no.
 - La UI solo recoge entradas, llama a `calcular()` y muestra resultados; no contiene fórmulas.
 - Tareas largas (dibujar moldes, exportar PDF/DXF) reciben un callback `on_progress(fraccion, texto)`
   y se ejecutan fuera del hilo de la interfaz.
-- Tarea 1: portar `referencia/trompo_estrella.py` a `logic/` sin cambiar resultados (tests primero).
-  Reemplazar la clase vieja `TrompoEstrellaCalculator`.
-- Tarea 2 (después, en una rama aparte): evaluar migrar la UI de CustomTkinter a Flet. Fijar la
-  versión de Flet en `requirements.txt` y comprobar la API contra la documentación de esa versión.
-- Renombrar `requiremets.txt` a `requirements.txt`.
+- Tarea 1: portar `referencia/trompo_estrella.py` a `logic/calculators/` sin cambiar resultados
+  (tests primero). Reemplazar la clase vieja `TrompoEstrellaCalculator`.
+- Tarea 2 (después, en una rama aparte): evaluar migrar la UI de CustomTkinter a Flet. Primero la app
+  completa, funcional y probada en CustomTkinter. Fijar la versión de Flet en `requirements.txt` y
+  comprobar la API contra la documentación de esa versión.
+- Gráfica 2D: matplotlib embebida en CustomTkinter. La construcción de la figura va en una función
+  separada de la UI (recibe el resultado y devuelve la figura) para reutilizarla si se migra a Flet.
+- Nombres de archivo sin `ñ`, sin espacios y sin typos (`vista_disenar.py`, `gestor_imagenes.py`,
+  `requirements.txt`).
+
+## Modos de cálculo (campo `usar_parametros_avanzados: bool = False` en `BalloonInput`)
+- MODO SIMPLE (por defecto): calcula las 3 piezas con la boca por defecto (11 % del largo, necesaria
+  para el cono inferior), SIN pestaña. Muestra ancho de gajo, gajos recomendados y área de papel.
+  NO calcula mecha, holgura, empuje, carga ni viabilidad: el resultado deja `boca` y `vuelo` en `None`,
+  `viable` en `None` y un único aviso: "Modo simple: solo geometría. Activa parámetros avanzados para
+  verificar viabilidad".
+- MODO AVANZADO (casilla/sección desplegable "Parámetros avanzados"): boca personalizada, pestaña,
+  diámetro y peso de mecha; en una subsección alambre, varillas, altura de llama y holgura. Activa
+  pestaña, holgura, empuje, carga neta, pliegos y viabilidad.
 
 ## Fuente de verdad
 Excel `CALCULADORA_DE_MOLDE_TROMPO_ESTRELLA_MODEL_3_EDITABLE_.xlsx`.
