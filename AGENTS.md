@@ -6,13 +6,27 @@ cada gajo (cono superior, pico, cono inferior) para cortar el molde de un globo 
 papel china que se eleva con aire caliente (tradición de Veracruz). Cualquier medida
 que el usuario ponga debe validarse como viable o explicar por qué no.
 
-## Arquitectura (respetar la que ya existe)
-- `logic/interfaces.py` → `BalloonCalculator` (interfaz). Nuevos tipos de globo la implementan.
-- `logic/models.py` → `BalloonInput`, `BalloonCalculationResult`, `SectionResult`, `Point2D`.
-- `logic/utils.py` → utilidades matemáticas.
-- La lógica NUNCA imprime ni lee consola: `calcular()` devuelve objetos. La presentación va aparte.
-- `trompo_estrella.py` es un prototipo autocontenido con la lógica CORRECTA y validada.
-  Tarea: portarlo a la arquitectura de arriba sin cambiar sus resultados.
+## Estructura real del repositorio
+- `main.py` → app CustomTkinter (`App`): sidebar + `content_frame` + vistas con carga perezosa.
+- `logic/` → `interfaces.py` (`BalloonCalculator`), `models.py` (`BalloonInput`,
+  `BalloonCalculationResult`, `SectionResult`, `Point2D`), `utils.py`.
+- `ui/` → vistas (`vista_inicio`, `vista_moldes`, `vista_guardados`, `vista_diseñar`, `vista_info`)
+  y `ui/modulos_moldes/vista_trompo_estrella.py`.
+- `widgets/` (p. ej. `sidebar_2`), `configuracion/constantes.py` (colores), `utils/`, `recursos/`.
+- `referencia/trompo_estrella.py` → prototipo autocontenido con la lógica CORRECTA y validada
+  (copiarlo al repo en esa carpeta; no forma parte de la app, es la referencia a portar).
+
+## Reglas de arquitectura
+- `logic/` NUNCA importa `customtkinter`, `flet` ni `tkinter`, y NUNCA imprime ni lee consola:
+  `calcular()` devuelve objetos. Nuevos tipos de globo implementan `BalloonCalculator`.
+- La UI solo recoge entradas, llama a `calcular()` y muestra resultados; no contiene fórmulas.
+- Tareas largas (dibujar moldes, exportar PDF/DXF) reciben un callback `on_progress(fraccion, texto)`
+  y se ejecutan fuera del hilo de la interfaz.
+- Tarea 1: portar `referencia/trompo_estrella.py` a `logic/` sin cambiar resultados (tests primero).
+  Reemplazar la clase vieja `TrompoEstrellaCalculator`.
+- Tarea 2 (después, en una rama aparte): evaluar migrar la UI de CustomTkinter a Flet. Fijar la
+  versión de Flet en `requirements.txt` y comprobar la API contra la documentación de esa versión.
+- Renombrar `requiremets.txt` a `requirements.txt`.
 
 ## Fuente de verdad
 Excel `CALCULADORA_DE_MOLDE_TROMPO_ESTRELLA_MODEL_3_EDITABLE_.xlsx`.
