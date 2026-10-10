@@ -20,7 +20,7 @@ class Sidebar(ctk.CTkFrame):
             ("Moldes", "moldes"),
             ("Guardados", "guardados"),
             ("🎨 Diseñar", "diseñar"),
-            ("Mas Información", "info")
+            ("Más Información", "info")
         ]
 
         self.botones = {}

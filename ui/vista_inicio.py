@@ -13,7 +13,7 @@ class VistaInicio(ctk.CTkFrame):
         gestor = GestorImagenes()
 
         # Título Principal
-        lbl_titulo = ctk.CTkLabel(self, text="¡Crea tu Globo de Catonlla\nPerfecto!", 
+        lbl_titulo = ctk.CTkLabel(self, text="¡Crea tu Globo de Cantoya\nPerfecto!", 
                                   font=FONT_TITULO_GRANDE, text_color=COLOR_TEXTO_BLANCO, justify="center")
         lbl_titulo.pack(pady=(50, 30))
 
@@ -45,11 +45,11 @@ class VistaInicio(ctk.CTkFrame):
         frame_info.grid_columnconfigure(0, weight=1)
         frame_info.grid_columnconfigure(1, weight=1)
 
-        # Como Empezar
-        lbl_como = ctk.CTkLabel(frame_info, text="Como Empezar?", font=FONT_TITULO_MEDIANO, text_color=COLOR_TEXTO_BLANCO, anchor="w")
+        # Cómo empezar
+        lbl_como = ctk.CTkLabel(frame_info, text="¿Cómo empezar?", font=FONT_TITULO_MEDIANO, text_color=COLOR_TEXTO_BLANCO, anchor="w")
         lbl_como.grid(row=0, column=0, sticky="w", pady=(0, 10))
         
-        instrucciones = "1.Selecciona el tipo de molde\n2.Introduce las dimensiones deseadas\n3.Obtén el calculo"
+        instrucciones = "1.Selecciona el tipo de molde\n2.Introduce las dimensiones deseadas\n3.Obtén el cálculo"
         lbl_inst = ctk.CTkLabel(frame_info, text=instrucciones, font=FONT_TEXTO_NORMAL, text_color=COLOR_TEXTO_BLANCO, anchor="w", justify="left")
         lbl_inst.grid(row=1, column=0, sticky="w")
 
@@ -57,6 +57,6 @@ class VistaInicio(ctk.CTkFrame):
         lbl_nota_titulo = ctk.CTkLabel(frame_info, text="Nota:", font=FONT_TITULO_MEDIANO, text_color=COLOR_TEXTO_BLANCO, anchor="w")
         lbl_nota_titulo.grid(row=0, column=1, sticky="w", pady=(0, 10))
 
-        nota = "Si guardas tus medidas podras\nver tu globo en 3d"
+        nota = "Si guardas tus medidas podrás\nver tu globo en 3D"
         lbl_nota = ctk.CTkLabel(frame_info, text=nota, font=FONT_TEXTO_NORMAL, text_color=COLOR_TEXTO_BLANCO, anchor="w", justify="left")
         lbl_nota.grid(row=1, column=1, sticky="w")

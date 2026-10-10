@@ -12,7 +12,7 @@ class VistaInfo(ctk.CTkFrame):
         frame_header.pack(fill="x", pady=(20, 10))
         # TODO: Icono información
         ctk.CTkLabel(frame_header, text="[i]", font=("Arial", 40), text_color=COLOR_ACENTO_NARANJA).pack(side="left", padx=(0,10))
-        ctk.CTkLabel(frame_header, text="Mas Información", font=FONT_TITULO_GRANDE, text_color=COLOR_TEXTO_BLANCO).pack(side="left")
+        ctk.CTkLabel(frame_header, text="Más Información", font=FONT_TITULO_GRANDE, text_color=COLOR_TEXTO_BLANCO).pack(side="left")
         
         ctk.CTkFrame(self, height=2, fg_color=COLOR_TEXTO_GRIS_CLARO).pack(fill="x", pady=(0, 30))
 

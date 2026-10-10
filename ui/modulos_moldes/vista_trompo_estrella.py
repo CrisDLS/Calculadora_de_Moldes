@@ -59,7 +59,7 @@ class VistaTrompoEstrella(ctk.CTkScrollableFrame):
         frame_der.grid(row=0, column=1, sticky="nsew")
         frame_der.pack_propagate(False)
 
-        lbl_graf = ctk.CTkLabel(frame_der, text="Graficacion de\nmedidas", font=FONT_TITULO_MEDIANO, text_color=COLOR_TEXTO_BLANCO)
+        lbl_graf = ctk.CTkLabel(frame_der, text="Graficación de\nmedidas", font=FONT_TITULO_MEDIANO, text_color=COLOR_TEXTO_BLANCO)
         lbl_graf.pack(expand=True)
 
         btn_guardar_medidas = ctk.CTkButton(frame_der, text="   Guardar Medidas", fg_color="transparent", 
@@ -93,7 +93,7 @@ class VistaTrompoEstrella(ctk.CTkScrollableFrame):
         frame_tabla = ctk.CTkFrame(master, fg_color="transparent", border_width=1, border_color="white", corner_radius=0)
         frame_tabla.pack(fill="x")
         
-        titulos = ["Diámetro de la Boca", "Ancho Max.", "Gajos Min Recomendados.", "Gajos Max. Recomendados"] 
+        titulos = ["Diámetro de la Boca", "Ancho Max.", "Gajos mín. recomendados", "Gajos máx. recomendados"] 
         
         # DEFINIMOS ALTURA FIJA PARA LAS FILAS
         ALTURA_FILA = 30
