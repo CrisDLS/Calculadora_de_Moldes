@@ -8,7 +8,8 @@ from configuracion.constantes import (COLOR_ACENTO_MORADO, COLOR_ACENTO_NARANJA,
                                       FONT_TEXTO_PEQUENO, FONT_TITULO_GRANDE, FONT_TITULO_MEDIANO)
 from logic.calculators.trompo_estrella import TrompoEstrellaCalculator
 from ui.modulos_moldes.presentador_trompo_estrella import (ETIQUETAS_RESUMEN_SIMPLE, clasificar_aviso,
-                                                           formatear_resumen, leer_entrada)
+                                                           formatear_resumen, leer_entrada, formatear_tablas, tabla_a_texto)
+from tkinter import ttk
 
 class VistaTrompoEstrella(ctk.CTkScrollableFrame):
     # Clase de aviso -> (color de fondo, color de texto)
@@ -100,10 +101,53 @@ class VistaTrompoEstrella(ctk.CTkScrollableFrame):
         btn_guardar_medidas.pack(side="bottom", pady=20)
 
 
-        # --- Sección Inferior: Tablas Detalladas (Redondeadas) ---
-        self._crear_tabla_detallada(self, "Cono Superior")
-        self._crear_tabla_detallada(self, "Pico")
-        self._crear_tabla_detallada(self, "Cono Inferior")
+        # --- Sección Inferior: Tablas Detalladas (CTkTabview) ---
+        self.tabview = ctk.CTkTabview(self, command=self._on_tab_changed)
+        self.tabview.pack(fill="both", expand=True, pady=(20, 0))
+        
+        self.nombres_tabs = ["Cono superior", "Pico", "Cono inferior"]
+        self.tab_widgets = {}
+        
+        self._configurar_estilo_treeview()
+
+        for nombre in self.nombres_tabs:
+            tab = self.tabview.add(nombre)
+            
+            lbl_resumen = ctk.CTkLabel(tab, text="", font=FONT_TEXTO_NORMAL, text_color=COLOR_TEXTO_BLANCO)
+            lbl_resumen.pack(pady=(5, 5))
+            
+            frame_tree = ctk.CTkFrame(tab, fg_color="transparent")
+            frame_tree.pack(fill="both", expand=True)
+            
+            from tkinter import ttk
+            scrollbar = ttk.Scrollbar(frame_tree)
+            scrollbar.pack(side="right", fill="y")
+            
+            tree = ttk.Treeview(frame_tree, yscrollcommand=scrollbar.set, style="Dark.Treeview")
+            tree.pack(side="left", fill="both", expand=True)
+            scrollbar.config(command=tree.yview)
+            
+            lbl_nota = ctk.CTkLabel(tab, text="", font=FONT_TEXTO_PEQUENO, text_color=COLOR_AVISO_INFO)
+            lbl_nota.pack(pady=(5, 5))
+            
+            btn_copiar = ctk.CTkButton(tab, text="Copiar tabla", font=FONT_BOTON,
+                                       fg_color=COLOR_ACENTO_MORADO, command=lambda n=nombre: self._copiar_tabla(n))
+            btn_copiar.pack(pady=(5, 10))
+            
+            self.tab_widgets[nombre] = {
+                'tree': tree,
+                'lbl_resumen': lbl_resumen,
+                'lbl_nota': lbl_nota,
+                'tabla_data': None
+            }
+
+    def _on_tab_changed(self):
+        nombre = self.tabview.get()
+        if nombre in self.tab_widgets:
+            tree = self.tab_widgets[nombre]['tree']
+            # Forzar distribución al cambiar de pestaña
+            if tree.winfo_width() > 20:
+                tree.event_generate("<Configure>", width=tree.winfo_width(), height=tree.winfo_height())
 
 
     def _crear_input(self, master, row, label_text, unidad="", ayuda="", clave=None):
@@ -142,6 +186,13 @@ class VistaTrompoEstrella(ctk.CTkScrollableFrame):
             self.frame_avanzado.pack(fill="x", before=self.btn_calcular, pady=(5, 0))
         else:
             self.frame_avanzado.pack_forget()
+        
+        # Al cambiar el modo, limpiamos resultados para no dejar datos inconsistentes
+        self.resultado = None
+        self.lbl_error.configure(text="")
+        self._pintar_resumen([(e, "-") for e in ETIQUETAS_RESUMEN_SIMPLE])
+        self._pintar_avisos([])
+        self._limpiar_tablas()
 
     def _calcular(self):
         """Lee los campos, calcula y pinta. Los errores de entrada se muestran en la vista."""
@@ -155,11 +206,13 @@ class VistaTrompoEstrella(ctk.CTkScrollableFrame):
             self.lbl_error.configure(text=str(exc))
             self._pintar_resumen([(e, "-") for e in ETIQUETAS_RESUMEN_SIMPLE])
             self._pintar_avisos([])
+            self._limpiar_tablas()
             return
         self.resultado = resultado
         self.lbl_error.configure(text="")
         self._pintar_resumen(formatear_resumen(resultado))
         self._pintar_avisos(resultado.avisos)
+        self._pintar_tablas(resultado, entrada)
 
     def evento_guardar_medidas(self):
         print("Guardando...")
@@ -186,17 +239,18 @@ class VistaTrompoEstrella(ctk.CTkScrollableFrame):
             row_frame.pack(fill="x", padx=1) 
             row_frame.grid_propagate(False) # <--- EL CANDADO: Obliga a respetar la altura fija
 
+            row_frame.grid_rowconfigure(0, weight=1)
             row_frame.grid_columnconfigure(0, weight=2)
             row_frame.grid_columnconfigure(1, weight=1)
 
             # Labels sin pady, sticky nsew para que se centren solitos en el espacio pequeño
-            lbl_izq = ctk.CTkLabel(row_frame, text=titulo, anchor="center", font=("Roboto", 11), text_color=COLOR_TEXTO_BLANCO)
+            lbl_izq = ctk.CTkLabel(row_frame, text=titulo, anchor="center", font=FONT_TEXTO_NORMAL, text_color=COLOR_TEXTO_BLANCO)
             lbl_izq.grid(row=0, column=0, sticky="nsew", padx=5)
             
             # Divisor vertical
             ctk.CTkFrame(row_frame, width=1, fg_color="white").grid(row=0, column=0, sticky="nse", padx=0)
 
-            lbl_der = ctk.CTkLabel(row_frame, text=valor, anchor="center", font=("Roboto", 11), text_color=COLOR_TEXTO_BLANCO)
+            lbl_der = ctk.CTkLabel(row_frame, text=valor, anchor="center", font=FONT_TEXTO_NORMAL, text_color=COLOR_TEXTO_BLANCO)
             lbl_der.grid(row=0, column=1, sticky="nsew", padx=5)
 
             # Línea separadora
@@ -214,62 +268,80 @@ class VistaTrompoEstrella(ctk.CTkScrollableFrame):
                          font=("Roboto", 12)).pack(fill="x", pady=3, ipadx=6, ipady=4)
 
     def _crear_tabla_detallada(self, master, titulo_tabla):
-        ctk.CTkLabel(master, text=titulo_tabla, font=FONT_TITULO_MEDIANO, text_color=COLOR_TEXTO_BLANCO).pack(pady=(20, 5))
+        # We replace this mock function with the actual Tabview integration
+        pass
 
-        # --- ESTRUCTURA REDONDEADA ---
-        outer_frame = ctk.CTkFrame(master, fg_color="white", corner_radius=15)
-        outer_frame.pack(fill="x")
+    def _configurar_estilo_treeview(self):
+        style = ttk.Style()
+        style.theme_use("default")
+        
+        # Obtenemos la fuente de la interfaz (es una tupla ej: ("Roboto", 14))
+        font_str = f"{FONT_TEXTO_NORMAL[0]} {FONT_TEXTO_NORMAL[1]}"
+        
+        style.configure("Dark.Treeview",
+                        background=COLOR_FONDO_APP,
+                        foreground=COLOR_TEXTO_BLANCO,
+                        fieldbackground=COLOR_FONDO_APP,
+                        bordercolor=COLOR_INPUT_BORDE,
+                        font=font_str,
+                        rowheight=FONT_TEXTO_NORMAL[1] + 10)
+        style.map("Dark.Treeview", background=[('selected', COLOR_ACENTO_MORADO)])
+        style.configure("Dark.Treeview.Heading",
+                        background=COLOR_INPUT_FONDO,
+                        foreground=COLOR_TEXTO_BLANCO,
+                        font=font_str,
+                        relief="flat")
+        style.map("Dark.Treeview.Heading", background=[('active', "#5c5c5c")])
 
-        inner_frame = ctk.CTkFrame(outer_frame, fg_color=COLOR_FONDO_APP, corner_radius=15)
-        inner_frame.pack(fill="both", expand=True, padx=1, pady=1)
-
-        # --- HEADERS ---
-        # Altura fija para el encabezado también
-        header_frame = ctk.CTkFrame(inner_frame, fg_color="transparent", corner_radius=10, height=25)
-        header_frame.pack(fill="x", pady=(2,0))
-        header_frame.grid_propagate(False) # Bloqueamos altura del header
-
-        headers = ["Paso", "Largo", "Acum.", "Ancho/2"]
-        for i, h in enumerate(headers):
-            header_frame.grid_columnconfigure(i, weight=1)
-            # Quitamos pady vertical, dejamos que se centre solo
-            ctk.CTkLabel(header_frame, text=h, font=("Roboto", 11, "bold"), text_color=COLOR_TEXTO_BLANCO).grid(row=0, column=i, sticky="nsew")
+    def _limpiar_tablas(self):
+        for w in self.tab_widgets.values():
+            w['lbl_resumen'].configure(text="")
+            w['lbl_nota'].configure(text="")
+            w['tabla_data'] = None
+            tree = w['tree']
+            tree.delete(*tree.get_children())
+            tree["columns"] = []
             
-            # Divisor Header
-            if i > 0:
-                 ctk.CTkFrame(header_frame, width=1, height=15, fg_color="white").grid(row=0, column=i, sticky="w")
+            # Quitar binding previo si existe
+            tree.unbind("<Configure>")
 
-        ctk.CTkFrame(inner_frame, height=1, fg_color="white").pack(fill="x")
-
-        # --- BODY ---
-        body_container = ctk.CTkFrame(inner_frame, fg_color="transparent", corner_radius=0)
-        body_container.pack(fill="x", pady=(0, 5))
-
-        # ALTURA FILA DATOS
-        ALTURA_FILA_DATOS = 20 # Puedes bajarlo a 18 si quieres más comprimido
-
-        for row_idx in range(1, 11): 
-            bg_color = "transparent" if row_idx % 2 != 0 else COLOR_FILA_ALTERNADA
-            
-            # 1. Fijamos height
-            row_frame = ctk.CTkFrame(body_container, fg_color=bg_color, corner_radius=0, height=ALTURA_FILA_DATOS)
-            row_frame.pack(fill="x")
-            
-            # 2. IMPORTANTE: Bloqueamos la propagación para que respete el height=20
-            row_frame.grid_propagate(False)
-            
-            for col_idx in range(4):
-                row_frame.grid_columnconfigure(col_idx, weight=1)
-                texto = f"{row_idx}" if col_idx == 0 else ""
+    def _pintar_tablas(self, resultado, entrada):
+        self._limpiar_tablas()
+        tablas = formatear_tablas(resultado, entrada)
+        for tabla in tablas:
+            w = self.tab_widgets[tabla.titulo]
+            w['tabla_data'] = tabla
+            w['lbl_resumen'].configure(text=tabla.resumen)
+            if tabla.nota:
+                w['lbl_nota'].configure(text=tabla.nota)
+            else:
+                w['lbl_nota'].configure(text="")
                 
-                # 3. Label sin pady, usando sticky="nsew" ocupa todo el alto disponible (que son 20px)
-                lbl = ctk.CTkLabel(row_frame, text=texto, font=("Roboto", 11), text_color=COLOR_TEXTO_BLANCO)
-                lbl.grid(row=0, column=col_idx, sticky="nsew")
-                
-                # Divisor vertical sutil
-                if col_idx > 0:
-                      ctk.CTkFrame(row_frame, width=1, fg_color="white").grid(row=0, column=col_idx, sticky="nsw")
+            tree = w['tree']
+            tree["columns"] = tabla.encabezados
+            tree["show"] = "headings"
+            for col in tabla.encabezados:
+                tree.heading(col, text=col, anchor="e")
+                tree.column(col, anchor="e", width=100)
             
-            # Línea separadora
-            if row_idx < 10:
-                ctk.CTkFrame(body_container, height=1, fg_color="#555555").pack(fill="x")
+            tree.tag_configure("impar", background=COLOR_FONDO_APP)
+            tree.tag_configure("par", background=COLOR_FILA_ALTERNADA)
+            
+            for i, fila in enumerate(tabla.filas):
+                tag = "par" if i % 2 != 0 else "impar"
+                tree.insert("", "end", values=fila, tags=(tag,))
+                
+            def _distribuir_columnas(event, t=tree, n_cols=len(tabla.encabezados)):
+                if event.width > 20:
+                    ancho = max(20, event.width // n_cols)
+                    for c in t["columns"]:
+                        t.column(c, width=ancho)
+            
+            tree.bind("<Configure>", _distribuir_columnas)
+
+    def _copiar_tabla(self, nombre):
+        tabla_data = self.tab_widgets[nombre]['tabla_data']
+        if tabla_data:
+            texto = tabla_a_texto(tabla_data)
+            self.clipboard_clear()
+            self.clipboard_append(texto)

@@ -41,14 +41,14 @@ _L50 = TrompoEstrellaCalculator.GAJO_REF_MIN_CM
 
 # Etiquetas del resumen (la vista las usa también para el estado vacío)
 ETIQUETAS_RESUMEN_SIMPLE = (
-    "Diámetro del globo",
-    "Ancho máx. de gajo",
-    "Diámetro de la boca",
-    "Circunferencia de la boca",
-    f"Gajos mín. (ancho ≤ {_L70:.0f} cm)",
-    f"Gajos máx. (ancho ≤ {_L50:.0f} cm)",
-    "Altura armada estimada",
-    "Área de papel",
+    "Diámetro de la boca (cm)",
+    "Ancho máx. de gajo (cm)",
+    f"Gajos mín. recomendados (ancho ≤ {_L70:.0f} cm)",
+    f"Gajos máx. recomendados (ancho ≤ {_L50:.0f} cm)",
+    "Alto inflado est. (cm)",
+    "Ancho inflado est. (cm)",
+    "Volumen (m³)",
+    "Área de papel (m²)",
 )
 ETIQUETAS_RESUMEN_AVANZADO = (
     "Pestaña",
@@ -133,14 +133,14 @@ def _cm(x: float, decimales: int = 1) -> str:
 def formatear_resumen(r: BalloonCalculationResult) -> List[Tuple[str, str]]:
     """Resultado -> lista de (etiqueta, valor formateado). Avanzado si r.boca no es None."""
     valores = [
-        _cm(r.diametro_globo),
-        _cm(r.ancho_max_gajo, 2),
-        _cm(r.diametro_boquilla_calculado),
-        _cm(r.circumferencia_boquilla),
+        f"{r.diametro_boquilla_calculado:.1f}",
+        f"{r.ancho_max_gajo:.2f}",
         str(r.gajos_min_70cm),
         str(r.gajos_min_50cm),
-        _cm(r.altura_total_real, 0),
-        f"{r.area_total_m2:.1f} m²",
+        f"{r.altura_total_real:.0f}",
+        f"{r.diametro_globo:.1f}",
+        f"{r.volumen_m3:.1f}",
+        f"{r.area_total_m2:.1f}",
     ]
     filas = list(zip(ETIQUETAS_RESUMEN_SIMPLE, valores))
     if r.boca is not None and r.vuelo is not None:
@@ -169,3 +169,75 @@ def clasificar_aviso(texto: str) -> str:
     if t.startswith("OK"):
         return "ok"
     return "info"
+
+
+from dataclasses import dataclass
+from configuracion.constantes import DECIMALES_TABLA
+
+@dataclass
+class TablaMolde:
+    titulo: str
+    encabezados: List[str]
+    filas: List[List[str]]
+    resumen: str
+    nota: Optional[str]
+
+
+def formatear_tablas(resultado: BalloonCalculationResult, entrada: BalloonInput) -> List[TablaMolde]:
+    """Formatea las tres secciones del resultado en tablas para la interfaz."""
+    def _punto(p) -> List[str]:
+        return [
+            str(p.paso_numero),
+            f"{p.largo_segmento:.{DECIMALES_TABLA}f}",
+            f"{p.largo_acumulado:.{DECIMALES_TABLA}f}",
+            f"{p.ancho_medio:.{DECIMALES_TABLA}f}",
+        ]
+    
+    encabezados = ["Paso", "Largo (cm)", "Acumulado (cm)", "Ancho/2 (cm)"]
+    
+    sup = resultado.seccion_superior
+    tabla_sup = TablaMolde(
+        titulo="Cono superior",
+        encabezados=encabezados,
+        filas=[_punto(p) for p in sup.puntos],
+        resumen=f"Largo total {sup.generatriz_total:.{DECIMALES_TABLA}f} cm · Cantidad: {entrada.num_gajos} piezas",
+        nota=None
+    )
+    
+    pic = resultado.seccion_picos
+    tabla_pic = TablaMolde(
+        titulo="Pico",
+        encabezados=encabezados,
+        filas=[_punto(p) for p in pic.puntos],
+        resumen=f"Largo total {pic.generatriz_total:.{DECIMALES_TABLA}f} cm · Cantidad: {entrada.num_gajos * entrada.num_hileras_picos} piezas",
+        nota=None
+    )
+    
+    inf = resultado.seccion_inferior
+    nota_inf = None
+    if entrada.usar_parametros_avanzados and resultado.boca and resultado.boca.pestana > 0:
+        ancho_recto = inf.puntos[1].ancho_medio
+        nota_inf = f"pestaña de {resultado.boca.pestana:.{DECIMALES_TABLA}f} cm después del paso 1, con semiancho recto de {ancho_recto:.{DECIMALES_TABLA}f} cm"
+    
+    tabla_inf = TablaMolde(
+        titulo="Cono inferior",
+        encabezados=encabezados,
+        filas=[_punto(p) for p in inf.puntos],
+        resumen=f"Largo total {inf.generatriz_total:.{DECIMALES_TABLA}f} cm · Cantidad: {entrada.num_gajos} piezas",
+        nota=nota_inf
+    )
+    
+    return [tabla_sup, tabla_pic, tabla_inf]
+
+def tabla_a_texto(tabla: TablaMolde) -> str:
+    """Convierte una tabla en texto separado por tabuladores para copiar a Excel."""
+    lineas = []
+    lineas.append(tabla.titulo)
+    lineas.append(tabla.resumen)
+    if tabla.nota:
+        lineas.append(tabla.nota)
+    lineas.append("\t".join(tabla.encabezados))
+    for fila in tabla.filas:
+        lineas.append("\t".join(fila))
+    return "\n".join(lineas)
+

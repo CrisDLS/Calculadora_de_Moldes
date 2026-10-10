@@ -25,3 +25,7 @@ COLOR_AVISO_AVISO = "#f0ad4e"   # ámbar
 COLOR_AVISO_AVISO_TEXTO = "#1e1e1e"   # texto oscuro sobre el ámbar
 COLOR_AVISO_OK = "#2e8b57"      # verde
 COLOR_AVISO_INFO = "#5c5c5c"    # gris
+
+# Precisión de tablas
+DECIMALES_TABLA = 2
+
