@@ -3,7 +3,7 @@ import pytest
 
 from logic.calculators.trompo_estrella import TrompoEstrellaCalculator
 from logic.models import BalloonInput
-from ui.modulos_moldes.presentador_trompo_estrella import (
+from presentacion.trompo_estrella import (
     clasificar_aviso, formatear_resumen, leer_entrada,
     ETIQUETAS_RESUMEN_SIMPLE, ETIQUETAS_RESUMEN_AVANZADO,
 )
@@ -155,7 +155,7 @@ def test_clasifica_avisos_reales_del_calculo():
     assert [clasificar_aviso(a) for a in _calc(True).avisos] == ["ok"]
 
 # --------------------------------------------------------- formatear_tablas / tabla_a_texto
-from ui.modulos_moldes.presentador_trompo_estrella import formatear_tablas, tabla_a_texto, TablaMolde
+from presentacion.trompo_estrella import formatear_tablas, tabla_a_texto, TablaMolde
 from configuracion.constantes import DECIMALES_TABLA
 
 def test_formatear_tablas_y_tabla_a_texto_avanzado():

@@ -14,7 +14,7 @@ from configuracion.constantes import (COLOR_ACENTO_MORADO, COLOR_ACENTO_NARANJA,
                                       COLOR_GRAFICA_FONDO_FIGURA, COLOR_GRAFICA_FONDO_EJES,
                                       COLOR_GRAFICA_TEXTO, COLOR_GRAFICA_LINEAS, COLOR_GRAFICA_PESTANA)
 from logic.calculators.trompo_estrella import TrompoEstrellaCalculator
-from ui.modulos_moldes.presentador_trompo_estrella import (ETIQUETAS_RESUMEN_SIMPLE, clasificar_aviso,
+from presentacion.trompo_estrella import (ETIQUETAS_RESUMEN_SIMPLE, clasificar_aviso,
                                                            formatear_resumen, leer_entrada, formatear_tablas, tabla_a_texto)
 from ui.modulos_moldes.graficas_trompo_estrella import figura_moldes, figura_perfil
 from tkinter import ttk
