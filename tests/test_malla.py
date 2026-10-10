@@ -25,14 +25,15 @@ def area_cuadrilatero(v0, v1, v2, v3):
 def calculos():
     calc = TrompoEstrellaCalculator()
     casos = [
-        (950, 30, 2, 1, False, 0),
-        (500, 12, 1, 1, True, 4.0),
-        (400, 16, 1, 1, False, 0),
-        (380, 60, 3, 1, True, 2.0)
+        (950, 30, 2, 1, False, 0, None),
+        (500, 12, 1, 1, True, 4.0, None),
+        (400, 16, 1, 1, False, 0, None),
+        (380, 60, 3, 1, True, 2.0, None),
+        (380, 20, 2, 1, True, 0.0, 53.2) # boca personalizada 14% de 380
     ]
     resultados = []
-    for h, g, hil, c, av, p in casos:
-        e = BalloonInput(h, g, hil, c, usar_parametros_avanzados=av, pestana_boca=p)
+    for h, g, hil, c, av, p, boca in casos:
+        e = BalloonInput(h, g, hil, c, usar_parametros_avanzados=av, pestana_boca=p, diametro_boca=boca)
         r = calc.calcular(e)
         malla = construir_malla(e, r)
         resultados.append((e, r, malla))
@@ -134,16 +135,20 @@ def test_malla_pico_geometria(calculos):
 def test_malla_normales_hacia_afuera(calculos):
     for _, _, malla in calculos:
         for cara in malla.caras:
-            v0 = malla.vertices[cara.indices_vertices[0]]
             nx, ny, nz = cara.normal
-            if nz != 0 or nx != 0 or ny != 0:
-                # Centroide aproximado 
-                cx = sum(malla.vertices[i][0] for i in cara.indices_vertices) / len(cara.indices_vertices)
-                cy = sum(malla.vertices[i][1] for i in cara.indices_vertices) / len(cara.indices_vertices)
-                
-                dot = cx*nx + cy*ny
-                if cara.seccion != "superior" and cara.seccion != "inferior":
-                    assert dot > 0.0
+            cx = sum(malla.vertices[i][0] for i in cara.indices_vertices) / len(cara.indices_vertices)
+            cy = sum(malla.vertices[i][1] for i in cara.indices_vertices) / len(cara.indices_vertices)
+            
+            dot_radial = cx*nx + cy*ny
+            
+            if cara.seccion == "inferior":
+                assert dot_radial > 1e-9
+                assert nz < -1e-9
+            elif cara.seccion == "superior":
+                assert dot_radial > 1e-9
+                assert nz > 1e-9
+            elif cara.seccion == "pico":
+                assert dot_radial > 1e-9
 
 def test_malla_dimensiones_globales(calculos):
     for _, r, malla in calculos:
