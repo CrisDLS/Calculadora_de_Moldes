@@ -44,7 +44,10 @@ que el usuario ponga debe validarse como viable o explicar por qué no.
   comprobar la API contra la documentación de esa versión.
 - Gráfica 2D: matplotlib embebida en CustomTkinter. La construcción de la figura va en una función
   separada de la UI (`ui/modulos_moldes/graficas_trompo_estrella.py`) para reutilizarla si se migra a Flet.
-- 3D futuro: three.js (luces realistas) como HTML autocontenido; la geometría vivirá en Python puro y se serializa a JSON (ahora usa polígonos exactos, donde R = a / (2*sin(pi/N)) y los bordes cuadran con las caras planas).
+- 3D futuro: three.js (luces realistas) como HTML autocontenido; la geometría vivirá en Python puro y se serializa a JSON.
+  - CONVENCIÓN: El "largo" (generatriz) de las piezas es el eje central (apotema de la cara 3D), no el borde lateral (que mide sqrt(largo² + (a/2)²)).
+  - La malla usa polígonos exactos (R = a / (2*sin(pi/N))) y alturas calculadas con apotemas para que las áreas y ejes coincidan perfectamente.
+  - DIFERENCIA: La calculadora estima un globo circular (altura armada ≈703.8 cm). La malla exacta (polígono) resulta en una altura Z máx ligeramente mayor (≈706.3 cm) por la diferencia entre circunferencia y perímetro poligonal (diferencia de ~0.35 %). NO cambiar la calculadora.
 - Nombres de archivo sin `ñ`, sin espacios y sin typos (`vista_disenar.py`, `gestor_imagenes.py`,
   `requirements.txt`).
 

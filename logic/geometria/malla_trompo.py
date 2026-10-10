@@ -1,3 +1,25 @@
+"""
+Construcción de la malla 3D exacta del globo.
+
+CONVENCIÓN DE LARGOS Y CONSISTENCIA GEOMÉTRICA:
+El "largo" de las piezas (l_sup, l_inf, l_pico) generado por la calculadora corresponde al
+EJE CENTRAL de la pieza (la altura del triángulo o trapecio plano), NO a los bordes laterales.
+Por lo tanto, la malla usa el apotema del polígono (la distancia del centro al punto medio 
+del segmento, R_apo) en lugar del circunradio (R) para calcular las alturas 3D, garantizando 
+que el eje de cada cara mida exactamente l_sup/l_inf, y que su área plana sin costura sea 
+idéntica a su área 3D.
+- h_sup = sqrt(l_sup² - R_apo²)
+- h_inf = sqrt(l_inf² - (R_apo - Rb_apo)²)
+- h_p = sqrt(l_pico² - (a/2)²) (desplazamiento del ápice de la pirámide hacia afuera)
+
+DIFERENCIA CON LA CALCULADORA:
+La calculadora estima las dimensiones globales asumiendo que el globo es un círculo perfecto 
+(circunferencia = N * a). La malla modela el polígono exacto (N lados rectos).
+Debido a esta aproximación, la calculadora subestima ligeramente el radio y, por lo tanto, 
+sobreestima la pérdida de altura por curvatura. Como resultado, la altura armada estimada 
+por la calculadora (~703.8 cm para 950/30/2/1) y la Z máxima de la malla (~706.3 cm) 
+difieren en un ~0.35 %. Esto es esperado y no requiere alterar la calculadora.
+"""
 import math
 from dataclasses import dataclass
 from typing import List, Tuple, Optional, Dict, Any
