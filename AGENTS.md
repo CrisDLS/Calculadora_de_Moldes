@@ -106,3 +106,12 @@ pico = triángulo, uno por gajo y por hilera. Prototipo mínimo recomendado: ~38
 - Todo parámetro nuevo va como campo con valor por defecto, no número mágico.
 - Escribe tests con los valores de referencia y corre pruebas tras cada cambio.
 - Responde en español.
+
+## Migración a Flet (en progreso)
+- `main.py` levanta CustomTkinter (congelado).
+- `flet run app_flet/main.py` levanta la nueva UI.
+- Arquitectura Flet:
+  - `app_flet/tema.py`: diseño, colores.
+  - `app_flet/controlador.py`: almacena estado puro y manda a llamar la lógica/presentación. No sabe de UI.
+  - `app_flet/vistas/`: árbol visual. Construye las vistas e inyecta el controlador.
+- F1-F5 Plan (Pendiente): Implementar la validación y el cálculo asíncrono para no congelar la UI de Flet.
