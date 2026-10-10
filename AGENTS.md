@@ -9,14 +9,18 @@ que el usuario ponga debe validarse como viable o explicar por qué no.
 ## Estructura real del repositorio
 - `main.py` → app CustomTkinter (`App`): sidebar + `content_frame` + vistas con carga perezosa.
 - `logic/` → `interfaces.py` (`BalloonCalculator`), `models.py` (`BalloonInput`,
-  `BalloonCalculationResult`, `SectionResult`, `Point2D`), `utils.py`,
+  `BalloonCalculationResult`, `SectionResult`, `Point2D`), `utils.py` (sin uso actual: helpers
+  `calcular_hipotenusa`, `calcular_ancho_gajo`, `interpolar_lineal`; se conserva por ahora),
   `gestor_archivos.py` (`GestorArchivos`: guarda/carga/lista JSON en `guardados/`).
 - `logic/calculators/` → un módulo por tipo de globo (habrá más). La calculadora del trompo estrella
   vive en `logic/calculators/trompo_estrella.py` (`TrompoEstrellaCalculator`).
 - `ui/` → vistas (`vista_inicio`, `vista_moldes`, `vista_guardados`, `vista_disenar`, `vista_info`)
   y `ui/modulos_moldes/vista_trompo_estrella.py`.
-- `widgets/sidebar.py` (único sidebar; `sidebar_2.py` se renombra y el viejo se elimina),
-  `configuracion/constantes.py` (colores), `utils/gestor_imagenes.py`, `recursos/`.
+- `widgets/sidebar.py` (único sidebar),
+  `configuracion/constantes.py` (colores; se importan los nombres de forma explícita, sin `import *`),
+  `utils/gestor_imagenes.py`, `recursos/`.
+- `scripts/reporte_trompo_estrella.py` → runner de consola (argparse: altura gajos hileras costura
+  `--avanzado`); la presentación en consola va aquí, no en `logic/`.
 - `referencia/trompo_estrella.py` → prototipo autocontenido con la lógica CORRECTA y validada
   (no forma parte de la app; es la referencia a portar y contra la que corren los tests).
   `referencia/parche/` → versión ya portada de models/calculadora/test, solo como guía (revisar, no copiar).
