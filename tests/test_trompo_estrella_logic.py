@@ -223,3 +223,61 @@ def test_mensajes_claros():
         calcular(altura=0)
     with pytest.raises(ValueError, match="boca"):
         calcular(avanzado=True, diametro_boca=700)
+
+def test_cobertura_piramides_y_cantidades():
+    import math
+    from logic.calculators.trompo_estrella import TrompoEstrellaCalculator
+    from logic.models import BalloonInput
+    
+    e = BalloonInput(950, 30, 2, 1, usar_parametros_avanzados=True, pestana_boca=4)
+    calc = TrompoEstrellaCalculator()
+    r = calc.calcular(e)
+    
+    # Cálculo independiente
+    ancho_gajo_esperado = math.pi * (950 * 0.64) / 30
+    largo_pico_esperado = ancho_gajo_esperado * 1.20
+    
+    num_piramides_esp = 30 * 2
+    piezas_pico_esp = 4 * num_piramides_esp
+    altura_piramide_esp = math.sqrt(largo_pico_esperado**2 - (ancho_gajo_esperado/2)**2)
+    
+    # Áreas
+    medio_cos = 1 / 2
+    ancho_max_m = ancho_gajo_esperado / 2 + medio_cos
+    area_cono_sup = r.seccion_superior.generatriz_total * (medio_cos + ancho_max_m)
+    area_pico = r.seccion_picos.generatriz_total * (medio_cos + ancho_max_m)
+    
+    # Boca
+    d_boca = 950 * 0.11
+    ancho_boca = math.pi * d_boca / 30
+    x_boca = ancho_boca / 2 + medio_cos
+    area_cono_inf = r.seccion_inferior.generatriz_total * (x_boca + ancho_max_m) + 4 * 2 * x_boca
+    
+    area_total_esp = (30 * area_cono_sup + piezas_pico_esp * area_pico + 30 * area_cono_inf) / 10000.0
+    
+    # Volumen
+    r_max = (950 * 0.64) / 2
+    volumen_piramides_cm3 = num_piramides_esp * (ancho_gajo_esperado**2) * altura_piramide_esp / 3.0
+    
+    h_sup = r.seccion_superior.altura_vertical
+    h_inf = r.seccion_inferior.altura_vertical
+    rb = d_boca / 2
+    largo_picos = ancho_gajo_esperado * 2
+    
+    v_cuerpo_cm3 = (math.pi * r_max**2 * h_sup / 3 + math.pi * r_max**2 * largo_picos 
+                    + math.pi * h_inf / 3 * (r_max**2 + r_max * rb + rb**2))
+    
+    volumen_total_esp = (v_cuerpo_cm3 + volumen_piramides_cm3) / 1000000.0
+    
+    ancho_total_esp = 2 * (r_max + altura_piramide_esp)
+    
+    assert r.num_piramides == num_piramides_esp
+    assert r.piezas_pico == piezas_pico_esp
+    assert r.altura_piramide == pytest.approx(altura_piramide_esp)
+    assert r.area_total_m2 == pytest.approx(area_total_esp)
+    assert r.volumen_m3 == pytest.approx(volumen_total_esp)
+    assert r.ancho_total_con_picos == pytest.approx(ancho_total_esp)
+    
+    assert r.seccion_superior.cantidad == 30
+    assert r.seccion_inferior.cantidad == 30
+    assert r.seccion_picos.cantidad == 240
