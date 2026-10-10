@@ -5,7 +5,14 @@ Dadas altura, gajos, hileras de picos y costura, calcular las TRES piezas planas
 cada gajo (cono superior, pico, cono inferior) para cortar el molde de un globo de
 papel china que se eleva con aire caliente (tradición de Veracruz). Cualquier medida
 que el usuario ponga debe validarse como viable o explicar por qué no.
-* Flujo del usuario: dibuja los diseños sobre los moldes planos a escala, en grupos de k gajos vecinos que se repiten (repetición, espejo total, o gajo central con vecinos en espejo). Hoy usa GeoGebra para el molde e Inkscape para trazar.
+* Flujo del usuario y diseño a escala:
+  El usuario diseña las caras del globo sobre los moldes planos dibujando en grupos de $G$ gajos vecinos.
+  Hoy el usuario calcula los moldes a escala en GeoGebra, los exporta a SVG, los decora/pinta en Inkscape, y al final los ajusta en una hoja tamaño Carta como referencia para imprimir y transferir.
+  La app reemplaza la calculadora manual (GeoGebra) y la generación de la hoja (generando directamente SVGs configurados).
+  Existen 3 modos de esquemas de pintura basados en el tamaño de grupo ($G$):
+  - Repetición: Los $G$ gajos son motivos distintos ($G$ motivos en total), repetidos secuencialmente sin espejos.
+  - Central con espejo: $G$ debe ser impar. Hay un motivo central (no espejeado) y los demás se espejean simétricamente hacia los bordes.
+  - Espejo total: $G$ debe ser par. Los motivos se abren en espejo desde el centro del grupo (sin un motivo impar al medio) y el espejo continúa en la unión entre grupos.
 
 ## Estructura real del repositorio
 - `main.py` → app CustomTkinter (`App`): sidebar + `content_frame` + vistas con carga perezosa.
@@ -13,8 +20,8 @@ que el usuario ponga debe validarse como viable o explicar por qué no.
   - `interfaces.py` (`BalloonCalculator`).
   - `models.py` (`BalloonInput`, `BalloonCalculationResult`, `SectionResult`, `Point2D`).
   - `proyecto/modelo.py` (`Proyecto` guardado en JSON, versionado).
-  - `diseno/esquema.py` (esquemas de repetición y espejo para el pintado, "central con espejo" pendiente).
-  - `exportacion/svg_moldes.py` (generación de moldes a escala real en milímetros para Inkscape, por capas).
+  - `diseno/esquema.py` (esquemas `repeticion`, `central_espejo`, `espejo_total` con tamaño de grupo).
+  - `exportacion/svg_moldes.py` (generación de moldes sueltos en mm a escala real y hojas de trazo automáticas en Carta/A4 con múltiples copias).
   - `geometria/malla_trompo.py` para construir una malla 3D exacta mapeando isométricamente 2D a 3D (para exportar a JSON/three.js).
   - `utils.py` (sin uso actual: helpers; se conserva por ahora).
   - `gestor_archivos.py` (`GestorArchivos`: guarda/carga/lista JSON en `guardados/`).
