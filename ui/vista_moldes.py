@@ -1,7 +1,8 @@
 # ui/vista_moldes.py
 import customtkinter as ctk
-from configuracion.constantes import *
-from utils.gestor_image import GestorImagenes
+from configuracion.constantes import (COLOR_ACENTO_MORADO, COLOR_ACENTO_NARANJA, COLOR_TEXTO_BLANCO,
+                                      COLOR_TEXTO_GRIS_CLARO, FONT_TEXTO_NORMAL, FONT_TITULO_MEDIANO)
+from utils.gestor_imagenes import GestorImagenes
 
 class VistaMoldes(ctk.CTkFrame):
     def __init__(self, master, callback_trompo_estrella, **kwargs):

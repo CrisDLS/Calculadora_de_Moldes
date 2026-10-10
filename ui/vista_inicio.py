@@ -1,7 +1,8 @@
 # ui/vista_inicio.py
 import customtkinter as ctk
-from configuracion.constantes import *
-from utils.gestor_image import GestorImagenes
+from configuracion.constantes import (COLOR_ACENTO_NARANJA, COLOR_TEXTO_BLANCO, COLOR_TEXTO_GRIS_CLARO,
+                                      FONT_BOTON, FONT_TEXTO_NORMAL, FONT_TITULO_GRANDE, FONT_TITULO_MEDIANO)
+from utils.gestor_imagenes import GestorImagenes
 
 class VistaInicio(ctk.CTkFrame):
     def __init__(self, master, call_moldes, **kwargs):

@@ -1,6 +1,9 @@
 # ui/modulos_moldes/vista_trompo_estrella.py
 import customtkinter as ctk
-from configuracion.constantes import *
+from configuracion.constantes import (COLOR_ACENTO_MORADO, COLOR_ACENTO_NARANJA, COLOR_FILA_ALTERNADA,
+                                      COLOR_FONDO_APP, COLOR_INPUT_BORDE, COLOR_INPUT_FONDO,
+                                      COLOR_TEXTO_BLANCO, COLOR_TEXTO_GRIS_CLARO, FONT_BOTON,
+                                      FONT_TEXTO_NORMAL, FONT_TITULO_GRANDE, FONT_TITULO_MEDIANO)
 
 class VistaTrompoEstrella(ctk.CTkScrollableFrame):
     def __init__(self, master, **kwargs):

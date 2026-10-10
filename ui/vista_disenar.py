@@ -1,6 +1,7 @@
-# ui/vista_diseñar.py
+# ui/vista_disenar.py
 import customtkinter as ctk
-from configuracion.constantes import *
+from configuracion.constantes import (COLOR_ACENTO_NARANJA, COLOR_SELECCION_SIDEBAR, COLOR_TEXTO_BLANCO,
+                                      COLOR_TEXTO_GRIS_CLARO, FONT_TITULO_GRANDE, FONT_TITULO_MEDIANO)
 
 class VistaDiseñar(ctk.CTkFrame):
     def __init__(self, master, **kwargs):
