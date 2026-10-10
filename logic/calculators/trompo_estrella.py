@@ -100,13 +100,14 @@ class TrompoEstrellaCalculator(BalloonCalculator):
                             area_cm2=l_inf * (x_boca + ancho_max_m) + pestana * 2 * x_boca)
         area_cm2 = e.num_gajos * (sup.area_cm2 + e.num_hileras_picos * pico.area_cm2 + inf.area_cm2)
 
+        volumen_m3 = v_cm3 / self.CM3_POR_M3
+        
         # --- Mecha / vuelo (solo modo avanzado) ---
         boca = vuelo = None
         if av:
             d_mecha = e.diametro_mecha if e.diametro_mecha is not None else self.F_MECHA * d_boca
             holgura = rb - d_mecha / 2
-            vol = v_cm3 / self.CM3_POR_M3
-            empuje = vol * self._empuje_por_m3()
+            empuje = volumen_m3 * self._empuje_por_m3()
             masa_papel = area_cm2 / self.CM2_POR_M2 * c.papel_gm2 * (1 + c.extra_pegamento)
             long_alambre_m = (math.pi * d_boca + e.varillas * rb) / self.CM_POR_M
             seccion_m2 = math.pi * (e.alambre_mm / 2 / self.MM_POR_M) ** 2
@@ -118,7 +119,7 @@ class TrompoEstrellaCalculator(BalloonCalculator):
                 holgura_ok=holgura >= e.holgura_min,
                 diametro_minimo=d_mecha + 2 * e.holgura_min,
                 radio_pared_a_llama=rb + min(e.altura_llama, h_inf) * (r - rb) / h_inf)
-            vuelo = VueloResult(vol, empuje, masa_papel, masa_estr, empuje - masa_papel,
+            vuelo = VueloResult(volumen_m3, empuje, masa_papel, masa_estr, empuje - masa_papel,
                                 empuje - masa_papel - masa_estr, pliegos)
 
         res = BalloonCalculationResult(
@@ -127,7 +128,7 @@ class TrompoEstrellaCalculator(BalloonCalculator):
             ancho_max_gajo=ancho_gajo,
             diametro_boquilla_calculado=d_boca, circumferencia_boquilla=math.pi * d_boca,
             seccion_superior=sup, seccion_picos=pico, seccion_inferior=inf,
-            boca=boca, vuelo=vuelo,
+            volumen_m3=volumen_m3, boca=boca, vuelo=vuelo,
             gajos_min_70cm=self._par_arriba(math.pi * d_max / self.GAJO_IDEAL_MAX_CM),
             gajos_min_50cm=self._par_arriba(math.pi * d_max / self.GAJO_REF_MIN_CM),
             area_total_m2=area_cm2 / self.CM2_POR_M2)

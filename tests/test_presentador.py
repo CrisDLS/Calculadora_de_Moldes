@@ -96,23 +96,23 @@ def test_claves_faltantes_se_tratan_como_vacias():
 def test_resumen_simple_950():
     filas = dict(formatear_resumen(_calc(False)))
     assert tuple(filas) == ETIQUETAS_RESUMEN_SIMPLE
-    assert filas["Diámetro del globo"] == "608.0 cm"
-    assert filas["Ancho máx. de gajo"] == "63.67 cm"
-    assert filas["Diámetro de la boca"] == "104.5 cm"
-    assert filas["Circunferencia de la boca"] == "328.3 cm"
-    assert filas["Gajos mín. (ancho ≤ 70 cm)"] == "28"
-    assert filas["Gajos máx. (ancho ≤ 50 cm)"] == "40"
-    assert filas["Altura armada estimada"] == "704 cm"
-    assert filas["Área de papel"] == "103.8 m²"
+    assert filas["Diámetro de la boca (cm)"] == "104.5"
+    assert filas["Ancho máx. de gajo (cm)"] == "63.67"
+    assert filas["Gajos mín. recomendados (ancho ≤ 70 cm)"] == "28"
+    assert filas["Gajos máx. recomendados (ancho ≤ 50 cm)"] == "40"
+    assert filas["Alto inflado est. (cm)"] == "704"
+    assert filas["Ancho inflado est. (cm)"] == "608.0"
+    assert filas["Volumen (m³)"] == "100.5"
+    assert filas["Área de papel (m²)"] == "103.8"
 
 
 def test_resumen_avanzado_950():
     filas = dict(formatear_resumen(_calc(True)))
     assert tuple(filas) == ETIQUETAS_RESUMEN_SIMPLE + ETIQUETAS_RESUMEN_AVANZADO
-    assert filas["Diámetro de la boca"] == "104.5 cm"
-    assert filas["Gajos mín. (ancho ≤ 70 cm)"] == "28"
-    assert filas["Gajos máx. (ancho ≤ 50 cm)"] == "40"
-    assert filas["Área de papel"] == "103.9 m²"            # con pestaña
+    assert filas["Diámetro de la boca (cm)"] == "104.5"
+    assert filas["Gajos mín. recomendados (ancho ≤ 70 cm)"] == "28"
+    assert filas["Gajos máx. recomendados (ancho ≤ 50 cm)"] == "40"
+    assert filas["Área de papel (m²)"] == "103.9"            # con pestaña
     assert filas["Pestaña"] == "4.0 cm"
     assert filas["Diámetro de mecha"] == "52.2 cm"
     assert filas["Holgura mecha-papel"] == "26.1 cm"
@@ -154,3 +154,56 @@ def test_clasificar_aviso(texto, clase):
 def test_clasifica_avisos_reales_del_calculo():
     assert [clasificar_aviso(a) for a in _calc(False).avisos] == ["info"]
     assert [clasificar_aviso(a) for a in _calc(True).avisos] == ["ok"]
+
+# --------------------------------------------------------- formatear_tablas / tabla_a_texto
+from ui.modulos_moldes.presentador_trompo_estrella import formatear_tablas, tabla_a_texto, TablaMolde
+from configuracion.constantes import DECIMALES_TABLA
+
+def test_formatear_tablas_y_tabla_a_texto_avanzado():
+    r = _calc(True)
+    e = BalloonInput(950, 30, 2, 1, usar_parametros_avanzados=True)
+    tablas = formatear_tablas(r, e)
+    assert len(tablas) == 3
+    t_sup, t_pic, t_inf = tablas
+    
+    assert t_sup.titulo == "Cono superior"
+    assert t_sup.resumen == f"Largo total 353.74 cm · Cantidad: 30 piezas"
+    assert len(t_sup.filas) == 17
+    assert t_sup.filas[0] == ["1", "0.00", "0.00", "0.50"]
+    assert t_sup.filas[-1][0] == "17"
+    assert t_sup.nota is None
+
+    assert t_pic.titulo == "Pico"
+    assert t_pic.resumen == f"Largo total 76.40 cm · Cantidad: 60 piezas"
+    assert len(t_pic.filas) == 12
+    assert t_pic.filas[0] == ["1", "0.00", "0.00", "0.50"]
+    assert t_pic.filas[-1][0] == "12"
+    assert t_pic.nota is None
+
+    assert t_inf.titulo == "Cono inferior"
+    assert t_inf.resumen == f"Largo total 468.92 cm · Cantidad: 30 piezas"
+    assert len(t_inf.filas) == 25
+    assert t_inf.filas[0] == ["1", "0.00", "0.00", "5.97"]
+    assert t_inf.filas[-1][0] == "25"
+    assert t_inf.nota == "pestaña de 4.00 cm después del paso 1, con semiancho recto de 7.07 cm"
+    
+    # Test tabla_a_texto uses tabs
+    texto = tabla_a_texto(t_inf)
+    lineas = texto.split("\n")
+    assert lineas[0] == "Cono inferior"
+    assert "Cantidad: 30 piezas" in lineas[1]
+    assert "pestaña de 4.00 cm" in lineas[2]
+    assert lineas[3] == "Paso\tLargo (cm)\tAcumulado (cm)\tAncho/2 (cm)"
+    assert lineas[4] == "1\t0.00\t0.00\t5.97"
+
+def test_formatear_tablas_simple_no_tiene_nota():
+    r = _calc(False)
+    e = BalloonInput(950, 30, 2, 1, usar_parametros_avanzados=False)
+    tablas = formatear_tablas(r, e)
+    t_inf = tablas[2]
+    assert t_inf.nota is None
+    
+    texto = tabla_a_texto(t_inf)
+    lineas = texto.split("\n")
+    assert lineas[2] == "Paso\tLargo (cm)\tAcumulado (cm)\tAncho/2 (cm)"
+

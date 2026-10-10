@@ -100,6 +100,7 @@ class BalloonCalculationResult:
     seccion_inferior: SectionResult
 
     # --- Nuevos (con valor por defecto) ---
+    volumen_m3: float = 0.0                 # calculado en modo simple y avanzado
     boca: Optional[BocaResult] = None       # None en modo simple
     vuelo: Optional[VueloResult] = None     # None en modo simple
     gajos_min_70cm: int = 0
