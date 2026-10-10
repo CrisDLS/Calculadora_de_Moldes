@@ -9,11 +9,15 @@ que el usuario ponga debe validarse como viable o explicar por qué no.
 
 ## Estructura real del repositorio
 - `main.py` → app CustomTkinter (`App`): sidebar + `content_frame` + vistas con carga perezosa.
-- `logic/` → `interfaces.py` (`BalloonCalculator`), `models.py` (`BalloonInput`,
-  `BalloonCalculationResult`, `SectionResult`, `Point2D`), `utils.py` (sin uso actual: helpers
-  `calcular_hipotenusa`, `calcular_ancho_gajo`, `interpolar_lineal`; se conserva por ahora),
-  `gestor_archivos.py` (`GestorArchivos`: guarda/carga/lista JSON en `guardados/`).
-- `logic/geometria/` → `malla_trompo.py` para construir una malla 3D exacta mapeando isométricamente 2D a 3D (para exportar a JSON/three.js).
+- `logic/` → lógica de negocio pura:
+  - `interfaces.py` (`BalloonCalculator`).
+  - `models.py` (`BalloonInput`, `BalloonCalculationResult`, `SectionResult`, `Point2D`).
+  - `proyecto/modelo.py` (`Proyecto` guardado en JSON, versionado).
+  - `diseno/esquema.py` (esquemas de repetición y espejo para el pintado, "central con espejo" pendiente).
+  - `exportacion/svg_moldes.py` (generación de moldes a escala real en milímetros para Inkscape, por capas).
+  - `geometria/malla_trompo.py` para construir una malla 3D exacta mapeando isométricamente 2D a 3D (para exportar a JSON/three.js).
+  - `utils.py` (sin uso actual: helpers; se conserva por ahora).
+  - `gestor_archivos.py` (`GestorArchivos`: guarda/carga/lista JSON en `guardados/`).
 - `logic/calculators/` → un módulo por tipo de globo (habrá más). La calculadora del trompo estrella
   vive en `logic/calculators/trompo_estrella.py` (`TrompoEstrellaCalculator`).
 - `ui/` → vistas (`vista_inicio`, `vista_moldes`, `vista_guardados`, `vista_disenar`, `vista_info`)
