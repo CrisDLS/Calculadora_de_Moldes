@@ -36,7 +36,7 @@ def test_valores_canonicos_modo_avanzado():
     assert r.boca.diametro == pytest.approx(104.5)
     assert (r.gajos_min_70cm, r.gajos_min_50cm) == (28, 40)
     assert r.altura_total_real == pytest.approx(703.8, abs=0.1)
-    assert r.vuelo.empuje_g / 1000 == pytest.approx(14.4, abs=0.05)
+    assert r.vuelo.empuje_g / 1000 == pytest.approx(15.2, abs=0.05)
     assert r.viable is True
 
 

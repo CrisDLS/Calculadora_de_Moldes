@@ -60,6 +60,7 @@ class SectionResult:
     radio_fin: float
     pestana: float = 0.0            # tira extra (solo cono inferior, modo avanzado)
     area_cm2: float = 0.0           # área de UNA pieza con costuras
+    cantidad: int = 0               # gajos para conos, 4 * gajos * hileras para picos
 
 @dataclass
 class BocaResult:
@@ -98,6 +99,12 @@ class BalloonCalculationResult:
     seccion_superior: SectionResult
     seccion_picos: SectionResult
     seccion_inferior: SectionResult
+    
+    # --- Pirámides (Picos) ---
+    num_piramides: int = 0
+    piezas_pico: int = 0
+    altura_piramide: float = 0.0
+    ancho_total_con_picos: float = 0.0
 
     # --- Nuevos (con valor por defecto) ---
     volumen_m3: float = 0.0                 # calculado en modo simple y avanzado

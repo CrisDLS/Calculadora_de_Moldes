@@ -42,4 +42,4 @@ def test_boca_y_gajos_minimos(res):
 
 def test_altura_armada_y_empuje(res):
     assert res.altura_armada_estimada == pytest.approx(704, abs=1)
-    assert res.vuelo.empuje_g / 1000 == pytest.approx(14.4, abs=0.05)
+    assert res.vuelo.empuje_g / 1000 == pytest.approx(15.2, abs=0.05)

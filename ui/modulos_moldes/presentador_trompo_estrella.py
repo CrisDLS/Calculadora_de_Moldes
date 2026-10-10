@@ -46,7 +46,7 @@ ETIQUETAS_RESUMEN_SIMPLE = (
     f"Gajos mín. recomendados (ancho ≤ {_L70:.0f} cm)",
     f"Gajos máx. recomendados (ancho ≤ {_L50:.0f} cm)",
     "Alto inflado est. (cm)",
-    "Ancho inflado est. (cm)",
+    "Ancho inflado con picos est. (cm)",
     "Volumen (m³)",
     "Área de papel (m²)",
 )
@@ -138,7 +138,7 @@ def formatear_resumen(r: BalloonCalculationResult) -> List[Tuple[str, str]]:
         str(r.gajos_min_70cm),
         str(r.gajos_min_50cm),
         f"{r.altura_total_real:.0f}",
-        f"{r.diametro_globo:.1f}",
+        f"{r.ancho_total_con_picos:.1f}",
         f"{r.volumen_m3:.1f}",
         f"{r.area_total_m2:.1f}",
     ]
@@ -200,7 +200,7 @@ def formatear_tablas(resultado: BalloonCalculationResult, entrada: BalloonInput)
         titulo="Cono superior",
         encabezados=encabezados,
         filas=[_punto(p) for p in sup.puntos],
-        resumen=f"Largo total {sup.generatriz_total:.{DECIMALES_TABLA}f} cm · Cantidad: {entrada.num_gajos} piezas",
+        resumen=f"Largo total {sup.generatriz_total:.{DECIMALES_TABLA}f} cm · Cantidad: {sup.cantidad} piezas",
         nota=None
     )
     
@@ -209,7 +209,7 @@ def formatear_tablas(resultado: BalloonCalculationResult, entrada: BalloonInput)
         titulo="Pico",
         encabezados=encabezados,
         filas=[_punto(p) for p in pic.puntos],
-        resumen=f"Largo total {pic.generatriz_total:.{DECIMALES_TABLA}f} cm · Cantidad: {entrada.num_gajos * entrada.num_hileras_picos} piezas",
+        resumen=f"Largo total {pic.generatriz_total:.{DECIMALES_TABLA}f} cm · Cantidad: {pic.cantidad} triángulos ({resultado.num_piramides} pirámides × 4)",
         nota=None
     )
     
@@ -223,7 +223,7 @@ def formatear_tablas(resultado: BalloonCalculationResult, entrada: BalloonInput)
         titulo="Cono inferior",
         encabezados=encabezados,
         filas=[_punto(p) for p in inf.puntos],
-        resumen=f"Largo total {inf.generatriz_total:.{DECIMALES_TABLA}f} cm · Cantidad: {entrada.num_gajos} piezas",
+        resumen=f"Largo total {inf.generatriz_total:.{DECIMALES_TABLA}f} cm · Cantidad: {inf.cantidad} piezas",
         nota=nota_inf
     )
     

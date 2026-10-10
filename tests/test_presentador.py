@@ -101,10 +101,9 @@ def test_resumen_simple_950():
     assert filas["Gajos mín. recomendados (ancho ≤ 70 cm)"] == "28"
     assert filas["Gajos máx. recomendados (ancho ≤ 50 cm)"] == "40"
     assert filas["Alto inflado est. (cm)"] == "704"
-    assert filas["Ancho inflado est. (cm)"] == "608.0"
-    assert filas["Volumen (m³)"] == "100.5"
-    assert filas["Área de papel (m²)"] == "103.8"
-
+    assert filas["Ancho inflado con picos est. (cm)"] == "746.9"
+    assert filas["Volumen (m³)"] == "106.1"
+    assert filas["Área de papel (m²)"] == "148.9"
 
 def test_resumen_avanzado_950():
     filas = dict(formatear_resumen(_calc(True)))
@@ -112,13 +111,13 @@ def test_resumen_avanzado_950():
     assert filas["Diámetro de la boca (cm)"] == "104.5"
     assert filas["Gajos mín. recomendados (ancho ≤ 70 cm)"] == "28"
     assert filas["Gajos máx. recomendados (ancho ≤ 50 cm)"] == "40"
-    assert filas["Área de papel (m²)"] == "103.9"            # con pestaña
+    assert filas["Área de papel (m²)"] == "149.1"            # con pestaña
     assert filas["Pestaña"] == "4.0 cm"
     assert filas["Diámetro de mecha"] == "52.2 cm"
     assert filas["Holgura mecha-papel"] == "26.1 cm"
-    assert filas["Empuje"] == "14.4 kg"
-    assert filas["Carga neta para la mecha"] == "11.8 kg"
-    assert filas["Pliegos"] == "319"
+    assert filas["Empuje"] == "15.2 kg"
+    assert filas["Carga neta para la mecha"] == "11.5 kg"
+    assert filas["Pliegos"] == "457"
     assert filas["Viable"] == "Sí"
 
 
@@ -174,7 +173,7 @@ def test_formatear_tablas_y_tabla_a_texto_avanzado():
     assert t_sup.nota is None
 
     assert t_pic.titulo == "Pico"
-    assert t_pic.resumen == f"Largo total 76.40 cm · Cantidad: 60 piezas"
+    assert t_pic.resumen == f"Largo total 76.40 cm · Cantidad: 240 triángulos (60 pirámides × 4)"
     assert len(t_pic.filas) == 12
     assert t_pic.filas[0] == ["1", "0.00", "0.00", "0.50"]
     assert t_pic.filas[-1][0] == "12"

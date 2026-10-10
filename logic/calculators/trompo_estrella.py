@@ -81,25 +81,34 @@ class TrompoEstrellaCalculator(BalloonCalculator):
         # --- Geometría vertical y volumen ---
         h_sup = math.sqrt(l_sup ** 2 - r ** 2)
         h_inf = math.sqrt(l_inf ** 2 - (r - rb) ** 2)
-        v_cm3 = (math.pi * r ** 2 * h_sup / 3 + math.pi * r ** 2 * largo_picos
-                 + math.pi * h_inf / 3 * (r ** 2 + r * rb + rb ** 2))
+        v_cuerpo_cm3 = (math.pi * r ** 2 * h_sup / 3 + math.pi * r ** 2 * largo_picos
+                        + math.pi * h_inf / 3 * (r ** 2 + r * rb + rb ** 2))
 
         # --- Piezas ---
         ancho_max_m = ancho_gajo / 2 + medio_cos
         x_boca = ancho_boca / 2 + medio_cos
+        num_piramides = e.num_gajos * e.num_hileras_picos
+        piezas_pico = 4 * num_piramides
+        
         pts_sup = self._puntos(l_sup, self.INTERVALOS_SUP, medio_cos, ancho_max_m)
         pts_pico = self._puntos(l_pico, self.INTERVALOS_PICO, medio_cos, ancho_max_m)
         pts_inf = self._puntos(l_inf, self.INTERVALOS_INF, x_boca, ancho_max_m)
 
         sup = SectionResult("Cono Superior", pts_sup, h_sup, l_sup, 0.0, r,
-                            area_cm2=l_sup * (medio_cos + ancho_max_m))
+                            area_cm2=l_sup * (medio_cos + ancho_max_m), cantidad=e.num_gajos)
         pico = SectionResult("Pico", pts_pico, ancho_gajo, l_pico, r, r,
-                             area_cm2=l_pico * (medio_cos + ancho_max_m))
+                             area_cm2=l_pico * (medio_cos + ancho_max_m), cantidad=piezas_pico)
         inf = SectionResult("Cono Inferior", pts_inf, h_inf, l_inf, rb, r,
                             pestana=pestana,
-                            area_cm2=l_inf * (x_boca + ancho_max_m) + pestana * 2 * x_boca)
-        area_cm2 = e.num_gajos * (sup.area_cm2 + e.num_hileras_picos * pico.area_cm2 + inf.area_cm2)
-
+                            area_cm2=l_inf * (x_boca + ancho_max_m) + pestana * 2 * x_boca, cantidad=e.num_gajos)
+        
+        # --- Picos (Pirámides) ---
+        altura_piramide = math.sqrt(l_pico**2 - (ancho_gajo/2)**2)
+        ancho_total_con_picos = 2 * (r + altura_piramide)
+        volumen_piramides_cm3 = num_piramides * (ancho_gajo**2) * altura_piramide / 3.0
+        v_cm3 = v_cuerpo_cm3 + volumen_piramides_cm3
+        
+        area_cm2 = e.num_gajos * sup.area_cm2 + piezas_pico * pico.area_cm2 + e.num_gajos * inf.area_cm2
         volumen_m3 = v_cm3 / self.CM3_POR_M3
         
         # --- Mecha / vuelo (solo modo avanzado) ---
@@ -128,6 +137,8 @@ class TrompoEstrellaCalculator(BalloonCalculator):
             ancho_max_gajo=ancho_gajo,
             diametro_boquilla_calculado=d_boca, circumferencia_boquilla=math.pi * d_boca,
             seccion_superior=sup, seccion_picos=pico, seccion_inferior=inf,
+            num_piramides=num_piramides, piezas_pico=piezas_pico,
+            altura_piramide=altura_piramide, ancho_total_con_picos=ancho_total_con_picos,
             volumen_m3=volumen_m3, boca=boca, vuelo=vuelo,
             gajos_min_70cm=self._par_arriba(math.pi * d_max / self.GAJO_IDEAL_MAX_CM),
             gajos_min_50cm=self._par_arriba(math.pi * d_max / self.GAJO_REF_MIN_CM),

@@ -74,6 +74,8 @@ class Pieza:
     ancho_mitad_fin: float
     puntos: list[Punto]
     pestana: float = 0.0   # tira extra DESPUÉS del paso 1 (solo cono inferior)
+    cantidad: int = 0      # número de piezas
+
 
     def area(self) -> float:
         """Área de UNA pieza con costuras (cm²)."""
@@ -120,15 +122,19 @@ class Resultado:
     gajos_min_50cm: int
     altura_armada_estimada: float
     area_total_m2: float
+    num_piramides: int
+    piezas_pico: int
+    altura_piramide: float
+    ancho_total_con_picos: float
     avisos: list[str]
     viable: bool
 
 
-def _tabla(nombre, largo, intervalos, x0, x1, pestana=0.0) -> Pieza:
+def _tabla(nombre, largo, intervalos, x0, x1, cantidad, pestana=0.0) -> Pieza:
     paso = largo / intervalos
     pts = [Punto(i + 1, 0.0 if i == 0 else paso, paso * i,
                  x0 + (x1 - x0) * i / intervalos) for i in range(intervalos + 1)]
-    return Pieza(nombre, largo, x0, x1, pts, pestana)
+    return Pieza(nombre, largo, x0, x1, pts, pestana, cantidad)
 
 
 def _par_arriba(x: float) -> int:          # equivale a EVEN() de Excel
@@ -174,12 +180,22 @@ def calcular(e: Entrada, c: Condiciones = Condiciones()) -> Resultado:
         raise ValueError("La boca no puede ser mayor que el diámetro máximo")
 
     ancho_max_m = ancho_gajo / 2 + medio_cos
-    sup = _tabla("Cono superior", l_sup, INTERVALOS["Cono superior"], medio_cos, ancho_max_m)
-    pico = _tabla("Pico", l_pico, INTERVALOS["Pico"], medio_cos, ancho_max_m)
+    num_piramides = e.gajos * e.hileras_picos
+    piezas_pico = 4 * num_piramides
+    
+    sup = _tabla("Cono superior", l_sup, INTERVALOS["Cono superior"], medio_cos, ancho_max_m, e.gajos)
+    pico = _tabla("Pico", l_pico, INTERVALOS["Pico"], medio_cos, ancho_max_m, piezas_pico)
     inf = _tabla("Cono inferior", l_inf, INTERVALOS["Cono inferior"],
-                 ancho_boca / 2 + medio_cos, ancho_max_m, pestana=e.pestana_boca)
+                 ancho_boca / 2 + medio_cos, ancho_max_m, e.gajos, pestana=e.pestana_boca)
 
-    h_sup, h_inf, v_cm3 = _geometria(l_sup, l_inf, r, rb, largo_picos)
+    h_sup, h_inf, v_cuerpo = _geometria(l_sup, l_inf, r, rb, largo_picos)
+    
+    # --- Picos (Pirámides) ---
+    altura_piramide = math.sqrt(l_pico**2 - (ancho_gajo/2)**2)
+    ancho_total_con_picos = 2 * (r + altura_piramide)
+    volumen_piramides_cm3 = num_piramides * (ancho_gajo**2) * altura_piramide / 3.0
+    v_cm3 = v_cuerpo + volumen_piramides_cm3
+    
     altura_armada = h_sup + largo_picos + h_inf
 
     # --- Boca / mecha ---
@@ -190,7 +206,7 @@ def calcular(e: Entrada, c: Condiciones = Condiciones()) -> Resultado:
                 d_mecha, hol, hol >= e.holgura_min, d_mecha + 2 * e.holgura_min)
 
     # --- Área, pliegos, empuje ---
-    area_cm2 = e.gajos * (sup.area() + e.hileras_picos * pico.area() + inf.area())
+    area_cm2 = e.gajos * sup.area() + piezas_pico * pico.area() + e.gajos * inf.area()
     area_m2 = area_cm2 / 1e4
     vol = v_cm3 / 1e6
     empuje = vol * empuje_por_m3(c)
@@ -204,7 +220,7 @@ def calcular(e: Entrada, c: Condiciones = Condiciones()) -> Resultado:
 
     res = Resultado(e, d_max, ancho_gajo, largo_picos, sup, pico, inf, boca, vuelo,
                     _par_arriba(math.pi * d_max / 70), _par_arriba(math.pi * d_max / 50),
-                    altura_armada, area_m2, [], True)
+                    altura_armada, area_m2, num_piramides, piezas_pico, altura_piramide, ancho_total_con_picos, [], True)
     avisos = _diagnostico(res)
     return Resultado(**{**res.__dict__, "avisos": avisos,
                         "viable": not any(a.startswith("ERROR") for a in avisos)})

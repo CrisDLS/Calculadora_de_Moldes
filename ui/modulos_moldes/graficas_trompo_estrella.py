@@ -30,14 +30,11 @@ def figura_moldes(resultado: BalloonCalculationResult, tema: dict) -> Figure:
     ax2 = fig.add_subplot(132)
     ax3 = fig.add_subplot(133)
     
-    # Cantidad real de piezas, gajos = resultado.seccion_superior.puntos... no, usar recomendados
-    gajos = resultado.gajos_min_70cm
-    hileras = round(resultado.altura_picos / resultado.ancho_max_gajo)
-    
+    # Usar seccion.cantidad para piezas
     piezas = [
-        (ax1, resultado.seccion_superior, f"Cono Superior\n({gajos} piezas)"),
-        (ax2, resultado.seccion_picos, f"Pico\n({gajos * hileras} piezas)"),
-        (ax3, resultado.seccion_inferior, f"Cono Inferior\n({gajos} piezas)")
+        (ax1, resultado.seccion_superior, f"Cono Superior\n({resultado.seccion_superior.cantidad} piezas)"),
+        (ax2, resultado.seccion_picos, f"Pico\n({resultado.seccion_picos.cantidad} piezas)"),
+        (ax3, resultado.seccion_inferior, f"Cono Inferior\n({resultado.seccion_inferior.cantidad} piezas)")
     ]
     
     color_linea = tema["acento"]
