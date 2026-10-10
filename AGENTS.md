@@ -34,12 +34,13 @@ que el usuario ponga debe validarse como viable o explicar por qué no.
 - Tareas largas (dibujar moldes, exportar PDF/DXF) reciben un callback `on_progress(fraccion, texto)`
   y se ejecutan fuera del hilo de la interfaz.
 - Tarea 1: portar `referencia/trompo_estrella.py` a `logic/calculators/` sin cambiar resultados
-  (tests primero). Reemplazar la clase vieja `TrompoEstrellaCalculator`.
-- Tarea 2 (después, en una rama aparte): evaluar migrar la UI de CustomTkinter a Flet. Primero la app
+  (tests primero). Reemplazar la clase vieja `TrompoEstrellaCalculator`. (COMPLETADO)
+- Tarea 2: (COMPLETADO) interfaz principal (vista y tablas, gráfica y validación dinámica de "datos desactualizados").
+- Tarea 3 (después, en una rama aparte): evaluar migrar la UI de CustomTkinter a Flet. Primero la app
   completa, funcional y probada en CustomTkinter. Fijar la versión de Flet en `requirements.txt` y
   comprobar la API contra la documentación de esa versión.
 - Gráfica 2D: matplotlib embebida en CustomTkinter. La construcción de la figura va en una función
-  separada de la UI (recibe el resultado y devuelve la figura) para reutilizarla si se migra a Flet.
+  separada de la UI (`ui/modulos_moldes/graficas_trompo_estrella.py`) para reutilizarla si se migra a Flet.
 - Nombres de archivo sin `ñ`, sin espacios y sin typos (`vista_disenar.py`, `gestor_imagenes.py`,
   `requirements.txt`).
 

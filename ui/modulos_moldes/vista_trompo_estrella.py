@@ -1,14 +1,22 @@
 # ui/modulos_moldes/vista_trompo_estrella.py
 import customtkinter as ctk
+import matplotlib
+matplotlib.use("Agg")
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import matplotlib.pyplot as plt
+
 from configuracion.constantes import (COLOR_ACENTO_MORADO, COLOR_ACENTO_NARANJA, COLOR_AVISO_AVISO,
                                       COLOR_AVISO_AVISO_TEXTO, COLOR_AVISO_ERROR, COLOR_AVISO_INFO,
                                       COLOR_AVISO_OK, COLOR_FILA_ALTERNADA, COLOR_FONDO_APP,
                                       COLOR_INPUT_BORDE, COLOR_INPUT_FONDO, COLOR_TEXTO_BLANCO,
                                       COLOR_TEXTO_GRIS_CLARO, FONT_BOTON, FONT_TEXTO_NORMAL,
-                                      FONT_TEXTO_PEQUENO, FONT_TITULO_GRANDE, FONT_TITULO_MEDIANO)
+                                      FONT_TEXTO_PEQUENO, FONT_TITULO_GRANDE, FONT_TITULO_MEDIANO,
+                                      COLOR_GRAFICA_FONDO_FIGURA, COLOR_GRAFICA_FONDO_EJES,
+                                      COLOR_GRAFICA_TEXTO, COLOR_GRAFICA_LINEAS, COLOR_GRAFICA_PESTANA)
 from logic.calculators.trompo_estrella import TrompoEstrellaCalculator
 from ui.modulos_moldes.presentador_trompo_estrella import (ETIQUETAS_RESUMEN_SIMPLE, clasificar_aviso,
                                                            formatear_resumen, leer_entrada, formatear_tablas, tabla_a_texto)
+from ui.modulos_moldes.graficas_trompo_estrella import figura_moldes, figura_perfil
 from tkinter import ttk
 
 class VistaTrompoEstrella(ctk.CTkScrollableFrame):
@@ -23,7 +31,14 @@ class VistaTrompoEstrella(ctk.CTkScrollableFrame):
     def __init__(self, master, **kwargs):
         super().__init__(master, fg_color="transparent", **kwargs)
         self.entradas = {}      # clave del presentador -> CTkEntry
+        self.variables = {}     # clave del presentador -> StringVar
         self.resultado = None   # último BalloonCalculationResult (None si hubo error)
+        self.datos_desactualizados = False
+        
+        # Estado de gráfica
+        self.figura_actual = None
+        self.canvas_widget = None
+        self.tipo_grafica_var = ctk.StringVar(value="Moldes")
 
         # --- Encabezado ---
         frame_header = ctk.CTkFrame(self, fg_color="transparent")
@@ -41,9 +56,9 @@ class VistaTrompoEstrella(ctk.CTkScrollableFrame):
         frame_central = ctk.CTkFrame(self, fg_color="transparent")
         frame_central.pack(fill="x", expand=True)
         
-        # PROPORCIÓN DE COLUMNAS: weight=5 para la izquierda (inputs y resultados) y
-        # weight=2 para la derecha (gráfica). Pendiente de decidir en el Paso 7.
-        frame_central.grid_columnconfigure(0, weight=5) 
+        # PROPORCIÓN DE COLUMNAS: weight=3 para la izquierda (inputs y resultados) y
+        # weight=2 para la derecha (gráfica). Para que sea un 40%.
+        frame_central.grid_columnconfigure(0, weight=3) 
         frame_central.grid_columnconfigure(1, weight=2)
 
         # === COLUMNA IZQUIERDA ===
@@ -92,8 +107,13 @@ class VistaTrompoEstrella(ctk.CTkScrollableFrame):
         frame_der.grid(row=0, column=1, sticky="nsew")
         frame_der.pack_propagate(False)
 
-        lbl_graf = ctk.CTkLabel(frame_der, text="Graficación de\nmedidas", font=FONT_TITULO_MEDIANO, text_color=COLOR_TEXTO_BLANCO)
-        lbl_graf.pack(expand=True)
+        self.seg_btn_grafica = ctk.CTkSegmentedButton(frame_der, values=["Moldes", "Perfil armado"],
+                                                      variable=self.tipo_grafica_var,
+                                                      command=self._cambiar_grafica)
+        self.seg_btn_grafica.pack(fill="x", padx=20, pady=(15, 10))
+        
+        self.frame_canvas = ctk.CTkFrame(frame_der, fg_color="transparent")
+        self.frame_canvas.pack(expand=True, fill="both", padx=10, pady=5)
 
         btn_guardar_medidas = ctk.CTkButton(frame_der, text="   Guardar Medidas", fg_color="transparent", 
                                             text_color=COLOR_TEXTO_BLANCO, hover_color="#5a3275",
@@ -154,10 +174,16 @@ class VistaTrompoEstrella(ctk.CTkScrollableFrame):
         lbl = ctk.CTkLabel(master, text=label_text, font=FONT_TEXTO_NORMAL, text_color=COLOR_TEXTO_BLANCO, anchor="w")
         lbl.grid(row=row, column=0, sticky="w", pady=5)
         
+        var = ctk.StringVar()
+        if clave is not None:
+            self.variables[clave] = var
+            var.trace_add("write", self._on_datos_cambiados)
+            
         # Input más compacto (height=30); `ayuda` es el valor por defecto como texto de ayuda
         entry = ctk.CTkEntry(master, border_width=1, border_color=COLOR_INPUT_BORDE,
                              fg_color=COLOR_INPUT_FONDO, text_color=COLOR_TEXTO_BLANCO,
-                             corner_radius=6, height=30, placeholder_text=ayuda)
+                             corner_radius=6, height=30, placeholder_text=ayuda,
+                             textvariable=var)
         entry.grid(row=row, column=1, sticky="ew", padx=(10, 0), pady=5)
 
         ctk.CTkLabel(master, text=unidad, width=36, font=FONT_TEXTO_PEQUENO,
@@ -181,38 +207,90 @@ class VistaTrompoEstrella(ctk.CTkScrollableFrame):
         self._crear_input(master, 7, "Altura de llama:", "cm", "40", "altura_llama")
         self._crear_input(master, 8, "Holgura mínima:", "cm", "10", "holgura_min")
 
+    def _on_datos_cambiados(self, *args):
+        if self.datos_desactualizados:
+            return # Ya está desactualizado, evitar loops y recálculos gráficos
+            
+        self.datos_desactualizados = True
+        self.resultado = None
+        self.lbl_error.configure(text="Cambiaste los datos: pulsa Calcular", text_color=COLOR_AVISO_INFO)
+        self._pintar_resumen([(e, "-") for e in ETIQUETAS_RESUMEN_SIMPLE])
+        self._pintar_avisos([])
+        self._limpiar_tablas()
+        self._limpiar_grafica()
+
     def _alternar_avanzados(self):
         if self.switch_avanzado.get():
             self.frame_avanzado.pack(fill="x", before=self.btn_calcular, pady=(5, 0))
         else:
             self.frame_avanzado.pack_forget()
         
-        # Al cambiar el modo, limpiamos resultados para no dejar datos inconsistentes
-        self.resultado = None
-        self.lbl_error.configure(text="")
-        self._pintar_resumen([(e, "-") for e in ETIQUETAS_RESUMEN_SIMPLE])
-        self._pintar_avisos([])
-        self._limpiar_tablas()
+        self.datos_desactualizados = False # reset state and force full clear
+        self._on_datos_cambiados()
 
     def _calcular(self):
         """Lee los campos, calcula y pinta. Los errores de entrada se muestran en la vista."""
+        # Temporalmente evitar que el cálculo active el trace por alguna razón (aunque solo leemos)
         valores = {clave: entry.get() for clave, entry in self.entradas.items()}
         avanzado = bool(self.switch_avanzado.get())
+        
+        self.datos_desactualizados = False # Quitamos bandera de error
+        
         try:
             entrada = leer_entrada(valores, avanzado)
             resultado = TrompoEstrellaCalculator().calcular(entrada)
         except ValueError as exc:
             self.resultado = None
-            self.lbl_error.configure(text=str(exc))
+            self.lbl_error.configure(text=str(exc), text_color=COLOR_AVISO_ERROR)
             self._pintar_resumen([(e, "-") for e in ETIQUETAS_RESUMEN_SIMPLE])
             self._pintar_avisos([])
             self._limpiar_tablas()
+            self._limpiar_grafica()
             return
+            
         self.resultado = resultado
         self.lbl_error.configure(text="")
         self._pintar_resumen(formatear_resumen(resultado))
         self._pintar_avisos(resultado.avisos)
         self._pintar_tablas(resultado, entrada)
+        self._pintar_grafica()
+
+    def _limpiar_grafica(self):
+        if self.figura_actual is not None:
+            plt.close(self.figura_actual)
+            self.figura_actual = None
+        if self.canvas_widget is not None:
+            self.canvas_widget.destroy()
+            self.canvas_widget = None
+
+    def _pintar_grafica(self):
+        self._limpiar_grafica()
+        if not self.resultado:
+            return
+            
+        tema = {
+            "fondo_figura": COLOR_GRAFICA_FONDO_FIGURA,
+            "fondo_grafica": COLOR_GRAFICA_FONDO_EJES,
+            "texto": COLOR_GRAFICA_TEXTO,
+            "lineas": COLOR_GRAFICA_LINEAS,
+            "acento": COLOR_ACENTO_NARANJA,
+            "pestana": COLOR_GRAFICA_PESTANA
+        }
+        
+        tipo = self.tipo_grafica_var.get()
+        if tipo == "Moldes":
+            self.figura_actual = figura_moldes(self.resultado, tema)
+        else:
+            self.figura_actual = figura_perfil(self.resultado, tema)
+            
+        canvas = FigureCanvasTkAgg(self.figura_actual, master=self.frame_canvas)
+        canvas.draw()
+        self.canvas_widget = canvas.get_tk_widget()
+        self.canvas_widget.pack(expand=True, fill="both")
+
+    def _cambiar_grafica(self, *args):
+        if not self.datos_desactualizados and self.resultado:
+            self._pintar_grafica()
 
     def evento_guardar_medidas(self):
         print("Guardando...")
