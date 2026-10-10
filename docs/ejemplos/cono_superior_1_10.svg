@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="64.67mm" height="353.74mm" viewBox="0 0 64.67 353.74"
+     xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape">
+  <g inkscape:groupmode="layer" inkscape:label="cuadricula" id="layer-cuadricula">
+    <line x1="32.33" y1="0" x2="32.33" y2="353.74" stroke="blue" stroke-width="0.2" id="grid-center"/>
+    <line x1="31.83" y1="0.00" x2="32.83" y2="0.00" stroke="blue" stroke-width="0.2" id="grid-step-0"/>
+    <line x1="29.85" y1="22.11" x2="34.82" y2="22.11" stroke="blue" stroke-width="0.2" id="grid-step-1"/>
+    <line x1="27.86" y1="44.22" x2="36.81" y2="44.22" stroke="blue" stroke-width="0.2" id="grid-step-2"/>
+    <line x1="25.87" y1="66.33" x2="38.80" y2="66.33" stroke="blue" stroke-width="0.2" id="grid-step-3"/>
+    <line x1="23.88" y1="88.44" x2="40.79" y2="88.44" stroke="blue" stroke-width="0.2" id="grid-step-4"/>
+    <line x1="21.89" y1="110.55" x2="42.78" y2="110.55" stroke="blue" stroke-width="0.2" id="grid-step-5"/>
+    <line x1="19.90" y1="132.65" x2="44.77" y2="132.65" stroke="blue" stroke-width="0.2" id="grid-step-6"/>
+    <line x1="17.91" y1="154.76" x2="46.76" y2="154.76" stroke="blue" stroke-width="0.2" id="grid-step-7"/>
+    <line x1="15.92" y1="176.87" x2="48.75" y2="176.87" stroke="blue" stroke-width="0.2" id="grid-step-8"/>
+    <line x1="13.93" y1="198.98" x2="50.74" y2="198.98" stroke="blue" stroke-width="0.2" id="grid-step-9"/>
+    <line x1="11.94" y1="221.09" x2="52.73" y2="221.09" stroke="blue" stroke-width="0.2" id="grid-step-10"/>
+    <line x1="9.95" y1="243.20" x2="54.72" y2="243.20" stroke="blue" stroke-width="0.2" id="grid-step-11"/>
+    <line x1="7.96" y1="265.31" x2="56.71" y2="265.31" stroke="blue" stroke-width="0.2" id="grid-step-12"/>
+    <line x1="5.97" y1="287.42" x2="58.70" y2="287.42" stroke="blue" stroke-width="0.2" id="grid-step-13"/>
+    <line x1="3.98" y1="309.53" x2="60.69" y2="309.53" stroke="blue" stroke-width="0.2" id="grid-step-14"/>
+    <line x1="1.99" y1="331.64" x2="62.68" y2="331.64" stroke="blue" stroke-width="0.2" id="grid-step-15"/>
+    <line x1="0.00" y1="353.74" x2="64.67" y2="353.74" stroke="blue" stroke-width="0.2" id="grid-step-16"/>
+  </g>
+  <g inkscape:groupmode="layer" inkscape:label="costura" id="layer-costura">
+    <path d="M 32.33,0.00 L 34.32,22.11 L 36.31,44.22 L 38.30,66.33 L 40.29,88.44 L 42.28,110.55 L 44.27,132.65 L 46.26,154.76 L 48.25,176.87 L 50.24,198.98 L 52.23,221.09 L 54.22,243.20 L 56.21,265.31 L 58.20,287.42 L 60.19,309.53 L 62.18,331.64 L 64.17,353.74 L 0.50,353.74 L 2.49,331.64 L 4.48,309.53 L 6.47,287.42 L 8.46,265.31 L 10.45,243.20 L 12.44,221.09 L 14.43,198.98 L 16.42,176.87 L 18.41,154.76 L 20.40,132.65 L 22.39,110.55 L 24.38,88.44 L 26.37,66.33 L 28.36,44.22 L 30.35,22.11 L 32.33,0.00 Z" fill="none" stroke="red" stroke-width="0.5" stroke-dasharray="2,2" id="path-seam"/>
+  </g>
+  <g inkscape:groupmode="layer" inkscape:label="contorno" id="layer-contorno">
+    <path d="M 32.83,0.00 L 34.82,22.11 L 36.81,44.22 L 38.80,66.33 L 40.79,88.44 L 42.78,110.55 L 44.77,132.65 L 46.76,154.76 L 48.75,176.87 L 50.74,198.98 L 52.73,221.09 L 54.72,243.20 L 56.71,265.31 L 58.70,287.42 L 60.69,309.53 L 62.68,331.64 L 64.67,353.74 L 0.00,353.74 L 1.99,331.64 L 3.98,309.53 L 5.97,287.42 L 7.96,265.31 L 9.95,243.20 L 11.94,221.09 L 13.93,198.98 L 15.92,176.87 L 17.91,154.76 L 19.90,132.65 L 21.89,110.55 L 23.88,88.44 L 25.87,66.33 L 27.86,44.22 L 29.85,22.11 L 31.83,0.00 Z" fill="none" stroke="black" stroke-width="1.0" id="path-cut"/>
+  </g>
+  <g inkscape:groupmode="layer" inkscape:label="etiquetas" id="layer-etiquetas">
+    <text x="32.83" y="-1.00" font-size="2" fill="blue" id="label-step-1">1</text>
+    <text x="30.85" y="21.11" font-size="2" fill="blue" id="label-step-2">2</text>
+    <text x="28.86" y="43.22" font-size="2" fill="blue" id="label-step-3">3</text>
+    <text x="26.87" y="65.33" font-size="2" fill="blue" id="label-step-4">4</text>
+    <text x="24.88" y="87.44" font-size="2" fill="blue" id="label-step-5">5</text>
+    <text x="22.89" y="109.55" font-size="2" fill="blue" id="label-step-6">6</text>
+    <text x="20.90" y="131.65" font-size="2" fill="blue" id="label-step-7">7</text>
+    <text x="18.91" y="153.76" font-size="2" fill="blue" id="label-step-8">8</text>
+    <text x="16.92" y="175.87" font-size="2" fill="blue" id="label-step-9">9</text>
+    <text x="14.93" y="197.98" font-size="2" fill="blue" id="label-step-10">10</text>
+    <text x="12.94" y="220.09" font-size="2" fill="blue" id="label-step-11">11</text>
+    <text x="10.95" y="242.20" font-size="2" fill="blue" id="label-step-12">12</text>
+    <text x="8.96" y="264.31" font-size="2" fill="blue" id="label-step-13">13</text>
+    <text x="6.97" y="286.42" font-size="2" fill="blue" id="label-step-14">14</text>
+    <text x="4.98" y="308.53" font-size="2" fill="blue" id="label-step-15">15</text>
+    <text x="2.99" y="330.64" font-size="2" fill="blue" id="label-step-16">16</text>
+    <text x="1.00" y="352.74" font-size="2" fill="blue" id="label-step-17">17</text>
+    <text x="32.33" y="343.74" font-size="4" fill="black" text-anchor="middle" id="label-info">Superior | 30 piezas | Escala 1:10.0 | Largo 353.74 cm</text>
+  </g>
+  <g inkscape:groupmode="layer" inkscape:label="diseno" id="layer-diseno">
+  </g>
+</svg>
