@@ -32,7 +32,7 @@ class Proyecto:
             ciclo = e_data.get("ciclo")
             if ciclo:
                 ciclo = [(c[0], c[1]) for c in ciclo]
-            esq = EsquemaDiseno(e_data["modo"], e_data["k"], ciclo)
+            esq = EsquemaDiseno(e_data["modo"], e_data.get("tam_grupo", e_data.get("k", 1)), ciclo)
             
         return cls(
             version=data["version"],

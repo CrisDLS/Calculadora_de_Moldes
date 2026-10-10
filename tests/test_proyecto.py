@@ -19,7 +19,7 @@ def test_proyecto_ida_y_vuelta(tmp_path):
     assert p2.entrada.altura_cuerpo == 380
     assert p2.condiciones.t_interior == 75.0
     assert p2.esquema.modo == "repeticion"
-    assert p2.esquema.k == 5
+    assert p2.esquema.tam_grupo == 5
     assert p2.notas == "Nota test"
 
 def test_proyecto_version_desconocida(tmp_path):
