@@ -13,6 +13,7 @@ que el usuario ponga debe validarse como viable o explicar por qué no.
   `BalloonCalculationResult`, `SectionResult`, `Point2D`), `utils.py` (sin uso actual: helpers
   `calcular_hipotenusa`, `calcular_ancho_gajo`, `interpolar_lineal`; se conserva por ahora),
   `gestor_archivos.py` (`GestorArchivos`: guarda/carga/lista JSON en `guardados/`).
+- `logic/geometria/` → `malla_trompo.py` para construir una malla 3D exacta mapeando isométricamente 2D a 3D (para exportar a JSON/three.js).
 - `logic/calculators/` → un módulo por tipo de globo (habrá más). La calculadora del trompo estrella
   vive en `logic/calculators/trompo_estrella.py` (`TrompoEstrellaCalculator`).
 - `ui/` → vistas (`vista_inicio`, `vista_moldes`, `vista_guardados`, `vista_disenar`, `vista_info`)
@@ -43,7 +44,7 @@ que el usuario ponga debe validarse como viable o explicar por qué no.
   comprobar la API contra la documentación de esa versión.
 - Gráfica 2D: matplotlib embebida en CustomTkinter. La construcción de la figura va en una función
   separada de la UI (`ui/modulos_moldes/graficas_trompo_estrella.py`) para reutilizarla si se migra a Flet.
-- 3D futuro: three.js (luces realistas) como HTML autocontenido; la geometría vivirá en Python puro y se serializa a JSON.
+- 3D futuro: three.js (luces realistas) como HTML autocontenido; la geometría vivirá en Python puro y se serializa a JSON (ahora usa polígonos exactos, donde R = a / (2*sin(pi/N)) y los bordes cuadran con las caras planas).
 - Nombres de archivo sin `ñ`, sin espacios y sin typos (`vista_disenar.py`, `gestor_imagenes.py`,
   `requirements.txt`).
 
