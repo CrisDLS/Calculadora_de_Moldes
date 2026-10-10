@@ -1,4 +1,8 @@
 # app_flet/main.py
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import flet as ft
 from app_flet.vistas.trompo import VistaTrompo
 from app_flet import tema
@@ -14,5 +18,4 @@ def main(page: ft.Page):
     vista = VistaTrompo()
     page.add(vista)
 
-if __name__ == "__main__":
-    ft.app(target=main)
+
