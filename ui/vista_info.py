@@ -1,6 +1,7 @@
 # ui/vista_info.py
 import customtkinter as ctk
-from configuracion.constantes import *
+from configuracion.constantes import (COLOR_ACENTO_NARANJA, COLOR_SELECCION_SIDEBAR, COLOR_TEXTO_BLANCO,
+                                      COLOR_TEXTO_GRIS_CLARO, FONT_TITULO_GRANDE, FONT_TITULO_MEDIANO)
 
 class VistaInfo(ctk.CTkFrame):
     def __init__(self, master, **kwargs):
@@ -11,7 +12,7 @@ class VistaInfo(ctk.CTkFrame):
         frame_header.pack(fill="x", pady=(20, 10))
         # TODO: Icono información
         ctk.CTkLabel(frame_header, text="[i]", font=("Arial", 40), text_color=COLOR_ACENTO_NARANJA).pack(side="left", padx=(0,10))
-        ctk.CTkLabel(frame_header, text="Mas Información", font=FONT_TITULO_GRANDE, text_color=COLOR_TEXTO_BLANCO).pack(side="left")
+        ctk.CTkLabel(frame_header, text="Más Información", font=FONT_TITULO_GRANDE, text_color=COLOR_TEXTO_BLANCO).pack(side="left")
         
         ctk.CTkFrame(self, height=2, fg_color=COLOR_TEXTO_GRIS_CLARO).pack(fill="x", pady=(0, 30))
 

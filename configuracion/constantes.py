@@ -19,3 +19,20 @@ FONT_TITULO_MEDIANO = ("Roboto", 20, "bold")
 FONT_TEXTO_NORMAL = ("Roboto", 14)
 FONT_TEXTO_PEQUENO = ("Roboto", 12)
 FONT_BOTON = ("Roboto", 16, "bold")
+# Avisos de viabilidad (fondo del panel; texto blanco salvo en el ámbar)
+COLOR_AVISO_ERROR = "#c0392b"   # rojo
+COLOR_AVISO_AVISO = "#f0ad4e"   # ámbar
+COLOR_AVISO_AVISO_TEXTO = "#1e1e1e"   # texto oscuro sobre el ámbar
+COLOR_AVISO_OK = "#2e8b57"      # verde
+COLOR_AVISO_INFO = "#5c5c5c"    # gris
+
+# Precisión de tablas
+DECIMALES_TABLA = 2
+
+# Colores gráfica matplotlib
+COLOR_GRAFICA_FONDO_FIGURA = COLOR_FONDO_APP
+COLOR_GRAFICA_FONDO_EJES = COLOR_INPUT_FONDO
+COLOR_GRAFICA_TEXTO = COLOR_TEXTO_BLANCO
+COLOR_GRAFICA_LINEAS = COLOR_TEXTO_GRIS_CLARO
+COLOR_GRAFICA_PESTANA = COLOR_ACENTO_NARANJA
+

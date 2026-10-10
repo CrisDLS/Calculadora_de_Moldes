@@ -1,106 +1,97 @@
 # widgets/sidebar.py
 import customtkinter as ctk
-from configuracion.constantes import *
-
+from configuracion.constantes import (COLOR_ACENTO_NARANJA, COLOR_FONDO_SIDEBAR, COLOR_SELECCION_SIDEBAR,
+                                      COLOR_TEXTO_BLANCO, FONT_TEXTO_NORMAL)
+from utils.gestor_imagenes import GestorImagenes
 
 class Sidebar(ctk.CTkFrame):
     def __init__(self, master, comando_navegacion, **kwargs):
         super().__init__(master, fg_color=COLOR_FONDO_SIDEBAR, width=250, corner_radius=0, **kwargs)
         self.comando_navegacion = comando_navegacion
-        
-        # Estado inicial
         self.es_expandido = True 
-
-        # Evitamos que el frame se encoja automáticamente al contenido
         self.grid_propagate(False)
 
-        # --- Botón Hamburguesa (Ahora es un Botón funcional) ---
-        self.btn_menu = ctk.CTkButton(self, text="☰", font=("Arial", 26), 
-                                      fg_color="transparent", 
-                                      text_color=COLOR_ACENTO_NARANJA,
-                                      width=40,
-                                      hover_color=COLOR_SELECCION_SIDEBAR,
-                                      command=self.alternar_sidebar) # <--- Vinculamos la función
-        # Lo alineamos a la izquierda (w)
+        # 1. Instanciamos el Gestor
+        self.gestor = GestorImagenes()
+
+        # 2. DEFINICIÓN: Solo Texto y Clave. La imagen la pedimos después.
+        self.menu_items = [
+            ("Inicio", "inicio"),
+            ("Moldes", "moldes"),
+            ("Guardados", "guardados"),
+            ("🎨 Diseñar", "diseñar"),
+            ("Más Información", "info")
+        ]
+
+        self.botones = {}
+
+        # --- Botón Hamburguesa ---
+        self.btn_menu = ctk.CTkButton(self, text="☰", font=("Arial", 26), width=40, 
+                                      fg_color="transparent", text_color=COLOR_ACENTO_NARANJA,
+                                      hover_color=COLOR_SELECCION_SIDEBAR, anchor="w",
+                                      command=self.alternar_sidebar)
         self.btn_menu.pack(pady=(20, 40), padx=15, anchor="w")
 
-        # Lista para guardar referencias a los botones y poder cambiar su texto luego
-        self.botones_menu = []
+        # --- Generación de Botones ---
+        for texto, clave in self.menu_items:
+            # PEDIMOS LA IMAGEN AL GESTOR (Tipo Sidebar)
+            icono = self.gestor.obtener_imagen(clave, tipo="sidebar")
+            
+            btn = self._crear_boton_generico(f"   {texto}", clave, icono)
+            self.botones[clave] = btn
+            btn.pack(pady=5, padx=10, fill="x")
 
-        # --- Botones de Navegación ---
-        self.btn_inicio = self._crear_boton_menu("Inicio", "inicio")
-        self.btn_moldes = self._crear_boton_menu("Moldes", "moldes")
-        self.btn_guardados = self._crear_boton_menu("Guardados", "guardados")
-        self.btn_info = self._crear_boton_menu("Mas\nInfomacion", "info")
+        self.espaciador = ctk.CTkFrame(self, fg_color="transparent")
+        self.espaciador.pack(expand=True, fill="y")
 
-        self.seleccionar_boton("inicio")
-
-        # --- Botón Inferior ---
-        # Guardamos el texto original en un atributo custom para usarlo luego
-        self.btn_info = ctk.CTkButton(self, text="Mas\ninfromación", anchor="w", fg_color="transparent",
-                                      text_color=COLOR_TEXTO_BLANCO, hover=False, font=FONT_TEXTO_NORMAL)
-        self.btn_info.texto_original = "Mas\ninfromación" # Hack para guardar el texto
+        """# --- Botón Info ---
+        icono_info = self.gestor.obtener_imagen("info", tipo="sidebar")
+        self.btn_info = self._crear_boton_generico("Mas\nInformación", "info", icono_info)
+        self.botones["info"] = self.btn_info
         self.btn_info.pack(side="bottom", fill="x", pady=20, padx=10)
 
-    def _crear_boton_menu(self, texto, nombre_vista):
-        # Nota: Cuando tengas iconos, agrégalos aquí con el parámetro image=tu_imagen
-        btn = ctk.CTkButton(self, text=f"   {texto}", anchor="w", 
-                            fg_color="transparent", 
-                            text_color=COLOR_TEXTO_BLANCO,
-                            font=FONT_TEXTO_NORMAL,
-                            height=50,
-                            corner_radius=10,
-                            hover_color=COLOR_SELECCION_SIDEBAR,
-                            command=lambda v=nombre_vista: self.navegar(v))
-        
-        # Guardamos el texto original dentro del objeto botón para recordarlo
-        btn.texto_original = f"   {texto}"
-        
-        btn.pack(pady=5, padx=10, fill="x")
-        self.botones_menu.append(btn) # Lo agregamos a la lista
+        self.seleccionar_boton("inicio")"""
+
+    def _crear_boton_generico(self, texto, clave, icono):
+        btn = ctk.CTkButton(
+            self, text=texto, image=icono, compound="left", anchor="w", 
+            fg_color="transparent", text_color=COLOR_TEXTO_BLANCO,
+            font=FONT_TEXTO_NORMAL, height=50, corner_radius=10,
+            hover_color=COLOR_SELECCION_SIDEBAR,
+            # AL NAVEGAR: También pasamos la imagen
+            command=lambda v=clave: self.navegar(v)
+        )
+        btn.texto_original = texto
         return btn
 
     def navegar(self, vista):
         self.seleccionar_boton(vista)
         if self.comando_navegacion:
-            self.comando_navegacion(vista)
+            # El título principal cambie su icono,
+            icono_header = self.gestor.obtener_imagen(vista, tipo="header")
+            
+            # Enviamos el nombre de la vista Y su icono grande correspondiente
+            self.comando_navegacion(vista, icono_header)
 
-    def seleccionar_boton(self, nombre_vista):
-        # Reseteamos colores
-        self.btn_inicio.configure(fg_color="transparent")
-        self.btn_moldes.configure(fg_color="transparent")
-        self.btn_guardados.configure(fg_color="transparent")
-
-        # Resaltamos
-        if nombre_vista == "inicio":
-            self.btn_inicio.configure(fg_color=COLOR_SELECCION_SIDEBAR)
-        elif nombre_vista == "moldes":
-            self.btn_moldes.configure(fg_color=COLOR_SELECCION_SIDEBAR)
-        elif nombre_vista == "guardados":
-            self.btn_guardados.configure(fg_color=COLOR_SELECCION_SIDEBAR)
+    def seleccionar_boton(self, vista_seleccionada):
+        # 1. Limpiamos TODOS los botones 
+        for btn in self.botones.values():
+            btn.configure(fg_color="transparent")
+        
+        # 2. Iluminamos SOLO el seleccionado
+        if vista_seleccionada in self.botones:
+            self.botones[vista_seleccionada].configure(fg_color=COLOR_SELECCION_SIDEBAR)
 
     def alternar_sidebar(self):
         if self.es_expandido:
             # --- COLAPSAR ---
-            self.configure(width=70) # Reducir ancho del sidebar
-            
-            # Ocultar texto de los botones de navegación
-            for btn in self.botones_menu:
+            self.configure(width=60)
+            for btn in self.botones.values(): # Recorre botones principales e info
                 btn.configure(text="") 
-            
-            # Ocultar texto del botón info
-            self.btn_info.configure(text="")
-            
             self.es_expandido = False
         else:
             # --- EXPANDIR ---
-            self.configure(width=250) # Restaurar ancho original
-            
-            # Restaurar texto de los botones
-            for btn in self.botones_menu:
-                btn.configure(text=btn.texto_original)
-            
-            # Restaurar texto info
-            self.btn_info.configure(text=self.btn_info.texto_original)
-            
+            self.configure(width=180)
+            for btn in self.botones.values():
+                btn.configure(text=btn.texto_original) # Recupera el texto guardado
             self.es_expandido = True

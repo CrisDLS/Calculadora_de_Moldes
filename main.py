@@ -2,12 +2,12 @@
 import customtkinter as ctk
 import os
 import sys
-from configuracion.constantes import *
-from widgets.sidebar_2 import Sidebar
+from configuracion.constantes import COLOR_FONDO_APP
+from widgets.sidebar import Sidebar
 from ui.vista_inicio import VistaInicio
 from ui.vista_moldes import VistaMoldes
 from ui.vista_guardados import VistaGuardados
-from ui.vista_diseñar import VistaDiseñar
+from ui.vista_disenar import VistaDiseñar
 from ui.vista_info import VistaInfo
 from ui.modulos_moldes.vista_trompo_estrella import VistaTrompoEstrella
 
