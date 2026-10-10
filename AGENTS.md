@@ -5,6 +5,7 @@ Dadas altura, gajos, hileras de picos y costura, calcular las TRES piezas planas
 cada gajo (cono superior, pico, cono inferior) para cortar el molde de un globo de
 papel china que se eleva con aire caliente (tradición de Veracruz). Cualquier medida
 que el usuario ponga debe validarse como viable o explicar por qué no.
+* Flujo del usuario: dibuja los diseños sobre los moldes planos a escala, en grupos de k gajos vecinos que se repiten (repetición, espejo total, o gajo central con vecinos en espejo). Hoy usa GeoGebra para el molde e Inkscape para trazar.
 
 ## Estructura real del repositorio
 - `main.py` → app CustomTkinter (`App`): sidebar + `content_frame` + vistas con carga perezosa.
@@ -16,6 +17,7 @@ que el usuario ponga debe validarse como viable o explicar por qué no.
   vive en `logic/calculators/trompo_estrella.py` (`TrompoEstrellaCalculator`).
 - `ui/` → vistas (`vista_inicio`, `vista_moldes`, `vista_guardados`, `vista_disenar`, `vista_info`)
   y `ui/modulos_moldes/vista_trompo_estrella.py`.
+  **NOTA: LA UI DE CUSTOMTKINTER QUEDA CONGELADA (Se migrará a Flet).** No hacer mejoras de interfaz ni añadir el 3D con matplotlib.
 - `widgets/sidebar.py` (único sidebar),
   `configuracion/constantes.py` (colores; se importan los nombres de forma explícita, sin `import *`),
   `utils/gestor_imagenes.py`, `recursos/`.
@@ -41,6 +43,7 @@ que el usuario ponga debe validarse como viable o explicar por qué no.
   comprobar la API contra la documentación de esa versión.
 - Gráfica 2D: matplotlib embebida en CustomTkinter. La construcción de la figura va en una función
   separada de la UI (`ui/modulos_moldes/graficas_trompo_estrella.py`) para reutilizarla si se migra a Flet.
+- 3D futuro: three.js (luces realistas) como HTML autocontenido; la geometría vivirá en Python puro y se serializa a JSON.
 - Nombres de archivo sin `ñ`, sin espacios y sin typos (`vista_disenar.py`, `gestor_imagenes.py`,
   `requirements.txt`).
 
