@@ -15,7 +15,12 @@ que el usuario ponga debe validarse como viable o explicar por qué no.
   - Espejo total: $G$ debe ser par. Los motivos se abren en espejo desde el centro del grupo (sin un motivo impar al medio) y el espejo continúa en la unión entre grupos.
 
 ## Estructura real del repositorio
-- `main.py` → app CustomTkinter (`App`): sidebar + `content_frame` + vistas con carga perezosa.
+- `main.py` → punto de entrada de la app en Flet (`ft.run(main)`).
+- `app_flet/` → interfaz en Flet:
+  - `main.py`: configuración de ventana y montaje de vistas.
+  - `tema.py`: diseño, paleta y estilos.
+  - `controlador.py`: estado puro en Python y puente con la lógica/presentación.
+  - `vistas/trompo.py`: vista principal del trompo estrella.
 - `logic/` → lógica de negocio pura:
   - `interfaces.py` (`BalloonCalculator`).
   - `models.py` (`BalloonInput`, `BalloonCalculationResult`, `SectionResult`, `Point2D`).
@@ -23,44 +28,27 @@ que el usuario ponga debe validarse como viable o explicar por qué no.
   - `diseno/esquema.py` (esquemas `repeticion`, `central_espejo`, `espejo_total` con tamaño de grupo).
   - `exportacion/svg_moldes.py` (generación de moldes sueltos en mm a escala real y hojas de trazo automáticas en Carta/A4 con múltiples copias).
   - `geometria/malla_trompo.py` para construir una malla 3D exacta mapeando isométricamente 2D a 3D (para exportar a JSON/three.js).
-  - `utils.py` (sin uso actual: helpers; se conserva por ahora).
   - `gestor_archivos.py` (`GestorArchivos`: guarda/carga/lista JSON en `guardados/`).
-- `logic/calculators/` → un módulo por tipo de globo (habrá más). La calculadora del trompo estrella
-  vive en `logic/calculators/trompo_estrella.py` (`TrompoEstrellaCalculator`).
-- `ui/` → vistas (`vista_inicio`, `vista_moldes`, `vista_guardados`, `vista_disenar`, `vista_info`)
-  y `ui/modulos_moldes/vista_trompo_estrella.py`.
-  **NOTA: LA UI DE CUSTOMTKINTER QUEDA CONGELADA (Se migrará a Flet).** No hacer mejoras de interfaz ni añadir el 3D con matplotlib.
-- `widgets/sidebar.py` (único sidebar),
-  `configuracion/constantes.py` (colores; se importan los nombres de forma explícita, sin `import *`),
-  `utils/gestor_imagenes.py`, `recursos/`.
-- `scripts/reporte_trompo_estrella.py` → runner de consola (argparse: altura gajos hileras costura
-  `--avanzado`); la presentación en consola va aquí, no en `logic/`.
-- `referencia/trompo_estrella.py` → prototipo autocontenido con la lógica CORRECTA y validada
-  (no forma parte de la app; es la referencia a portar y contra la que corren los tests).
-  `referencia/parche/` → versión ya portada de models/calculadora/test, solo como guía (revisar, no copiar).
+- `presentacion/` → capa pura compartida de formateo de datos para la UI (`presentacion/trompo_estrella.py`).
+- `configuracion/constantes.py` → constantes del negocio y formatos (`DECIMALES_TABLA`).
+- `recursos/` → iconos e imágenes del proyecto.
+- `scripts/reporte_trompo_estrella.py` → runner de consola (argparse: altura gajos hileras costura `--avanzado`).
+- `referencia/trompo_estrella.py` → prototipo autocontenido con la lógica CORRECTA y validada.
 - `tests/` → pruebas con pytest (se corren desde la raíz; `pytest.ini` fija `pythonpath = .`).
-- `requirements.txt` → dependencias (customtkinter, pillow, matplotlib, pytest).
+- `requirements.txt` → dependencias (`pytest`, `flet`).
+- La interfaz previa en CustomTkinter fue retirada y queda preservada en la etiqueta `ctk-final` (`git checkout ctk-final` para consultarla).
 
 ## Reglas de arquitectura
-- `logic/` NUNCA importa `customtkinter`, `flet` ni `tkinter`, y NUNCA imprime ni lee consola:
+- `logic/` NUNCA importa `flet`, y NUNCA imprime ni lee consola:
   `calcular()` devuelve objetos. Nuevos tipos de globo implementan `BalloonCalculator`.
 - La UI solo recoge entradas, llama a `calcular()` y muestra resultados; no contiene fórmulas.
 - Tareas largas (dibujar moldes, exportar PDF/DXF) reciben un callback `on_progress(fraccion, texto)`
   y se ejecutan fuera del hilo de la interfaz.
-- Tarea 1: portar `referencia/trompo_estrella.py` a `logic/calculators/` sin cambiar resultados
-  (tests primero). Reemplazar la clase vieja `TrompoEstrellaCalculator`. (COMPLETADO)
-- Tarea 2: (COMPLETADO) interfaz principal (vista y tablas, gráfica y validación dinámica de "datos desactualizados").
-- Tarea 3 (después, en una rama aparte): evaluar migrar la UI de CustomTkinter a Flet. Primero la app
-  completa, funcional y probada en CustomTkinter. Fijar la versión de Flet en `requirements.txt` y
-  comprobar la API contra la documentación de esa versión.
-- Gráfica 2D: matplotlib embebida en CustomTkinter. La construcción de la figura va en una función
-  separada de la UI (`ui/modulos_moldes/graficas_trompo_estrella.py`) para reutilizarla si se migra a Flet.
 - 3D futuro: three.js (luces realistas) como HTML autocontenido; la geometría vivirá en Python puro y se serializa a JSON.
   - CONVENCIÓN: El "largo" (generatriz) de las piezas es el eje central (apotema de la cara 3D), no el borde lateral (que mide sqrt(largo² + (a/2)²)).
   - La malla usa polígonos exactos (R = a / (2*sin(pi/N))) y alturas calculadas con apotemas para que las áreas y ejes coincidan perfectamente.
   - DIFERENCIA: La calculadora estima un globo circular (altura armada ≈703.8 cm). La malla exacta (polígono) resulta en una altura Z máx ligeramente mayor (≈706.3 cm) por la diferencia entre circunferencia y perímetro poligonal (diferencia de ~0.35 %). NO cambiar la calculadora.
-- Nombres de archivo sin `ñ`, sin espacios y sin typos (`vista_disenar.py`, `gestor_imagenes.py`,
-  `requirements.txt`).
+- Nombres de archivo sin `ñ`, sin espacios y sin typos (`requirements.txt`).
 
 ## Modos de cálculo (campo `usar_parametros_avanzados: bool = False` en `BalloonInput`)
 - MODO SIMPLE (por defecto): calcula las 3 piezas con la boca por defecto (11 % del largo, necesaria
@@ -108,8 +96,8 @@ pico = triángulo, uno por gajo y por hilera. Prototipo mínimo recomendado: ~38
 - Responde en español.
 
 ## Migración a Flet (en progreso)
-- `main.py` levanta CustomTkinter (congelado).
-- `run_flet.py` levanta la nueva UI (`python run_flet.py` o `.venv\Scripts\flet.exe run run_flet.py`).
+- La interfaz es SOLO Flet; CustomTkinter queda en la etiqueta `ctk-final` (`git checkout ctk-final`).
+- `main.py` levanta la app Flet (`python main.py` o `.venv\Scripts\flet.exe run main.py`).
 - Decisiones:
   - `presentacion/` compartida entre CustomTkinter y Flet (sin dependencias de UI).
   - Controlador Flet (`app_flet/controlador.py`) en Python puro, sin importar Flet ni UI, cálculo instantáneo síncrono sin hilos.
