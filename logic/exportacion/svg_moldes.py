@@ -109,18 +109,23 @@ def svg_pieza(resultado: BalloonCalculationResult, entrada: BalloonInput, seccio
         fs_paso = 2 * estilo.factor_texto
         fs_info = 4 * estilo.factor_texto
 
+    # Evitar traslape vertical entre números de paso contiguos si el paso es pequeño
+    if len(sec_res.puntos) >= 2:
+        dys = [abs(sec_res.puntos[k+1].largo_acumulado - sec_res.puntos[k].largo_acumulado) * factor for k in range(len(sec_res.puntos)-1)]
+        min_dy = min(dys) if dys else 10.0
+        if min_dy > 0:
+            fs_paso = min(fs_paso, min_dy * 0.70)
+
     lines.append('  <g inkscape:groupmode="layer" inkscape:label="etiquetas" id="layer-etiquetas">')
     for i, p in enumerate(sec_res.puntos):
         y = get_y(p.largo_acumulado)
         w_cut = p.ancho_medio * factor
         lines.append(f'    <text x="{cx - w_cut + 1:.2f}" y="{y - 1:.2f}" font-size="{fs_paso:.2f}" fill="{estilo.cuadricula}" id="label-step-{i+1}">{i+1}</text>')
     
-    # Etiqueta general cerca de la punta
-    offset_info = max(10.0, fs_info * 1.5)
-    if seccion == "inferior":
-        text_y = get_y(0.0) - offset_info # arriba de la boca
-    else:
-        text_y = get_y(L_real) - offset_info # arriba del pico
+    # Etiqueta general fuera del contorno de corte (arriba de la punta más alta)
+    offset_info = max(6.0, fs_info * 1.2)
+    # En inferior, y=0 es el extremo superior (boca); en superior/pico, y=0 es la punta
+    text_y = -offset_info
     lines.append(f'    <text x="{cx:.2f}" y="{text_y:.2f}" font-size="{fs_info:.2f}" fill="{estilo.texto}" text-anchor="middle" id="label-info">{seccion.capitalize()} | {sec_res.cantidad} piezas | Escala 1:{escala} | Largo {L_real:.2f} cm</text>')
     lines.append('  </g>')
 
@@ -282,10 +287,15 @@ def svg_hoja(resultado: BalloonCalculationResult, entrada: BalloonInput, seccion
     off_x = (w_page - total_w_content) / 2
     off_y = (h_page - total_h_content) / 2
 
+    # Asegurar que las piezas no invadan el encabezado superior
+    fs_header = 4 * estilo.factor_texto
+    min_off_y = 10.0 + fs_header + 4.0
+    if off_y < min_off_y:
+        off_y = min_off_y
+
     asignaciones = esquema.asignar(entrada.num_gajos)
     resumen = esquema.resumen_motivos(asignaciones)
 
-    fs_header = 4 * estilo.factor_texto
     lines.append('  <g inkscape:groupmode="layer" inkscape:label="encabezado" id="layer-encabezado">')
     lines.append(f'    <text x="10" y="10" font-size="{fs_header:.2f}" fill="{estilo.texto}">Escala 1:{factor_S:.1f} | Hoja {hoja.capitalize()}</text>')
     lines.append('  </g>')
@@ -298,11 +308,26 @@ def svg_hoja(resultado: BalloonCalculationResult, entrada: BalloonInput, seccion
     fs_paso = 2 * estilo.factor_texto
     fs_molde = 3 * estilo.factor_texto
 
+    # Evitar traslape entre números de pasos contiguos
+    if len(sec_res.puntos) >= 2:
+        dys = [abs(sec_res.puntos[k+1].largo_acumulado - sec_res.puntos[k].largo_acumulado) * factor for k in range(len(sec_res.puntos)-1)]
+        min_dy = min(dys) if dys else 10.0
+        if min_dy > 0:
+            fs_paso = min(fs_paso, min_dy * 0.70)
+
+    # Limitar fs_molde para que no colisione horizontalmente con columnas vecinas
+    if cols > 1:
+        ancho_slot = W_svg + gap_mm
+        fs_molde = min(fs_molde, (ancho_slot - 2.0) / 16.0)
+
+    gap_mm = 5.0
+    gap_y_mm = max(gap_mm, fs_molde * 2.5 + 4.0)
+
     for i, motivo in enumerate(motivos):
         c = i % cols
         r = i // cols
         tx = off_x + c * (W_svg + gap_mm)
-        ty = off_y + r * (H_svg + gap_mm)
+        ty = off_y + r * (H_svg + gap_y_mm)
         
         lines.append(f'  <g transform="translate({tx:.2f}, {ty:.2f})" id="pieza-{i}">')
         
@@ -333,10 +358,11 @@ def svg_hoja(resultado: BalloonCalculationResult, entrada: BalloonInput, seccion
         t_tot = tot * cant_por_gajo
         t_en_esp = en_esp * cant_por_gajo
         
+        # Colocar rótulo del molde arriba o abajo de la pieza sin pisar los números de paso
         if seccion == "inferior":
-            text_y = get_y(0.0) - 6
+            text_y = -fs_molde * 0.5
         else:
-            text_y = get_y(L_real) - 6
+            text_y = H_svg + fs_molde * 1.0 + 1.0
 
         lineas_molde = [f"Molde {motivo} — ×{t_tot}"]
         if t_en_esp > 0:
@@ -539,11 +565,19 @@ def svg_conjunto(resultado: BalloonCalculationResult, entrada: BalloonInput, esc
         # Cuadrícula
         lines.append(f'    <g id="cuadricula-{clave}" inkscape:groupmode="layer" inkscape:label="cuadricula-{clave}">')
         lines.append(f'      <line x1="{cx:.2f}" y1="{y_piezas_top:.2f}" x2="{cx:.2f}" y2="{y_piezas_top + l_real*factor:.2f}" stroke="{estilo.eje}" stroke-width="{w_eje:.2f}" id="grid-center-{clave}"/>')
+        
+        fs_paso_pieza = fs_paso
+        if len(sec.puntos) >= 2:
+            dys = [abs(sec.puntos[k+1].largo_acumulado - sec.puntos[k].largo_acumulado) * factor for k in range(len(sec.puntos)-1)]
+            min_dy = min(dys) if dys else 10.0
+            if min_dy > 0:
+                fs_paso_pieza = min(fs_paso, min_dy * 0.70)
+
         for idx, p in enumerate(sec.puntos):
             y = get_y(p.largo_acumulado)
             w_cut = p.ancho_medio * factor
             lines.append(f'      <line x1="{cx - w_cut:.2f}" y1="{y:.2f}" x2="{cx + w_cut:.2f}" y2="{y:.2f}" stroke="{estilo.cuadricula}" stroke-width="{w_cuad:.2f}" id="grid-step-{clave}-{idx}"/>')
-            lines.append(f'      <text x="{cx - w_cut + 1.0:.2f}" y="{y - 0.8:.2f}" font-size="{fs_paso:.2f}" fill="{estilo.cuadricula}" id="label-step-{clave}-{idx+1}">{idx+1}</text>')
+            lines.append(f'      <text x="{cx - w_cut + 1.0:.2f}" y="{y - 0.8:.2f}" font-size="{fs_paso_pieza:.2f}" fill="{estilo.cuadricula}" id="label-step-{clave}-{idx+1}">{idx+1}</text>')
         lines.append('    </g>')
 
         # Costura
