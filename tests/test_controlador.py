@@ -123,3 +123,21 @@ def test_controlador_cambiar_estilo():
     assert c.resultado is res_orig  # No recalcula
     assert PANTALLA_CLARO.contorno in c.svg_conjunto
     assert vm.svg_conjunto == c.svg_conjunto
+
+def test_controlador_sin_guardar_estado():
+    c = ControladorTrompo()
+    # Al iniciar, no hay cambios sin guardar
+    assert c.sin_guardar is False
+    assert c.get_view_model().sin_guardar is False
+
+    # Al cambiar un campo, pasa a sin_guardar=True
+    c.actualizar_campo("altura", "1000")
+    assert c.sin_guardar is True
+
+    # Al iniciar nuevo proyecto, se limpia a False
+    c.nuevo()
+    assert c.sin_guardar is False
+
+    # Al calcular pasa a True
+    c.calcular()
+    assert c.sin_guardar is True

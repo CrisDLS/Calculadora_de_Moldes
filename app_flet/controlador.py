@@ -237,6 +237,7 @@ class ControladorTrompo:
             # Generar tablas y SVGs
             self.tablas = formatear_tablas(self.resultado, self.entrada_actual)
             self._generar_svgs()
+            self.sin_guardar = True
         except ValueError as e:
             self.mensaje_error = str(e)
 
