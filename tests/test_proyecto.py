@@ -5,21 +5,39 @@ from logic.diseno.esquema import EsquemaDiseno
 from logic.proyecto.modelo import Proyecto, guardar_proyecto, cargar_proyecto
 
 def test_proyecto_ida_y_vuelta(tmp_path):
-    ent = BalloonInput(380, 30, 2, 1, usar_parametros_avanzados=True, pestana_boca=4)
+    ent = BalloonInput(
+        380, 30, 2, 1,
+        usar_parametros_avanzados=True,
+        diametro_boca=50.0,
+        pestana_boca=4.0,
+        diametro_mecha=25.0,
+        masa_mecha_g=40.0,
+        alambre_mm=1.5,
+        varillas=2,
+        altura_llama=40.0,
+        holgura_min=10.0,
+    )
     cond = Condiciones(t_ambiente=25.0, t_interior=75.0)
-    esq = EsquemaDiseno("repeticion", 5)
-    p1 = Proyecto(1, "Test 1", ent, cond, esq, "Nota test")
+    ciclo = [(0, False), (1, False), (2, True), (1, True)]
+    esq = EsquemaDiseno("personalizado", 4, ciclo=ciclo)
+    p1 = Proyecto(1, "Test Completo", ent, cond, esq, "Nota test", hoja="a4", escala=15)
     
     ruta = tmp_path / "test.json"
     guardar_proyecto(p1, str(ruta))
     
     p2 = cargar_proyecto(str(ruta))
     assert p2.version == 1
-    assert p2.nombre == "Test 1"
+    assert p2.nombre == "Test Completo"
     assert p2.entrada.altura_cuerpo == 380
+    assert p2.entrada.usar_parametros_avanzados is True
+    assert p2.entrada.diametro_boca == 50.0
+    assert p2.entrada.pestana_boca == 4.0
     assert p2.condiciones.t_interior == 75.0
-    assert p2.esquema.modo == "repeticion"
-    assert p2.esquema.tam_grupo == 5
+    assert p2.esquema.modo == "personalizado"
+    assert p2.esquema.tam_grupo == 4
+    assert p2.esquema.ciclo == [(0, False), (1, False), (2, True), (1, True)]
+    assert p2.hoja == "a4"
+    assert p2.escala == 15
     assert p2.notas == "Nota test"
 
 def test_proyecto_version_desconocida(tmp_path):
@@ -38,13 +56,15 @@ def test_proyecto_json_corrupto(tmp_path):
 
 def test_proyecto_campos_faltantes_valores_defecto(tmp_path):
     ruta = tmp_path / "faltantes.json"
-    # Falta esquema, condiciones y notas
+    # Archivo viejo: sin esquema, condiciones, notas, hoja ni escala
     with open(ruta, "w", encoding="utf-8") as f:
         f.write('{"version": 1, "nombre": "min", "entrada": {"altura_cuerpo": 100, "num_gajos": 10, "num_hileras_picos": 1, "ancho_costura": 1}}')
     
     p = cargar_proyecto(str(ruta))
     assert p.esquema is None
     assert p.notas == ""
+    assert p.hoja == "carta"
+    assert p.escala == "auto"
     assert p.condiciones.t_ambiente == 28.0 # valor por defecto de Condiciones
 
 def test_proyecto_falta_entrada(tmp_path):

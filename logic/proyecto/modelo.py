@@ -1,6 +1,6 @@
 import json
 from dataclasses import dataclass, asdict
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Union
 from logic.models import BalloonInput, Condiciones
 from logic.diseno.esquema import EsquemaDiseno
 
@@ -12,6 +12,8 @@ class Proyecto:
     condiciones: Condiciones
     esquema: Optional[EsquemaDiseno]
     notas: str
+    hoja: str = "carta"
+    escala: Union[str, int, float] = "auto"
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Proyecto":
@@ -40,7 +42,9 @@ class Proyecto:
             entrada=ent,
             condiciones=cond,
             esquema=esq,
-            notas=data.get("notas", "")
+            notas=data.get("notas", ""),
+            hoja=data.get("hoja", "carta"),
+            escala=data.get("escala", "auto"),
         )
 
 def _migrar_proyecto(data: Dict[str, Any]) -> Dict[str, Any]:
