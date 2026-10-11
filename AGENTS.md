@@ -77,12 +77,12 @@ con hipotenusa) NO coincide con el Excel: reemplazarla.
 - Mecha/parrilla: diámetro = 50 % de la boca (medida del usuario). Holgura = radio_boca − radio_mecha;
   mínimo 10 cm (criterio inicial). Boca mínima = mecha + 2·holgura_min.
 - Empuje: gas ideal, 28 °C ambiente, 70 °C interior, papel 20 g/m² (+20 % pegamento).
-- Pliego ≈ 50×75 cm (+15 % desperdicio). Gajo ideal ≤ 70 cm de ancho.
+- Pliego ≈ 50×70 cm (+15 % desperdicio, configurable en Condiciones y proyecto). Gajo ideal ≤ 70 cm de ancho.
 
 ## Valores de referencia (test de regresión: 950 / 30 gajos / 2 hileras / 1 cm)
 - ancho_gajo 63.6696 · cono sup: largo 353.7441, salto 22.1090, semiancho final 32.3348, 17 puntos
 - pico: largo 76.4035, 12 puntos · cono inf: largo 468.9166, 25 puntos, semiancho inicial 5.9716
-- boca 104.5 · gajos mín (70/50 cm): 28 / 40 · altura armada ≈ 704 · empuje ≈ 14.4 kg
+- boca 104.5 · gajos mín (70/50 cm): 28 / 40 · altura armada ≈ 704 · empuje ≈ 14.4 kg · pliegos ≈ 490 (489.85)
 
 ## Supuestos por calibrar con prototipo (no son datos publicados)
 pestaña 4 cm · holgura 10 cm · altura de llama 40 cm · 70 °C interior · +20 % pegamento ·

@@ -117,7 +117,7 @@ def test_resumen_avanzado_950():
     assert filas["Holgura mecha-papel"] == "26.1 cm"
     assert filas["Empuje"] == "15.2 kg"
     assert filas["Carga neta para la mecha"] == "11.5 kg"
-    assert filas["Pliegos"] == "457"
+    assert filas["Pliegos"] == "490"
     assert filas["Viable"] == "Sí"
 
 

@@ -32,7 +32,7 @@ def test_condiciones_por_defecto():
     assert (c.papel_gm2, c.extra_pegamento) == (20.0, 0.20)
     assert (c.t_ambiente, c.t_interior, c.presion_pa) == (28.0, 70.0, 101325.0)
     assert c.desperdicio == 0.15
-    assert c.pliego_cm == (50.0, 75.0)
+    assert c.pliego_cm == (50.0, 70.0)
 
 
 def test_section_result_campos_nuevos_por_defecto():

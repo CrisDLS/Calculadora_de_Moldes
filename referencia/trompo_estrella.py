@@ -23,7 +23,7 @@ F_PICO = 1.20          # altura del pico = 120 % del ancho de gajo
 F_MECHA = 0.50         # diámetro de la parrilla/mecha = 50 % de la boca (medición del autor)
 DENSIDAD_ACERO = 7850  # kg/m³
 INTERVALOS = {"Cono superior": 16, "Pico": 11, "Cono inferior": 24}
-PLIEGO_CM = (50, 75)   # tamaño aprox. de pliego de papel china (confirmar con proveedor)
+PLIEGO_CM = (50, 70)   # tamaño de pliego de papel china (70 y 50 cm lados de referencia)
 
 
 @dataclass(frozen=True)

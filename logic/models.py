@@ -41,7 +41,7 @@ class Condiciones:
     t_interior: float = 70.0
     presion_pa: float = 101325.0
     desperdicio: float = 0.15
-    pliego_cm: Tuple[float, float] = (50.0, 75.0)
+    pliego_cm: Tuple[float, float] = (50.0, 70.0)
 
 @dataclass
 class Point2D:
