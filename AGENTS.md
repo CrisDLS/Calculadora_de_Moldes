@@ -101,18 +101,20 @@ Cada pico es una pirámide de base cuadrada armada con 4 triángulos del molde d
   - `presentacion/` compartida entre CustomTkinter y Flet (sin dependencias de UI).
   - Controlador Flet (`app_flet/controlador.py`) en Python puro, sin importar Flet ni UI, cálculo instantáneo síncrono sin hilos.
   - Diseños sobre cada pieza y hojas de trazo generados directamente en SVG para Inkscape e impresión.
-  - SVG en Flet: renderizado nativo en memoria con `ft.Image(src=svg.encode('utf-8'))` envuelto en `ft.InteractiveViewer` para zoom y desplazamiento interactivo (sin archivos temporales en disco).
+  - SVG en Flet: renderizado nativo en memoria con `ft.Image(src=svg.encode('utf-8'))` envuelto en `ft.GestureDetector` con manipulación directa de `viewBox` (`logic/exportacion/vista_svg.py`) para zoom y paneo nítidos sin recortes de Flutter/InteractiveViewer.
   - Portapapeles en Flet: `ft.Clipboard` / `CopyToClipboard` con notificación mediante `ft.SnackBar`.
   - Vista 3D futura con three.js embebida como HTML autocontenido (luces realistas).
 - Arquitectura Flet:
-  - `app_flet/tema.py`: diseño, colores.
+  - `app_flet/tema.py`: diseño, colores, `ft.ThemeMode`, esquemas de color atómicos.
   - `app_flet/controlador.py`: almacena estado puro y manda a llamar la lógica/presentación. No sabe de UI.
   - `app_flet/vistas/`: árbol visual. Construye las vistas e inyecta el controlador.
 - Plan F1-F5:
   - F1: Resumen y avisos con tarjetas reactivas (HECHO).
   - F2: Pestañas de Tablas y Moldes 2D en SVG (HECHO, con ajustes visuales y arquitectónicos completados):
     - Estilos de SVG (`logic/exportacion/estilos.py`): presets `IMPRESION` (fondo blanco, trazo base), `PANTALLA_OSCURO` (fondo `#1e1e24`, contraste WCAG ≥ 4.5), y `PANTALLA_CLARO` (fondo `#f8f9fa`), con `factor_trazo` y `factor_texto`.
-    - Temas claro y oscuro (`app_flet/tema.py`): paleta fuertemente tipada `PaletaTema` (`PALETA_OSCURA`, `PALETA_CLARA`) y botón sol/luna para conmutación dinámica de UI y regeneración síncrona de SVG sin re-calcular el modelo.
+    - Rótulos en SVG multilínea (`svg_conjunto` y `svg_hoja`): textos apilados y centrados con separación dinámica basada en bounding boxes estimados, evitando colisiones entre piezas contiguas.
+    - Zoom y desplazamiento por `viewBox` (`logic/exportacion/vista_svg.py`): `VistaSvg` con zoom relativo al cursor, paneo por arrastre, doble clic o botón para ajustar, botones +/- y visualización de porcentaje, manteniendo el vector a resolución nativa del dispositivo.
+    - Temas claro y oscuro atómicos (`app_flet/tema.py`): controles de UI usan `ft.Colors.*` del tema del sistema (`ft.ColorScheme` en `page.theme`), cambio de tema atómico desactivando animaciones con una sola llamada a `page.update()` para evitar estados intermedios.
     - Tabla de moldes personalizada (`app_flet/vistas/tabla_molde.py`): reemplaza `ft.DataTable` para garantizar ocupación de todo el ancho, encabezado fijo, `ft.ListView` con pesos proporcionales `[7, 10, 10, 10]`, alineación derecha, filas alternadas y reinicio de scroll al cambiar de pieza.
     - Portapapeles con API pública (`app_flet/vistas/trompo.py`): servicio inyectado para testabilidad con mock, registro en `page.services`, y retroalimentación mediante `ft.SnackBar` explícito ("Tabla copiada al portapapeles" / "No se pudo copiar").
   - F3: Hoja de trazo (esquema, grupo, Carta, escala, exportar SVG) y guardar/abrir proyecto.
