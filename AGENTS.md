@@ -127,5 +127,13 @@ Cada pico es una pirámide de base cuadrada armada con 4 triángulos del molde d
     - Paquete de exportación (`logic/exportacion/paquete.py`): genera en un solo paso las 3 hojas a escala común, el perfil armado proyectado y el conjunto de moldes, guardados en UTF-8 con nombres seguros para Windows.
     - Ciclo de vida de proyectos (`logic/proyecto/modelo.py` y `app_flet/controlador.py`): serialización a JSON versionado incluyendo geometría, condiciones, esquema, hoja y escala. Integración en UI con acciones Nuevo, Abrir…, Guardar, Guardar como…, sincronización reactiva de campos y título de ventana dinámico con asterisco para cambios sin guardar (`*`).
     - Deuda técnica: retransmisión de `viewBox` durante arrastre. En cada micro-evento de paneo (`on_pan_update`), la cadena SVG modificada se re-codifica y retransmite a Flutter vía `img.src`. Aunque en mediciones reales rinde a >30 act/s y ~1-2 ms/actualización con telemetría activa (`GLOBOS_DEBUG=1`), para mallas o decoraciones densas (F5) convendría explorar capas de transformación nativas cuando la API de Flet lo soporte sin provocar el recorte que sufría `InteractiveViewer`.
-  - F4: Vista 3D con three.js.
+  - F4: Vista 3D con three.js y lista de compra (HECHO):
+    - Paleta de colores de papel china (`datos/colores_papel.json`, `logic/diseno/paleta.py`): catálogo con colores comerciales tradicionales mexicanos, carga extensible para colores personalizados del usuario (`colores_usuario.json`).
+    - Esquema de pintura por sección, motivo o cara (`logic/diseno/pintura.py`): mapeo reactivo a caras de la malla poligonal 3D.
+    - Lista de compra (`logic/diseno/compra.py`): cálculo de piezas (superior, pico, inferior), superficie neta en m² y pliegos enteros (`math.ceil`) por cada color según tamaño de pliego (50×70 cm default) y desperdicio configurable. Serializado en `Proyecto`.
+    - Escena 3D serializable (`logic/exportacion/escena3d.py`): caras trianguladas con normales exteriores consistentes, boca anclada en z=0 y soporte para texturas/motivos.
+    - Visor 3D interactivo (`app_flet/assets/visor3d/`): three.js v0.128.0 empaquetado localmente para funcionamiento 100 % offline. Sombreado facetado, control orbital, modos día/noche, controles de iluminación y sondeo reactivo a `/api/escena`.
+    - Servidor local daemon (`logic/exportacion/visor3d.py`): servidor HTTP ligero en `127.0.0.1:<puerto>` para alimentar el visor local en tiempo real sin recargar la página.
+    - Exportación autocontenida de visor 3D HTML y soporte en paquete de exportación (`logic/exportacion/paquete.py`).
+    - Pestaña "Vista 3D" en Flet (`app_flet/vistas/trompo.py`): selectores de color para cono superior, picos y cono inferior; botón de lanzamiento de visor 3D en navegador del sistema; botón de exportación HTML independiente; tabla de lista de compra detallada y botón para copiar al portapapeles en formato TSV.
   - F5: Diseños sobre cada pieza.
