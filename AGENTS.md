@@ -101,6 +101,8 @@ Cada pico es una pirámide de base cuadrada armada con 4 triángulos del molde d
   - `presentacion/` compartida entre CustomTkinter y Flet (sin dependencias de UI).
   - Controlador Flet (`app_flet/controlador.py`) en Python puro, sin importar Flet ni UI, cálculo instantáneo síncrono sin hilos.
   - Diseños sobre cada pieza y hojas de trazo generados directamente en SVG para Inkscape e impresión.
+  - SVG en Flet: renderizado nativo en memoria con `ft.Image(src=svg.encode('utf-8'))` envuelto en `ft.InteractiveViewer` para zoom y desplazamiento interactivo (sin archivos temporales en disco).
+  - Portapapeles en Flet: `ft.Clipboard` / `CopyToClipboard` con notificación mediante `ft.SnackBar`.
   - Vista 3D futura con three.js embebida como HTML autocontenido (luces realistas).
 - Arquitectura Flet:
   - `app_flet/tema.py`: diseño, colores.
@@ -108,7 +110,7 @@ Cada pico es una pirámide de base cuadrada armada con 4 triángulos del molde d
   - `app_flet/vistas/`: árbol visual. Construye las vistas e inyecta el controlador.
 - Plan F1-F5:
   - F1: Resumen y avisos con tarjetas reactivas (HECHO).
-  - F2: Pestañas de Tablas y Moldes 2D en SVG.
+  - F2: Pestañas de Tablas y Moldes 2D en SVG (HECHO).
   - F3: Hoja de trazo (esquema, grupo, Carta, escala, exportar SVG) y guardar/abrir proyecto.
   - F4: Vista 3D con three.js.
   - F5: Diseños sobre cada pieza.
