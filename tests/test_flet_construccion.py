@@ -1,3 +1,4 @@
+import math
 import pytest
 pytest.importorskip("flet")
 import flet as ft
@@ -246,5 +247,83 @@ def test_copiar_tabla_con_servicio_mock():
     v_fail.on_copiar_tabla(None)
     assert mock_cb_fail.texto_copiado is None
     assert v_fail.ultimo_mensaje_snackbar == "No se pudo copiar"
+
+
+class MockSizeEvent:
+    def __init__(self, w: float, h: float):
+        self.width = w
+        self.height = h
+
+
+def test_visor_adaptacion_tamano_zona():
+    v = VistaTrompo()
+    v.on_calcular(None)
+
+    # 1. Simular evento de cambio de tamaño a zona ancha (800x400)
+    # Contenedor tiene padding=10 y border=1, descuento = 2*(10+1) = 22
+    ev_ancho = MockSizeEvent(822.0, 422.0)
+    v._on_container_size_change(ev_ancho)
+
+    assert abs(v.zona_ancho - 800.0) < 0.1
+    assert abs(v.zona_alto - 400.0) < 0.1
+    assert abs(v.img_svg.width - 800.0) < 0.1
+    assert abs(v.img_svg.height - 400.0) < 0.1
+
+    # Comprobar que la vista base conserva la relación de aspecto medida (800/400 = 2.0)
+    assert abs(v.vista_svg.aspecto - 2.0) < 0.05
+
+    # 2. Conservación del centro al cambiar aspecto
+    cx_antes = v.vista_svg.x + v.vista_svg.ancho / 2.0
+    cy_antes = v.vista_svg.y + v.vista_svg.alto / 2.0
+
+    # Cambiar a zona alta (422x822 -> útil 400x800, aspecto 0.5)
+    ev_alto = MockSizeEvent(422.0, 822.0)
+    v._on_container_size_change(ev_alto)
+
+    cx_despues = v.vista_svg.x + v.vista_svg.ancho / 2.0
+    cy_despues = v.vista_svg.y + v.vista_svg.alto / 2.0
+    assert math.isclose(cx_antes, cx_despues, rel_tol=1e-3)
+    assert math.isclose(cy_antes, cy_despues, rel_tol=1e-3)
+    assert abs(v.vista_svg.aspecto - 0.5) < 0.05
+
+    # 3. Conversión de cursor a fracciones usando el tamaño medido
+    class MockLocalPos:
+        def __init__(self, x, y):
+            self.x = x
+            self.y = y
+
+    class MockScrollEvent:
+        def __init__(self, x, y):
+            self.local_position = MockLocalPos(x, y)
+            self.scroll_delta = MockLocalPos(0, -10)
+
+    # Con zona de 400x800, posición x=200, y=400 debe representar fx=0.5, fy=0.5
+    ev_scroll = MockScrollEvent(200.0, 400.0)
+    vista_pre_scroll = v.vista_svg
+    v._on_gesture_scroll(ev_scroll)
+    # Al hacer zoom en el centro (0.5, 0.5), el centro debe permanecer idéntico
+    cx_scroll = v.vista_svg.x + v.vista_svg.ancho / 2.0
+    cy_scroll = v.vista_svg.y + v.vista_svg.alto / 2.0
+    assert math.isclose(cx_despues, cx_scroll, rel_tol=1e-3)
+    assert math.isclose(cy_despues, cy_scroll, rel_tol=1e-3)
+
+
+def test_seleccion_perfil_armado_en_vista_flet():
+    v = VistaTrompo()
+    # Sin calcular: texto "Calcula para ver el perfil" al seleccionar perfil
+    v.selector_molde.selected = ["4"]
+    v.on_cambio_pieza_molde(None)
+    assert v.lbl_vacio_moldes.content.value == "Calcula para ver el perfil"
+
+    # Al calcular
+    v.on_calcular(None)
+    assert v.panel_contenido_moldes.visible is True
+    # Selector en '4' renderiza svg_perfil
+    v.selector_molde.selected = ["4"]
+    v.on_cambio_pieza_molde(None)
+    assert "Perfil armado" in v._svg_actual_raw
+    assert "Alto total:" in v._svg_actual_raw
+    assert v.img_svg.src != b""
+
 
 

@@ -1,4 +1,5 @@
 # app_flet/vistas/trompo.py
+import os
 import time
 import asyncio
 from typing import Optional, Tuple
@@ -10,6 +11,7 @@ from logic.exportacion.estilos import PANTALLA_OSCURO, PANTALLA_CLARO
 from logic.exportacion.vista_svg import (
     VistaSvg,
     ajustar,
+    adaptar_aspecto,
     zoom,
     desplazar,
     aplicar_viewbox,
@@ -219,6 +221,7 @@ class VistaTrompo(ft.Container):
                 ft.Segment(value="1", label=ft.Text("Cono superior")),
                 ft.Segment(value="2", label=ft.Text("Pico")),
                 ft.Segment(value="3", label=ft.Text("Cono inferior")),
+                ft.Segment(value="4", label=ft.Text("Perfil armado")),
             ],
             on_change=self.on_cambio_pieza_molde
         )
@@ -228,7 +231,14 @@ class VistaTrompo(ft.Container):
             expand=True,
             visible=True,
         )
-        self.img_svg = ft.Image(src="", fit=ft.BoxFit.CONTAIN, expand=True)
+
+        # Dimensiones de la zona medida del visor (excluyendo padding y borde)
+        self.zona_ancho: float = 600.0
+        self.zona_alto: float = 500.0
+        self._padding_container: float = 10.0
+        self._border_width: float = 1.0
+
+        self.img_svg = ft.Image(src="", fit=ft.BoxFit.CONTAIN, width=self.zona_ancho, height=self.zona_alto)
 
         self.detector_gestos = ft.GestureDetector(
             content=self.img_svg,
@@ -240,11 +250,13 @@ class VistaTrompo(ft.Container):
 
         self.container_viewer_svg = ft.Container(
             content=self.detector_gestos,
-            border=ft.Border.all(1, ft.Colors.OUTLINE),
+            border=ft.Border.all(self._border_width, ft.Colors.OUTLINE),
             border_radius=8,
             expand=True,
-            padding=10,
+            padding=self._padding_container,
+            clip_behavior=ft.ClipBehavior.HARD_EDGE,
             alignment=ft.Alignment(0, 0),
+            on_size_change=self._on_container_size_change,
         )
 
         # Controles de zoom
@@ -294,6 +306,17 @@ class VistaTrompo(ft.Container):
             color=ft.Colors.ON_SURFACE_VARIANT,
             text_align=ft.TextAlign.CENTER,
         )
+
+        # Depuración con GLOBOS_DEBUG=1
+        self.debug_mode = os.environ.get("GLOBOS_DEBUG") == "1"
+        self.lbl_debug = ft.Text(
+            "",
+            size=10,
+            color=ft.Colors.ON_SURFACE_VARIANT,
+            text_align=ft.TextAlign.CENTER,
+            visible=self.debug_mode,
+        )
+
         self.panel_contenido_moldes = ft.Column(
             expand=True,
             visible=False,
@@ -301,6 +324,7 @@ class VistaTrompo(ft.Container):
                 self.container_viewer_svg,
                 self.barra_zoom,
                 ft.Row([self.lbl_instruccion_zoom], alignment=ft.MainAxisAlignment.CENTER),
+                ft.Row([self.lbl_debug], alignment=ft.MainAxisAlignment.CENTER) if self.debug_mode else ft.Container(),
                 ft.Row([self.lbl_pie_moldes], alignment=ft.MainAxisAlignment.CENTER),
             ],
             spacing=4,
@@ -448,6 +472,12 @@ class VistaTrompo(ft.Container):
             pass
 
     def on_cambio_pieza_molde(self, e):
+        sel_molde = self.selector_molde.selected[0] if self.selector_molde.selected else "0"
+        if sel_molde == "4":
+            self.lbl_vacio_moldes.content.value = "Calcula para ver el perfil"
+        else:
+            self.lbl_vacio_moldes.content.value = "Calcula para ver los moldes"
+
         self._renderizar_molde_seleccionado(reset_vista=True)
         try:
             self.update()
@@ -552,6 +582,37 @@ class VistaTrompo(ft.Container):
         ancho_max = self.vista_base_svg.ancho * 1.5
         return (ancho_min, ancho_max)
 
+    def _on_container_size_change(self, e):
+        # Medir tamaño real del contenedor descontando padding y borde
+        w_raw = getattr(e, "width", 0.0) or 0.0
+        h_raw = getattr(e, "height", 0.0) or 0.0
+        if w_raw <= 0 or h_raw <= 0:
+            return
+
+        descuento_w = 2.0 * (self._padding_container + self._border_width)
+        descuento_h = 2.0 * (self._padding_container + self._border_width)
+        w_util = max(50.0, w_raw - descuento_w)
+        h_util = max(50.0, h_raw - descuento_h)
+
+        if abs(w_util - self.zona_ancho) < 0.5 and abs(h_util - self.zona_alto) < 0.5:
+            return
+
+        self.zona_ancho = w_util
+        self.zona_alto = h_util
+        self.img_svg.width = self.zona_ancho
+        self.img_svg.height = self.zona_alto
+
+        aspecto_zona = self.zona_ancho / self.zona_alto
+
+        if self._svg_actual_raw:
+            w_nat, h_nat = extraer_dimensiones_svg(self._svg_actual_raw)
+            self.vista_base_svg = ajustar(w_nat, h_nat, aspecto_zona=aspecto_zona, margen=0.04)
+            if self.vista_svg:
+                self.vista_svg = adaptar_aspecto(self.vista_svg, aspecto_zona)
+            else:
+                self.vista_svg = self.vista_base_svg
+            self._actualizar_imagen_zoom(force=True)
+
     def _renderizar_molde_seleccionado(self, reset_vista: bool = False):
         vm = self.controlador.get_view_model()
         sel = self.selector_molde.selected[0] if self.selector_molde.selected else "0"
@@ -564,6 +625,8 @@ class VistaTrompo(ft.Container):
             svg_str = vm.svg_pico
         elif sel == "3":
             svg_str = vm.svg_inferior
+        elif sel == "4":
+            svg_str = vm.svg_perfil
 
         self._svg_actual_raw = svg_str
 
@@ -571,14 +634,29 @@ class VistaTrompo(ft.Container):
             self.img_svg.src = ""
             return
 
+        aspecto_zona = self.zona_ancho / self.zona_alto if self.zona_alto > 0 else 1.0
         w_nat, h_nat = extraer_dimensiones_svg(svg_str)
         if reset_vista or not self.vista_svg or not self.vista_base_svg:
-            self.vista_base_svg = ajustar(w_nat, h_nat, aspecto_zona=1.2, margen=0.04)
+            self.vista_base_svg = ajustar(w_nat, h_nat, aspecto_zona=aspecto_zona, margen=0.04)
             self.vista_svg = self.vista_base_svg
 
         svg_con_viewbox = aplicar_viewbox(svg_str, self.vista_svg)
         self.img_svg.src = svg_con_viewbox.encode("utf-8")
         self.lbl_zoom_porcentaje.value = f"{self._porcentaje_zoom():.0f} %"
+        self._actualizar_debug()
+
+    def _actualizar_debug(self):
+        if not self.debug_mode or not self.vista_svg:
+            return
+        z_str = f"zona {self.zona_ancho:.0f}×{self.zona_alto:.0f} px"
+        img_str = f"imagen {self.img_svg.width:.0f}×{self.img_svg.height:.0f}"
+        v_str = f"vista {self.vista_svg.x:.1f},{self.vista_svg.y:.1f},{self.vista_svg.ancho:.1f},{self.vista_svg.alto:.1f}"
+        zoom_str = f"zoom {self._porcentaje_zoom():.0f} %"
+        self.lbl_debug.value = f"{z_str} · {img_str} · {v_str} · {zoom_str}"
+        try:
+            self.lbl_debug.update()
+        except Exception:
+            pass
 
     def _actualizar_imagen_zoom(self, force: bool = False):
         if not self._svg_actual_raw or not self.vista_svg:
@@ -591,6 +669,7 @@ class VistaTrompo(ft.Container):
         svg_con_viewbox = aplicar_viewbox(self._svg_actual_raw, self.vista_svg)
         self.img_svg.src = svg_con_viewbox.encode("utf-8")
         self.lbl_zoom_porcentaje.value = f"{self._porcentaje_zoom():.0f} %"
+        self._actualizar_debug()
         try:
             self.img_svg.update()
             self.lbl_zoom_porcentaje.update()
@@ -613,12 +692,9 @@ class VistaTrompo(ft.Container):
         fy = 0.5
         local_pos = getattr(e, "local_position", None)
         if local_pos and hasattr(local_pos, "x") and hasattr(local_pos, "y"):
-            # Estimación razonable de fracción
-            w_control = 600.0
-            h_control = 500.0
-            if local_pos.x > 0 and local_pos.y > 0:
-                fx = max(0.05, min(0.95, local_pos.x / w_control))
-                fy = max(0.05, min(0.95, local_pos.y / h_control))
+            if self.zona_ancho > 0 and self.zona_alto > 0:
+                fx = max(0.01, min(0.99, local_pos.x / self.zona_ancho))
+                fy = max(0.01, min(0.99, local_pos.y / self.zona_alto))
 
         self.vista_svg = zoom(
             self.vista_svg,
@@ -634,9 +710,8 @@ class VistaTrompo(ft.Container):
             return
         delta = getattr(e, "local_delta", None) or getattr(e, "global_delta", None)
         if delta and hasattr(delta, "x") and hasattr(delta, "y"):
-            # Escalar delta de pantalla a unidades del dibujo
-            w_control = 600.0
-            h_control = 500.0
+            w_control = max(50.0, self.zona_ancho)
+            h_control = max(50.0, self.zona_alto)
             dx = delta.x * (self.vista_svg.ancho / w_control)
             dy = delta.y * (self.vista_svg.alto / h_control)
             limites_cont = (self.vista_base_svg.ancho, self.vista_base_svg.alto)
@@ -665,7 +740,8 @@ class VistaTrompo(ft.Container):
         if not self._svg_actual_raw:
             return
         w_nat, h_nat = extraer_dimensiones_svg(self._svg_actual_raw)
-        self.vista_base_svg = ajustar(w_nat, h_nat, aspecto_zona=1.2, margen=0.04)
+        aspecto_zona = self.zona_ancho / self.zona_alto if self.zona_alto > 0 else 1.0
+        self.vista_base_svg = ajustar(w_nat, h_nat, aspecto_zona=aspecto_zona, margen=0.04)
         self.vista_svg = self.vista_base_svg
         self._actualizar_imagen_zoom(force=True)
 
@@ -729,6 +805,12 @@ class VistaTrompo(ft.Container):
             self.panel_contenido_tablas.visible = False
 
         # 6. Moldes 2D
+        sel_molde = self.selector_molde.selected[0] if self.selector_molde.selected else "0"
+        if sel_molde == "4":
+            self.lbl_vacio_moldes.content.value = "Calcula para ver el perfil"
+        else:
+            self.lbl_vacio_moldes.content.value = "Calcula para ver los moldes"
+
         if vm.svg_conjunto and not vm.desactualizado:
             self.lbl_vacio_moldes.visible = False
             self.panel_contenido_moldes.visible = True

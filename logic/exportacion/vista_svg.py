@@ -44,6 +44,26 @@ def ajustar(contenido_ancho: float, contenido_alto: float, aspecto_zona: float =
     return VistaSvg(x, y, ancho_vista, alto_vista)
 
 
+def adaptar_aspecto(vista: VistaSvg, nuevo_aspecto_zona: float) -> VistaSvg:
+    """Adapta una vista existente a una nueva relación de aspecto de la zona de pantalla,
+    conservando el punto central (cx, cy) y la escala de zoom (manteniendo el área o dimensión de referencia)."""
+    if nuevo_aspecto_zona <= 0 or vista.alto <= 0:
+        return vista
+
+    cx = vista.x + vista.ancho / 2.0
+    cy = vista.y + vista.alto / 2.0
+
+    # Conservamos el área visual (ancho * alto) para que el nivel de zoom percibido no cambie bruscamente
+    area = vista.ancho * vista.alto
+    nuevo_ancho = (area * nuevo_aspecto_zona) ** 0.5
+    nuevo_alto = nuevo_ancho / nuevo_aspecto_zona
+
+    nuevo_x = cx - nuevo_ancho / 2.0
+    nuevo_y = cy - nuevo_alto / 2.0
+
+    return VistaSvg(nuevo_x, nuevo_y, nuevo_ancho, nuevo_alto)
+
+
 def zoom(
     vista: VistaSvg,
     factor: float,
