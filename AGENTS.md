@@ -109,9 +109,19 @@ pico = triángulo, uno por gajo y por hilera. Prototipo mínimo recomendado: ~38
 
 ## Migración a Flet (en progreso)
 - `main.py` levanta CustomTkinter (congelado).
-- `flet run app_flet/main.py` levanta la nueva UI.
+- `run_flet.py` levanta la nueva UI (`python run_flet.py` o `.venv\Scripts\flet.exe run run_flet.py`).
+- Decisiones:
+  - `presentacion/` compartida entre CustomTkinter y Flet (sin dependencias de UI).
+  - Controlador Flet (`app_flet/controlador.py`) en Python puro, sin importar Flet ni UI, cálculo instantáneo síncrono sin hilos.
+  - Diseños sobre cada pieza y hojas de trazo generados directamente en SVG para Inkscape e impresión.
+  - Vista 3D futura con three.js embebida como HTML autocontenido (luces realistas).
 - Arquitectura Flet:
   - `app_flet/tema.py`: diseño, colores.
   - `app_flet/controlador.py`: almacena estado puro y manda a llamar la lógica/presentación. No sabe de UI.
   - `app_flet/vistas/`: árbol visual. Construye las vistas e inyecta el controlador.
-- F1-F5 Plan (Pendiente): Implementar la validación y el cálculo asíncrono para no congelar la UI de Flet.
+- Plan F1-F5:
+  - F1: Resumen y avisos con tarjetas reactivas (HECHO).
+  - F2: Pestañas de Tablas y Moldes 2D en SVG.
+  - F3: Hoja de trazo (esquema, grupo, Carta, escala, exportar SVG) y guardar/abrir proyecto.
+  - F4: Vista 3D con three.js.
+  - F5: Diseños sobre cada pieza.
