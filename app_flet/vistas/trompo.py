@@ -1,14 +1,23 @@
 # app_flet/vistas/trompo.py
+import asyncio
+from typing import Optional
 import flet as ft
 from app_flet.controlador import ControladorTrompo, ViewModelTrompo
 from app_flet import tema
+from app_flet.vistas.tabla_molde import TablaMoldePersonalizada
+from logic.exportacion.estilos import PANTALLA_OSCURO, PANTALLA_CLARO
 from presentacion.trompo_estrella import tabla_a_texto, TablaMolde
 
 class VistaTrompo(ft.Container):
-    def __init__(self):
+    def __init__(self, servicio_clipboard=None):
         super().__init__()
-        self.controlador = ControladorTrompo()
         self.expand = True
+        self.modo_tema = ft.ThemeMode.DARK
+        self.paleta = tema.obtener_paleta(self.modo_tema)
+        
+        self.servicio_clipboard = servicio_clipboard if servicio_clipboard is not None else ft.Clipboard()
+        self.ultimo_mensaje_snackbar: Optional[str] = None
+        self.controlador = ControladorTrompo(estilo_svg=PANTALLA_OSCURO)
         
         # --- CAMPOS SIMPLES ---
         self.txt_altura = self._crear_campo("Altura total de papel", "950", "cm")
@@ -29,11 +38,17 @@ class VistaTrompo(ft.Container):
         self.txt_llama = self._crear_campo("Altura de llama", "", "cm", "40.0 cm")
         self.txt_holgura = self._crear_campo("Holgura mín.", "", "cm", "10.0 cm")
         
+        self.lbl_subseccion_avanzada = ft.Text(
+            "Estructura y seguridad",
+            weight=ft.FontWeight.BOLD,
+            size=14,
+            color=self.paleta.texto_secundario
+        )
         self.panel_avanzado = ft.Column(
             visible=False,
             controls=[
                 self.txt_boca, self.txt_pestana, self.txt_d_mecha, self.txt_p_mecha,
-                ft.Text("Estructura y seguridad", weight=ft.FontWeight.BOLD, size=14, color=tema.COLOR_TEXTO_SECUNDARIO),
+                self.lbl_subseccion_avanzada,
                 self.txt_alambre, self.txt_varillas, self.txt_llama, self.txt_holgura
             ]
         )
@@ -41,29 +56,55 @@ class VistaTrompo(ft.Container):
         self.btn_calcular = ft.FilledButton(
             "Calcular", 
             on_click=self.on_calcular,
-            style=ft.ButtonStyle(color=tema.COLOR_TEXTO, bgcolor=tema.COLOR_ACENTO)
+            style=ft.ButtonStyle(color=self.paleta.texto, bgcolor=self.paleta.acento)
         )
-        self.lbl_error = ft.Text(color=tema.COLOR_ERROR, visible=False)
-        self.lbl_desactualizado = ft.Text("Cambiaste los datos: pulsa Calcular", color=tema.COLOR_AVISO, visible=False)
+        self.lbl_error = ft.Text(color=self.paleta.color_error, visible=False)
+        self.lbl_desactualizado = ft.Text(
+            "Cambiaste los datos: pulsa Calcular",
+            color=self.paleta.color_aviso,
+            visible=False
+        )
         
-        panel_izquierdo = ft.Container(
+        # Botón de alternar tema (sol/luna)
+        self.btn_tema = ft.IconButton(
+            icon=ft.Icons.LIGHT_MODE,
+            tooltip="Cambiar a tema claro",
+            on_click=self.on_toggle_tema,
+        )
+        
+        self.panel_izquierdo = ft.Container(
             width=300,
             padding=20,
-            bgcolor=tema.COLOR_FONDO_SECUNDARIO,
+            bgcolor=self.paleta.panel,
             border_radius=10,
-            content=ft.ListView(
+            content=ft.Column(
                 controls=[
-                    ft.Text("Trompo estrella", size=24, weight=ft.FontWeight.BOLD),
-                    ft.Divider(),
-                    self.txt_altura, self.txt_gajos, self.txt_hileras, self.txt_costura,
-                    ft.Divider(),
-                    self.switch_avanzado,
-                    self.panel_avanzado,
-                    ft.Divider(),
-                    self.btn_calcular,
-                    self.lbl_error,
-                ],
-                spacing=10
+                    ft.Text("Trompo estrella", size=24, weight=ft.FontWeight.BOLD, color=self.paleta.texto),
+                    ft.Divider(color=self.paleta.borde),
+                    ft.Container(
+                        expand=True,
+                        content=ft.ListView(
+                            controls=[
+                                self.txt_altura, self.txt_gajos, self.txt_hileras, self.txt_costura,
+                                ft.Divider(color=self.paleta.borde),
+                                self.switch_avanzado,
+                                self.panel_avanzado,
+                                ft.Divider(color=self.paleta.borde),
+                                self.btn_calcular,
+                                self.lbl_error,
+                            ],
+                            spacing=10
+                        )
+                    ),
+                    ft.Divider(color=self.paleta.borde),
+                    ft.Row(
+                        controls=[
+                            ft.Text("Tema", size=13, color=self.paleta.texto_secundario),
+                            self.btn_tema,
+                        ],
+                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN
+                    )
+                ]
             )
         )
         
@@ -76,7 +117,7 @@ class VistaTrompo(ft.Container):
             controls=[
                 self.lbl_desactualizado,
                 self.grid_tarjetas,
-                ft.Divider(),
+                ft.Divider(color=self.paleta.borde),
                 self.col_avisos
             ]
         )
@@ -93,16 +134,16 @@ class VistaTrompo(ft.Container):
             on_change=self.on_cambio_pieza_tabla
         )
         self.lbl_vacio_tablas = ft.Container(
-            content=ft.Text("Calcula para ver las tablas", size=16, color=tema.COLOR_TEXTO_SECUNDARIO),
+            content=ft.Text("Calcula para ver las tablas", size=16, color=self.paleta.texto_secundario),
             alignment=ft.Alignment(0, 0),
             expand=True,
             visible=True,
         )
-        self.lbl_titulo_tabla = ft.Text(size=20, weight=ft.FontWeight.BOLD)
-        self.lbl_resumen_tabla = ft.Text(size=14, color=tema.COLOR_TEXTO_SECUNDARIO)
+        self.lbl_titulo_tabla = ft.Text(size=20, weight=ft.FontWeight.BOLD, color=self.paleta.texto)
+        self.lbl_resumen_tabla = ft.Text(size=14, color=self.paleta.texto_secundario)
         self.lbl_nota_tabla = ft.Container(
-            content=ft.Text(size=13, color=tema.COLOR_AVISO, weight=ft.FontWeight.W_500),
-            bgcolor=tema.COLOR_FONDO_SECUNDARIO,
+            content=ft.Text(size=13, color=self.paleta.color_aviso, weight=ft.FontWeight.W_500),
+            bgcolor=self.paleta.panel,
             border_radius=6,
             padding=8,
             visible=False,
@@ -112,20 +153,11 @@ class VistaTrompo(ft.Container):
             icon=ft.Icons.COPY,
             on_click=self.on_copiar_tabla
         )
-        self.datatable = ft.DataTable(
-            columns=[
-                ft.DataColumn(ft.Text("Paso"), numeric=True),
-                ft.DataColumn(ft.Text("Largo (cm)"), numeric=True),
-                ft.DataColumn(ft.Text("Acumulado (cm)"), numeric=True),
-                ft.DataColumn(ft.Text("Ancho/2 (cm)"), numeric=True),
-            ],
-            rows=[],
-            heading_row_color=tema.COLOR_FONDO_SECUNDARIO,
-        )
+        
+        self.tabla_componente = TablaMoldePersonalizada(self.paleta)
         
         self.panel_contenido_tablas = ft.Column(
             expand=True,
-            scroll=ft.ScrollMode.AUTO,
             visible=False,
             controls=[
                 ft.Row(
@@ -136,8 +168,8 @@ class VistaTrompo(ft.Container):
                     alignment=ft.MainAxisAlignment.SPACE_BETWEEN
                 ),
                 self.lbl_nota_tabla,
-                ft.Divider(),
-                self.datatable,
+                ft.Divider(color=self.paleta.borde),
+                self.tabla_componente,
             ],
             spacing=10,
         )
@@ -149,7 +181,7 @@ class VistaTrompo(ft.Container):
                 expand=True,
                 controls=[
                     ft.Row([self.selector_tabla], alignment=ft.MainAxisAlignment.CENTER),
-                    ft.Divider(),
+                    ft.Divider(color=self.paleta.borde),
                     self.lbl_vacio_tablas,
                     self.panel_contenido_tablas,
                 ]
@@ -169,7 +201,7 @@ class VistaTrompo(ft.Container):
             on_change=self.on_cambio_pieza_molde
         )
         self.lbl_vacio_moldes = ft.Container(
-            content=ft.Text("Calcula para ver los moldes", size=16, color=tema.COLOR_TEXTO_SECUNDARIO),
+            content=ft.Text("Calcula para ver los moldes", size=16, color=self.paleta.texto_secundario),
             alignment=ft.Alignment(0, 0),
             expand=True,
             visible=True,
@@ -181,19 +213,35 @@ class VistaTrompo(ft.Container):
             max_scale=10.0,
             expand=True,
         )
+        self.container_viewer_svg = ft.Container(
+            content=self.viewer_svg,
+            border=ft.Border.all(1, self.paleta.borde),
+            border_radius=8,
+            expand=True,
+            padding=10,
+            alignment=ft.Alignment(0, 0),
+        )
+        self.lbl_instruccion_zoom = ft.Text(
+            "Rueda del ratón: zoom · Arrastrar: mover",
+            size=11,
+            color=self.paleta.texto_secundario,
+            text_align=ft.TextAlign.CENTER,
+        )
         self.lbl_pie_moldes = ft.Text(
             "La escala y la hoja de trazo en Carta llegarán en F3.",
             size=12,
-            color=tema.COLOR_TEXTO_SECUNDARIO,
+            color=self.paleta.texto_secundario,
             text_align=ft.TextAlign.CENTER,
         )
         self.panel_contenido_moldes = ft.Column(
             expand=True,
             visible=False,
             controls=[
-                self.viewer_svg,
+                self.container_viewer_svg,
+                ft.Row([self.lbl_instruccion_zoom], alignment=ft.MainAxisAlignment.CENTER),
                 ft.Row([self.lbl_pie_moldes], alignment=ft.MainAxisAlignment.CENTER),
             ],
+            spacing=6,
         )
 
         tab_2d = ft.Container(
@@ -203,7 +251,7 @@ class VistaTrompo(ft.Container):
                 expand=True,
                 controls=[
                     ft.Row([self.selector_molde], alignment=ft.MainAxisAlignment.CENTER),
-                    ft.Divider(),
+                    ft.Divider(color=self.paleta.borde),
                     self.lbl_vacio_moldes,
                     self.panel_contenido_moldes,
                 ]
@@ -211,7 +259,7 @@ class VistaTrompo(ft.Container):
         )
 
         # 4. Pestaña Vista 3D
-        tab_3d = ft.Container(content=ft.Text("Próximamente en F4", color=tema.COLOR_TEXTO_SECUNDARIO), alignment=ft.Alignment(0, 0))
+        tab_3d = ft.Container(content=ft.Text("Próximamente en F4", color=self.paleta.texto_secundario), alignment=ft.Alignment(0, 0))
         
         self.tabs = ft.Tabs(
             selected_index=0,
@@ -236,7 +284,7 @@ class VistaTrompo(ft.Container):
             )
         )
         
-        panel_derecho = ft.Container(
+        self.panel_derecho = ft.Container(
             expand=True,
             padding=10,
             content=self.tabs
@@ -244,7 +292,7 @@ class VistaTrompo(ft.Container):
         
         self.content = ft.Row(
             expand=True,
-            controls=[panel_izquierdo, panel_derecho],
+            controls=[self.panel_izquierdo, self.panel_derecho],
             spacing=0
         )
         
@@ -260,6 +308,54 @@ class VistaTrompo(ft.Container):
             dense=True
         )
         return txt
+
+    @property
+    def obtener_pagina(self) -> Optional[ft.Page]:
+        try:
+            return self.page
+        except RuntimeError:
+            return None
+
+    def on_toggle_tema(self, e):
+        if self.modo_tema == ft.ThemeMode.DARK:
+            self.modo_tema = ft.ThemeMode.LIGHT
+            self.btn_tema.icon = ft.Icons.DARK_MODE
+            self.btn_tema.tooltip = "Cambiar a tema oscuro"
+            estilo = PANTALLA_CLARO
+        else:
+            self.modo_tema = ft.ThemeMode.DARK
+            self.btn_tema.icon = ft.Icons.LIGHT_MODE
+            self.btn_tema.tooltip = "Cambiar a tema claro"
+            estilo = PANTALLA_OSCURO
+
+        self.paleta = tema.obtener_paleta(self.modo_tema)
+        page = self.obtener_pagina
+        if page:
+            page.theme_mode = self.modo_tema
+            page.theme = tema.tema_claro
+            page.dark_theme = tema.tema_oscuro
+
+        # Regenerar SVG con el nuevo estilo sin recalcular
+        self.controlador.cambiar_estilo(estilo)
+        self._actualizar_estilos_paleta()
+        self._sync_controlador_a_vista(self.controlador.get_view_model())
+
+    def _actualizar_estilos_paleta(self):
+        self.panel_izquierdo.bgcolor = self.paleta.panel
+        self.btn_calcular.style = ft.ButtonStyle(color=self.paleta.texto, bgcolor=self.paleta.acento)
+        self.lbl_error.color = self.paleta.color_error
+        self.lbl_desactualizado.color = self.paleta.color_aviso
+        self.lbl_subseccion_avanzada.color = self.paleta.texto_secundario
+        self.lbl_vacio_tablas.content.color = self.paleta.texto_secundario
+        self.lbl_vacio_moldes.content.color = self.paleta.texto_secundario
+        self.lbl_titulo_tabla.color = self.paleta.texto
+        self.lbl_resumen_tabla.color = self.paleta.texto_secundario
+        self.lbl_nota_tabla.bgcolor = self.paleta.panel
+        self.lbl_nota_tabla.content.color = self.paleta.color_aviso
+        self.container_viewer_svg.border = ft.Border.all(1, self.paleta.borde)
+        self.lbl_instruccion_zoom.color = self.paleta.texto_secundario
+        self.lbl_pie_moldes.color = self.paleta.texto_secundario
+        self.tabla_componente.actualizar_paleta(self.paleta)
 
     def on_change_input(self, e):
         self.controlador.marcar_desactualizado()
@@ -290,36 +386,46 @@ class VistaTrompo(ft.Container):
 
     def on_copiar_tabla(self, e):
         idx = int(self.selector_tabla.selected[0]) if self.selector_tabla.selected else 0
-        if self.controlador.tablas and idx < len(self.controlador.tablas):
-            tabla = self.controlador.tablas[idx]
-            texto = tabla_a_texto(tabla)
-            
-            # Copiar al portapapeles
-            try:
-                cb = ft.Clipboard()
-                if self.page:
-                    if hasattr(self.page, "_services"):
-                        self.page._services.register_service(cb)
-                    self.page.run_task(cb.set, texto)
-            except Exception:
-                pass
-            
-            # Fallback en Windows
-            try:
-                import subprocess
-                subprocess.run(
-                    ["powershell", "-NoProfile", "-Command", "$input | Set-Clipboard"],
-                    input=texto, text=True, capture_output=True
-                )
-            except Exception:
-                pass
+        if not (self.controlador.tablas and idx < len(self.controlador.tablas)):
+            self._mostrar_snackbar("No se pudo copiar")
+            return
 
-            # Notificación SnackBar
+        tabla = self.controlador.tablas[idx]
+        texto = tabla_a_texto(tabla)
+
+        # Usar servicio inyectado
+        copia_exitosa = False
+        page = self.obtener_pagina
+        try:
+            # Asegurar registro del servicio si hay página y es ft.Service
+            if page and isinstance(self.servicio_clipboard, ft.Service):
+                if self.servicio_clipboard not in page.services:
+                    page.services.append(self.servicio_clipboard)
+
+            if hasattr(self.servicio_clipboard, "set"):
+                res = self.servicio_clipboard.set(texto)
+                if asyncio.iscoroutine(res):
+                    if page:
+                        page.run_task(self.servicio_clipboard.set, texto)
+                    else:
+                        asyncio.run(res)
+                copia_exitosa = True
+        except Exception:
+            copia_exitosa = False
+
+        if copia_exitosa:
+            self._mostrar_snackbar("Tabla copiada al portapapeles")
+        else:
+            self._mostrar_snackbar("No se pudo copiar")
+
+    def _mostrar_snackbar(self, mensaje: str):
+        self.ultimo_mensaje_snackbar = mensaje
+        page = self.obtener_pagina
+        if page:
             try:
-                snack = ft.SnackBar(ft.Text("Tabla copiada al portapapeles"), open=True)
-                if self.page:
-                    self.page.overlay.append(snack)
-                    self.page.update()
+                snack = ft.SnackBar(ft.Text(mensaje), open=True)
+                page.overlay.append(snack)
+                page.update()
             except Exception:
                 pass
 
@@ -361,13 +467,7 @@ class VistaTrompo(ft.Container):
         else:
             self.lbl_nota_tabla.visible = False
 
-        # Filas alternadas
-        filas = []
-        for i, f in enumerate(tabla.filas):
-            color_fondo = tema.COLOR_FONDO_SECUNDARIO if (i % 2 == 1) else None
-            cells = [ft.DataCell(ft.Text(val)) for val in f]
-            filas.append(ft.DataRow(cells=cells, color=color_fondo))
-        self.datatable.rows = filas
+        self.tabla_componente.cargar_tabla(tabla, self.paleta)
 
     def _renderizar_molde_seleccionado(self):
         vm = self.controlador.get_view_model()
@@ -402,16 +502,16 @@ class VistaTrompo(ft.Container):
         self.grid_tarjetas.controls.clear()
         if not vm.desactualizado:
             for tj in vm.tarjetas:
-                bg_color = tema.COLOR_FONDO_SECUNDARIO
-                text_color = tema.COLOR_TEXTO
+                bg_color = self.paleta.panel
+                text_color = self.paleta.texto
                 if tj.etiqueta == "Viable":
-                    bg_color = tema.COLOR_OK if tj.valor == "Sí" else tema.COLOR_ERROR
-                    text_color = ft.Colors.WHITE
+                    bg_color = self.paleta.color_ok if tj.valor == "Sí" else self.paleta.color_error
+                    text_color = "#ffffff"
                     
                 card = ft.Container(
                     content=ft.Column(
                         controls=[
-                            ft.Text(tj.etiqueta, size=11, color=tema.COLOR_TEXTO_SECUNDARIO),
+                            ft.Text(tj.etiqueta, size=11, color=self.paleta.texto_secundario),
                             ft.Text(tj.valor, size=18, weight=ft.FontWeight.BOLD, color=text_color),
                         ],
                         spacing=2,
@@ -427,11 +527,11 @@ class VistaTrompo(ft.Container):
         self.col_avisos.controls.clear()
         if not vm.desactualizado:
             for av in vm.avisos:
-                c = tema.COLOR_TEXTO
-                if av.clase == "ok": c = tema.COLOR_OK
-                elif av.clase == "aviso": c = tema.COLOR_AVISO
-                elif av.clase == "error": c = tema.COLOR_ERROR
-                elif av.clase == "info": c = tema.COLOR_TEXTO_SECUNDARIO
+                c = self.paleta.texto
+                if av.clase == "ok": c = self.paleta.color_ok
+                elif av.clase == "aviso": c = self.paleta.color_aviso
+                elif av.clase == "error": c = self.paleta.color_error
+                elif av.clase == "info": c = self.paleta.color_info
                 
                 self.col_avisos.controls.append(
                     ft.Text(av.texto, color=c)
