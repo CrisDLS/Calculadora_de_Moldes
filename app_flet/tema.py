@@ -38,7 +38,7 @@ PALETA_CLARA = PaletaTema(
     texto_secundario="#636e72",
     borde="#dfe6e9",
     acento="#e84393",
-    fila_alternada="#f1f2f6",
+    fila_alternada="#edf2f7",
     color_ok="#10ac84",
     color_aviso="#e67e22",
     color_error="#d63031",
@@ -50,15 +50,41 @@ def obtener_paleta(modo: ft.ThemeMode) -> PaletaTema:
         return PALETA_CLARA
     return PALETA_OSCURA
 
-# Temas Material 3 para Flet
+# Temas Material 3 para Flet con ColorScheme explícito
 tema_oscuro = ft.Theme(
-    color_scheme_seed=PALETA_OSCURA.acento,
+    color_scheme=ft.ColorScheme(
+        surface=PALETA_OSCURA.fondo,
+        on_surface=PALETA_OSCURA.texto,
+        surface_container=PALETA_OSCURA.panel,
+        surface_container_highest=PALETA_OSCURA.panel,
+        outline=PALETA_OSCURA.borde,
+        primary=PALETA_OSCURA.acento,
+        on_primary=PALETA_OSCURA.fondo,
+        secondary=PALETA_OSCURA.texto_secundario,
+        on_surface_variant=PALETA_OSCURA.texto_secundario,
+        error=PALETA_OSCURA.color_error,
+    ),
     scaffold_bgcolor=PALETA_OSCURA.fondo,
+    card_bgcolor=PALETA_OSCURA.panel,
+    divider_color=PALETA_OSCURA.borde,
     use_material3=True,
 )
 
 tema_claro = ft.Theme(
-    color_scheme_seed=PALETA_CLARA.acento,
+    color_scheme=ft.ColorScheme(
+        surface=PALETA_CLARA.fondo,
+        on_surface=PALETA_CLARA.texto,
+        surface_container=PALETA_CLARA.panel,
+        surface_container_highest=PALETA_CLARA.panel,
+        outline=PALETA_CLARA.borde,
+        primary=PALETA_CLARA.acento,
+        on_primary="#ffffff",
+        secondary=PALETA_CLARA.texto_secundario,
+        on_surface_variant=PALETA_CLARA.texto_secundario,
+        error=PALETA_CLARA.color_error,
+    ),
     scaffold_bgcolor=PALETA_CLARA.fondo,
+    card_bgcolor=PALETA_CLARA.panel,
+    divider_color=PALETA_CLARA.borde,
     use_material3=True,
 )

@@ -16,10 +16,10 @@ class TablaMoldePersonalizada(ft.Container):
         self.row_encabezados = ft.Row(spacing=0, expand=True)
         self.container_encabezado = ft.Container(
             content=self.row_encabezados,
-            bgcolor=self.paleta.panel,
+            bgcolor=ft.Colors.SURFACE_CONTAINER,
             border_radius=ft.BorderRadius.only(top_left=8, top_right=8),
             padding=ft.Padding.only(left=10, right=20, top=10, bottom=10),
-            border=ft.Border.all(1, self.paleta.borde),
+            border=ft.Border.all(1, ft.Colors.OUTLINE),
         )
 
         self.list_filas = ft.ListView(
@@ -32,9 +32,9 @@ class TablaMoldePersonalizada(ft.Container):
             content=self.list_filas,
             expand=True,
             border=ft.Border.only(
-                left=ft.BorderSide(1, self.paleta.borde),
-                right=ft.BorderSide(1, self.paleta.borde),
-                bottom=ft.BorderSide(1, self.paleta.borde),
+                left=ft.BorderSide(1, ft.Colors.OUTLINE),
+                right=ft.BorderSide(1, ft.Colors.OUTLINE),
+                bottom=ft.BorderSide(1, ft.Colors.OUTLINE),
             ),
             border_radius=ft.BorderRadius.only(bottom_left=8, bottom_right=8),
         )
@@ -72,12 +72,12 @@ class TablaMoldePersonalizada(ft.Container):
             return
 
         # 1. Encabezados
-        self.container_encabezado.bgcolor = self.paleta.panel
-        self.container_encabezado.border = ft.Border.all(1, self.paleta.borde)
+        self.container_encabezado.bgcolor = ft.Colors.SURFACE_CONTAINER
+        self.container_encabezado.border = ft.Border.all(1, ft.Colors.OUTLINE)
         self.container_cuerpo.border = ft.Border.only(
-            left=ft.BorderSide(1, self.paleta.borde),
-            right=ft.BorderSide(1, self.paleta.borde),
-            bottom=ft.BorderSide(1, self.paleta.borde),
+            left=ft.BorderSide(1, ft.Colors.OUTLINE),
+            right=ft.BorderSide(1, ft.Colors.OUTLINE),
+            bottom=ft.BorderSide(1, ft.Colors.OUTLINE),
         )
 
         self.row_encabezados.controls = [
@@ -88,7 +88,7 @@ class TablaMoldePersonalizada(ft.Container):
                     enc,
                     weight=ft.FontWeight.BOLD,
                     size=13,
-                    color=self.paleta.texto,
+                    color=ft.Colors.ON_SURFACE,
                     text_align=ft.TextAlign.RIGHT,
                 ),
             )
@@ -106,7 +106,7 @@ class TablaMoldePersonalizada(ft.Container):
                     content=ft.Text(
                         val,
                         size=13,
-                        color=self.paleta.texto,
+                        color=ft.Colors.ON_SURFACE,
                         text_align=ft.TextAlign.RIGHT,
                     ),
                 )
