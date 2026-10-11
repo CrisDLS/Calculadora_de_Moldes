@@ -18,15 +18,17 @@ from logic.exportacion.vista_svg import (
     extraer_dimensiones_svg,
 )
 from presentacion.trompo_estrella import tabla_a_texto, TablaMolde
+from logic.exportacion.paquete import generar_paquete, guardar_paquete
 
 class VistaTrompo(ft.Container):
-    def __init__(self, servicio_clipboard=None):
+    def __init__(self, servicio_clipboard=None, servicio_file_picker=None):
         super().__init__()
         self.expand = True
         self.modo_tema = ft.ThemeMode.DARK
         self.paleta = tema.obtener_paleta(self.modo_tema)
         
         self.servicio_clipboard = servicio_clipboard if servicio_clipboard is not None else ft.Clipboard()
+        self.file_picker = servicio_file_picker if servicio_file_picker is not None else ft.FilePicker()
         self.ultimo_mensaje_snackbar: Optional[str] = None
         self.ultimo_tiempo_toggle_tema_ms: float = 0.0
         self.conteo_page_updates: int = 0
@@ -347,16 +349,228 @@ class VistaTrompo(ft.Container):
             )
         )
 
-        # 4. Pestaña Vista 3D
+        # 4. Pestaña Hoja de trazo (F3)
+        self.selector_pieza_hoja = ft.SegmentedButton(
+            selected=["superior"],
+            allow_multiple_selection=False,
+            segments=[
+                ft.Segment(value="superior", label=ft.Text("Cono superior")),
+                ft.Segment(value="pico", label=ft.Text("Pico")),
+                ft.Segment(value="inferior", label=ft.Text("Cono inferior")),
+            ],
+            on_change=self.on_cambio_pieza_hoja,
+        )
+        self.dd_modo_esquema = ft.Dropdown(
+            label="Modo de diseño",
+            value="repeticion",
+            options=[
+                ft.DropdownOption(key="repeticion", text="Repetición"),
+                ft.DropdownOption(key="central_espejo", text="Central con espejo"),
+                ft.DropdownOption(key="espejo_total", text="Espejo total"),
+                ft.DropdownOption(key="personalizado", text="Personalizado"),
+            ],
+            on_select=self.on_cambio_esquema_opciones,
+            dense=True,
+            width=180,
+        )
+        self.txt_tam_grupo = ft.TextField(
+            label="Grupo (G)",
+            value="5",
+            width=90,
+            dense=True,
+            on_change=self.on_cambio_esquema_opciones,
+        )
+        self.txt_ciclo_personalizado = ft.TextField(
+            label="Ciclo personalizado",
+            value="0, 1, 2E, 1E",
+            expand=True,
+            dense=True,
+            hint_text="ej. 0, 1, 2E, 1E",
+            visible=False,
+            on_change=self.on_cambio_esquema_opciones,
+        )
+        self.dd_hoja = ft.Dropdown(
+            label="Hoja",
+            value="carta",
+            options=[
+                ft.DropdownOption(key="carta", text="Carta (215.9 × 279.4 mm)"),
+                ft.DropdownOption(key="a4", text="A4 (210 × 297 mm)"),
+            ],
+            on_select=self.on_cambio_hoja_opciones,
+            dense=True,
+            width=190,
+        )
+        self.dd_escala = ft.Dropdown(
+            label="Escala",
+            value="auto",
+            options=[
+                ft.DropdownOption(key="auto", text="Auto (ajustar)"),
+                ft.DropdownOption(key="10", text="1:10"),
+                ft.DropdownOption(key="15", text="1:15"),
+                ft.DropdownOption(key="20", text="1:20"),
+                ft.DropdownOption(key="25", text="1:25"),
+                ft.DropdownOption(key="30", text="1:30"),
+            ],
+            on_select=self.on_cambio_hoja_opciones,
+            dense=True,
+            width=140,
+        )
+        self.btn_exportar_hoja = ft.FilledButton(
+            "Exportar hoja (SVG)",
+            icon=ft.Icons.DOWNLOAD,
+            on_click=self.on_exportar_hoja,
+        )
+        self.btn_exportar_paquete = ft.OutlinedButton(
+            "Exportar paquete…",
+            icon=ft.Icons.FOLDER_ZIP,
+            on_click=self.on_exportar_paquete,
+        )
+        self.lbl_error_esquema = ft.Text(
+            "",
+            color=self.paleta.color_error,
+            size=13,
+            weight=ft.FontWeight.W_500,
+            visible=False,
+        )
+        self.lbl_aviso_hoja = ft.Container(
+            content=ft.Text("", size=12, color=self.paleta.color_aviso, weight=ft.FontWeight.W_500),
+            bgcolor=ft.Colors.SURFACE_CONTAINER,
+            border_radius=6,
+            padding=6,
+            visible=False,
+        )
+        self.col_resumen_esquema = ft.Column(spacing=2)
+
+        # Visor de la hoja (papel blanco con sombra suave)
+        self.zona_ancho_hoja: float = 600.0
+        self.zona_alto_hoja: float = 500.0
+        self.vista_svg_hoja: Optional[VistaSvg] = None
+        self.vista_base_svg_hoja: Optional[VistaSvg] = None
+        self._svg_hoja_raw: str = ""
+
+        self.img_svg_hoja = ft.Image(src="", fit=ft.BoxFit.CONTAIN, width=self.zona_ancho_hoja, height=self.zona_alto_hoja)
+        self.detector_gestos_hoja = ft.GestureDetector(
+            content=self.img_svg_hoja,
+            expand=True,
+            on_scroll=self._on_gesture_hoja_scroll,
+            on_pan_update=self._on_gesture_hoja_pan_update,
+            on_double_tap=self._on_gesture_hoja_double_tap,
+        )
+        self.container_viewer_hoja = ft.Container(
+            content=self.detector_gestos_hoja,
+            bgcolor=ft.Colors.WHITE,
+            border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
+            border_radius=4,
+            shadow=ft.BoxShadow(spread_radius=1, blur_radius=8, color="#00000022"),
+            expand=True,
+            padding=self._padding_container,
+            clip_behavior=ft.ClipBehavior.HARD_EDGE,
+            alignment=ft.Alignment(0, 0),
+            on_size_change=self._on_container_hoja_size_change,
+        )
+        self.btn_zoom_out_hoja = ft.IconButton(
+            icon=ft.Icons.REMOVE,
+            tooltip="Alejar",
+            icon_size=18,
+            on_click=self._on_btn_zoom_out_hoja,
+        )
+        self.lbl_zoom_hoja_porcentaje = ft.Text(
+            "100 %",
+            size=12,
+            color=ft.Colors.ON_SURFACE_VARIANT,
+            weight=ft.FontWeight.W_500,
+        )
+        self.btn_zoom_in_hoja = ft.IconButton(
+            icon=ft.Icons.ADD,
+            tooltip="Acercar",
+            icon_size=18,
+            on_click=self._on_btn_zoom_in_hoja,
+        )
+        self.btn_ajustar_hoja = ft.TextButton(
+            "Ajustar",
+            icon=ft.Icons.FIT_SCREEN,
+            on_click=self._on_btn_ajustar_hoja,
+        )
+        self.barra_zoom_hoja = ft.Row(
+            controls=[
+                self.btn_zoom_out_hoja,
+                self.lbl_zoom_hoja_porcentaje,
+                self.btn_zoom_in_hoja,
+                self.btn_ajustar_hoja,
+            ],
+            alignment=ft.MainAxisAlignment.CENTER,
+            spacing=4,
+        )
+        self.lbl_vacio_hoja = ft.Container(
+            content=ft.Text("Calcula para ver la hoja de trazo", size=16, color=ft.Colors.ON_SURFACE_VARIANT),
+            alignment=ft.Alignment(0, 0),
+            expand=True,
+            visible=True,
+        )
+        self.panel_contenido_hoja = ft.Column(
+            expand=True,
+            visible=False,
+            controls=[
+                self.container_viewer_hoja,
+                self.barra_zoom_hoja,
+                ft.Row([self.lbl_instruccion_zoom], alignment=ft.MainAxisAlignment.CENTER),
+            ],
+            spacing=4,
+        )
+
+        tab_hoja = ft.Container(
+            padding=15,
+            expand=True,
+            content=ft.Column(
+                expand=True,
+                controls=[
+                    ft.Row([self.selector_pieza_hoja], alignment=ft.MainAxisAlignment.CENTER),
+                    ft.Divider(color=ft.Colors.OUTLINE),
+                    ft.Row(
+                        controls=[
+                            self.dd_modo_esquema,
+                            self.txt_tam_grupo,
+                            self.txt_ciclo_personalizado,
+                            self.dd_hoja,
+                            self.dd_escala,
+                            self.btn_exportar_hoja,
+                            self.btn_exportar_paquete,
+                        ],
+                        alignment=ft.MainAxisAlignment.START,
+                        wrap=True,
+                        spacing=8,
+                    ),
+                    self.lbl_error_esquema,
+                    self.lbl_aviso_hoja,
+                    ft.ExpansionTile(
+                        title=ft.Text("Resumen de piezas del esquema", size=13, weight=ft.FontWeight.BOLD),
+                        expanded=False,
+                        dense=True,
+                        controls=[
+                            ft.Container(
+                                padding=8,
+                                content=self.col_resumen_esquema,
+                            )
+                        ],
+                    ),
+                    ft.Divider(color=ft.Colors.OUTLINE),
+                    self.lbl_vacio_hoja,
+                    self.panel_contenido_hoja,
+                ],
+                spacing=6,
+            ),
+        )
+
+        # 5. Pestaña Vista 3D
         tab_3d = ft.Container(
             content=ft.Text("3D llegará en F4", color=ft.Colors.ON_SURFACE_VARIANT),
             alignment=ft.Alignment(0, 0),
         )
 
-        # Tabs generales
+        # Tabs generales (5 pestañas)
         self.tabs = ft.Tabs(
             selected_index=0,
-            length=4,
+            length=5,
             expand=True,
             content=ft.Column(
                 expand=True,
@@ -366,12 +580,13 @@ class VistaTrompo(ft.Container):
                             ft.Tab(label="Resumen", icon=ft.Icons.DASHBOARD_OUTLINED),
                             ft.Tab(label="Tablas de moldes", icon=ft.Icons.TABLE_CHART_OUTLINED),
                             ft.Tab(label="Moldes 2D", icon=ft.Icons.IMAGE_OUTLINED),
+                            ft.Tab(label="Hoja de trazo", icon=ft.Icons.DESCRIPTION_OUTLINED),
                             ft.Tab(label="Vista 3D", icon=ft.Icons.VIEW_IN_AR_OUTLINED),
                         ]
                     ),
                     ft.TabBarView(
                         expand=True,
-                        controls=[tab_resumen, tab_tablas, tab_2d, tab_3d],
+                        controls=[tab_resumen, tab_tablas, tab_2d, tab_hoja, tab_3d],
                     ),
                 ],
             ),
@@ -845,8 +1060,256 @@ class VistaTrompo(ft.Container):
             self.lbl_vacio_moldes.visible = True
             self.panel_contenido_moldes.visible = False
 
+        # 7. Hoja de trazo (F3)
+        if vm.esquema_error:
+            self.lbl_error_esquema.value = vm.esquema_error
+            self.lbl_error_esquema.visible = True
+        else:
+            self.lbl_error_esquema.visible = False
+
+        if vm.aviso_hoja:
+            self.lbl_aviso_hoja.content.value = vm.aviso_hoja
+            self.lbl_aviso_hoja.visible = True
+        else:
+            self.lbl_aviso_hoja.visible = False
+
+        self.col_resumen_esquema.controls.clear()
+        for linea in vm.resumen_esquema:
+            self.col_resumen_esquema.controls.append(
+                ft.Text(f"• {linea}", size=12, color=ft.Colors.ON_SURFACE_VARIANT)
+            )
+
+        if vm.svg_hoja and not vm.desactualizado and not vm.esquema_error:
+            self.lbl_vacio_hoja.visible = False
+            self.panel_contenido_hoja.visible = True
+            self._renderizar_hoja(reset_vista=reset_zoom)
+        else:
+            if vm.esquema_error:
+                self.lbl_vacio_hoja.content.value = "Corrige el esquema para generar la hoja"
+            elif vm.desactualizado:
+                self.lbl_vacio_hoja.content.value = "Pulsa Calcular para actualizar la hoja"
+            else:
+                self.lbl_vacio_hoja.content.value = "Calcula para ver la hoja de trazo"
+            self.lbl_vacio_hoja.visible = True
+            self.panel_contenido_hoja.visible = False
+
         if not diferir_update:
             try:
                 self.update()
             except RuntimeError:
                 pass
+
+    def did_mount(self):
+        page = self.obtener_pagina
+        if page:
+            if hasattr(self, "file_picker") and self.file_picker not in page.services:
+                page.services.append(self.file_picker)
+                page.update()
+
+    def on_cambio_pieza_hoja(self, e):
+        sel = self.selector_pieza_hoja.selected[0] if self.selector_pieza_hoja.selected else "superior"
+        self.controlador.actualizar_opciones_hoja(pieza=sel)
+        vm = self.controlador.get_view_model()
+        self._sync_controlador_a_vista(vm, reset_zoom=True)
+
+    def on_cambio_esquema_opciones(self, e):
+        modo = self.dd_modo_esquema.value or "repeticion"
+        self.txt_ciclo_personalizado.visible = (modo == "personalizado")
+        self.txt_tam_grupo.visible = (modo != "personalizado")
+        tam_g = 5
+        try:
+            tam_g = int(self.txt_tam_grupo.value or "5")
+        except ValueError:
+            pass
+        ciclo = self.txt_ciclo_personalizado.value or ""
+        self.controlador.actualizar_esquema(modo=modo, tam_grupo=tam_g, ciclo_texto=ciclo)
+        vm = self.controlador.get_view_model()
+        self._sync_controlador_a_vista(vm, reset_zoom=True)
+
+    def on_cambio_hoja_opciones(self, e):
+        hoja = self.dd_hoja.value or "carta"
+        escala = self.dd_escala.value or "auto"
+        self.controlador.actualizar_opciones_hoja(tipo=hoja, escala=escala)
+        vm = self.controlador.get_view_model()
+        self._sync_controlador_a_vista(vm, reset_zoom=True)
+
+    async def on_exportar_hoja(self, e):
+        if not self.controlador.svg_hoja:
+            self._mostrar_snackbar("No hay hoja de trazo para exportar")
+            return
+        nombre_def = f"hoja_{self.controlador.hoja_pieza}_{self.controlador.esquema_modo}.svg"
+        ruta = await self.file_picker.save_file(
+            dialog_title="Exportar hoja de trazo",
+            file_name=nombre_def,
+            file_type=ft.FilePickerFileType.CUSTOM,
+            allowed_extensions=["svg"],
+        )
+        if ruta:
+            try:
+                with open(ruta, "w", encoding="utf-8") as f:
+                    f.write(self.controlador.svg_hoja)
+                self._mostrar_snackbar(f"Hoja exportada: {os.path.basename(ruta)}")
+            except Exception as err:
+                self._mostrar_snackbar(f"Error al exportar hoja: {err}")
+
+    async def on_exportar_paquete(self, e):
+        if not (self.controlador.resultado and self.controlador.entrada_actual):
+            self._mostrar_snackbar("Calcula el modelo antes de exportar el paquete")
+            return
+        carpeta = await self.file_picker.get_directory_path(
+            dialog_title="Seleccionar carpeta para paquete de exportación"
+        )
+        if carpeta:
+            try:
+                archivos_dict = generar_paquete(
+                    self.controlador.resultado,
+                    self.controlador.entrada_actual,
+                    esquema=self.controlador._construir_esquema(),
+                    hoja=self.controlador.hoja_tipo,
+                    escala=self.controlador.hoja_escala,
+                )
+                archivos_escritos = guardar_paquete(carpeta, archivos_dict, sobrescribir=True)
+                self._mostrar_snackbar(f"Paquete exportado: {len(archivos_escritos)} archivos guardados")
+            except Exception as err:
+                self._mostrar_snackbar(f"Error al exportar paquete: {err}")
+
+    def _porcentaje_zoom_hoja(self) -> float:
+        if not self.vista_base_svg_hoja or not self.vista_svg_hoja or self.vista_svg_hoja.ancho <= 0:
+            return 100.0
+        return (self.vista_base_svg_hoja.ancho / self.vista_svg_hoja.ancho) * 100.0
+
+    def _limites_zoom_hoja(self) -> Tuple[float, float]:
+        if not self.vista_base_svg_hoja:
+            return (1.0, 1000.0)
+        ancho_min = self.vista_base_svg_hoja.ancho / 40.0
+        ancho_max = self.vista_base_svg_hoja.ancho * 1.5
+        return (ancho_min, ancho_max)
+
+    def _on_container_hoja_size_change(self, e):
+        w_raw = getattr(e, "width", 0.0) or 0.0
+        h_raw = getattr(e, "height", 0.0) or 0.0
+        if w_raw <= 0 or h_raw <= 0:
+            return
+
+        descuento_w = 2.0 * (self._padding_container + 1.0)
+        descuento_h = 2.0 * (self._padding_container + 1.0)
+        w_util = max(50.0, w_raw - descuento_w)
+        h_util = max(50.0, h_raw - descuento_h)
+
+        if abs(w_util - self.zona_ancho_hoja) < 0.5 and abs(h_util - self.zona_alto_hoja) < 0.5:
+            return
+
+        self.zona_ancho_hoja = w_util
+        self.zona_alto_hoja = h_util
+        self.img_svg_hoja.width = self.zona_ancho_hoja
+        self.img_svg_hoja.height = self.zona_alto_hoja
+
+        aspecto_zona = self.zona_ancho_hoja / self.zona_alto_hoja
+
+        if self._svg_hoja_raw:
+            w_nat, h_nat = extraer_dimensiones_svg(self._svg_hoja_raw)
+            self.vista_base_svg_hoja = ajustar(w_nat, h_nat, aspecto_zona=aspecto_zona, margen=0.04)
+            if self.vista_svg_hoja:
+                self.vista_svg_hoja = adaptar_aspecto(self.vista_svg_hoja, aspecto_zona)
+            else:
+                self.vista_svg_hoja = self.vista_base_svg_hoja
+            self._actualizar_imagen_hoja_zoom(force=True)
+
+    def _renderizar_hoja(self, reset_vista: bool = False):
+        vm = self.controlador.get_view_model()
+        svg_str = vm.svg_hoja
+        self._svg_hoja_raw = svg_str
+
+        if not svg_str:
+            self.img_svg_hoja.src = ""
+            return
+
+        aspecto_zona = self.zona_ancho_hoja / self.zona_alto_hoja if self.zona_alto_hoja > 0 else 1.0
+        w_nat, h_nat = extraer_dimensiones_svg(svg_str)
+        if reset_vista or not self.vista_svg_hoja or not self.vista_base_svg_hoja:
+            self.vista_base_svg_hoja = ajustar(w_nat, h_nat, aspecto_zona=aspecto_zona, margen=0.04)
+            self.vista_svg_hoja = self.vista_base_svg_hoja
+
+        svg_con_viewbox = aplicar_viewbox(svg_str, self.vista_svg_hoja)
+        self.img_svg_hoja.src = svg_con_viewbox.encode("utf-8")
+        self.lbl_zoom_hoja_porcentaje.value = f"{self._porcentaje_zoom_hoja():.0f} %"
+
+    def _actualizar_imagen_hoja_zoom(self, force: bool = False):
+        if not self._svg_hoja_raw or not self.vista_svg_hoja:
+            return
+        svg_con_viewbox = aplicar_viewbox(self._svg_hoja_raw, self.vista_svg_hoja)
+        self.img_svg_hoja.src = svg_con_viewbox.encode("utf-8")
+        self.lbl_zoom_hoja_porcentaje.value = f"{self._porcentaje_zoom_hoja():.0f} %"
+        try:
+            self.img_svg_hoja.update()
+            self.lbl_zoom_hoja_porcentaje.update()
+        except Exception:
+            pass
+
+    def _on_gesture_hoja_scroll(self, e: ft.ScrollEvent):
+        if not self.vista_svg_hoja:
+            return
+        delta_y = getattr(e, "scroll_delta", None)
+        factor = 1.15
+        if delta_y and hasattr(delta_y, "y"):
+            if delta_y.y > 0:
+                factor = 1.0 / 1.15
+            elif delta_y.y < 0:
+                factor = 1.15
+
+        fx = 0.5
+        fy = 0.5
+        local_pos = getattr(e, "local_position", None)
+        if local_pos and hasattr(local_pos, "x") and hasattr(local_pos, "y"):
+            if self.zona_ancho_hoja > 0 and self.zona_alto_hoja > 0:
+                fx = max(0.01, min(0.99, local_pos.x / self.zona_ancho_hoja))
+                fy = max(0.01, min(0.99, local_pos.y / self.zona_alto_hoja))
+
+        self.vista_svg_hoja = zoom(
+            self.vista_svg_hoja,
+            factor=factor,
+            fx=fx,
+            fy=fy,
+            limites=self._limites_zoom_hoja()
+        )
+        self._actualizar_imagen_hoja_zoom()
+
+    def _on_gesture_hoja_pan_update(self, e: ft.DragUpdateEvent):
+        if not self.vista_svg_hoja or not self.vista_base_svg_hoja:
+            return
+        delta = getattr(e, "local_delta", None) or getattr(e, "global_delta", None)
+        if delta and hasattr(delta, "x") and hasattr(delta, "y"):
+            w_control = max(50.0, self.zona_ancho_hoja)
+            h_control = max(50.0, self.zona_alto_hoja)
+            dx = delta.x * (self.vista_svg_hoja.ancho / w_control)
+            dy = delta.y * (self.vista_svg_hoja.alto / h_control)
+            limites_cont = (self.vista_base_svg_hoja.ancho, self.vista_base_svg_hoja.alto)
+            self.vista_svg_hoja = desplazar(self.vista_svg_hoja, dx=dx, dy=dy, limites_contenido=limites_cont)
+            self._actualizar_imagen_hoja_zoom()
+
+    def _on_gesture_hoja_double_tap(self, e):
+        self._ajustar_vista_hoja()
+
+    def _on_btn_zoom_in_hoja(self, e):
+        if not self.vista_svg_hoja:
+            return
+        self.vista_svg_hoja = zoom(self.vista_svg_hoja, factor=1.25, fx=0.5, fy=0.5, limites=self._limites_zoom_hoja())
+        self._actualizar_imagen_hoja_zoom(force=True)
+
+    def _on_btn_zoom_out_hoja(self, e):
+        if not self.vista_svg_hoja:
+            return
+        self.vista_svg_hoja = zoom(self.vista_svg_hoja, factor=1.0 / 1.25, fx=0.5, fy=0.5, limites=self._limites_zoom_hoja())
+        self._actualizar_imagen_hoja_zoom(force=True)
+
+    def _on_btn_ajustar_hoja(self, e):
+        self._ajustar_vista_hoja()
+
+    def _ajustar_vista_hoja(self):
+        if not self._svg_hoja_raw:
+            return
+        w_nat, h_nat = extraer_dimensiones_svg(self._svg_hoja_raw)
+        aspecto_zona = self.zona_ancho_hoja / self.zona_alto_hoja if self.zona_alto_hoja > 0 else 1.0
+        self.vista_base_svg_hoja = ajustar(w_nat, h_nat, aspecto_zona=aspecto_zona, margen=0.04)
+        self.vista_svg_hoja = self.vista_base_svg_hoja
+        self._actualizar_imagen_hoja_zoom(force=True)
