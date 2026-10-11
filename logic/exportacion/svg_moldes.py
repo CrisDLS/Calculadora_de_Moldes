@@ -331,3 +331,148 @@ def svg_hoja(resultado: BalloonCalculationResult, entrada: BalloonInput, seccion
     lines.append('</svg>')
     
     return "\n".join(lines)
+
+
+def svg_conjunto(resultado: BalloonCalculationResult, entrada: BalloonInput, escala: float = 10.0) -> str:
+    """Genera UN SVG con las 3 piezas (cono superior, pico, cono inferior) juntas.
+    
+    Colocadas una al lado de la otra a la misma escala (por defecto 1:10),
+    con la punta estrecha hacia abajo, cuadrícula numerada y rótulo
+    (nombre, cantidad y largo total) en mm reales.
+    """
+    factor = 10.0 / escala
+    costura = entrada.ancho_costura
+    margen_mm = 15.0
+    sep_mm = 20.0
+    alto_rotulo_mm = 14.0
+
+    piezas = [
+        ("superior", "Cono superior", resultado.seccion_superior),
+        ("pico", "Pico", resultado.seccion_picos),
+        ("inferior", "Cono inferior", resultado.seccion_inferior),
+    ]
+
+    # Calcular dimensiones de cada pieza
+    dims = []
+    for clave, nombre, sec in piezas:
+        w_real = max(p.ancho_medio for p in sec.puntos) * 2
+        l_real = sec.generatriz_total
+        w_mm = w_real * factor
+        h_mm = l_real * factor
+        pestana_mm = 0.0
+        if clave == "inferior" and entrada.usar_parametros_avanzados and entrada.pestana_boca > 0:
+            pestana_mm = entrada.pestana_boca * factor
+            h_mm += pestana_mm
+        dims.append({
+            "clave": clave,
+            "nombre": nombre,
+            "sec": sec,
+            "w_mm": w_mm,
+            "h_mm": h_mm,
+            "l_real": l_real,
+            "pestana_mm": pestana_mm,
+        })
+
+    # Dimensiones globales del lienzo SVG
+    ancho_total_mm = margen_mm * 2 + sum(d["w_mm"] for d in dims) + sep_mm * (len(dims) - 1)
+    max_h_piezas_mm = max(d["h_mm"] for d in dims)
+    alto_total_mm = margen_mm * 2 + alto_rotulo_mm + max_h_piezas_mm
+
+    lines = [
+        '<?xml version="1.0" encoding="UTF-8" standalone="no"?>',
+        f'<svg width="{ancho_total_mm:.2f}mm" height="{alto_total_mm:.2f}mm" viewBox="0 0 {ancho_total_mm:.2f} {alto_total_mm:.2f}"',
+        '     xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape">',
+    ]
+
+    x_cur = margen_mm
+    y_piezas_top = margen_mm + alto_rotulo_mm
+
+    for d in dims:
+        clave = d["clave"]
+        nombre = d["nombre"]
+        sec = d["sec"]
+        w_mm = d["w_mm"]
+        l_real = d["l_real"]
+        pestana_mm = d["pestana_mm"]
+        cx = x_cur + w_mm / 2.0
+
+        # Función de coordenadas Y para punta estrecha abajo
+        # En inferior: largo_acumulado = 0 es boca estrecha (abajo).
+        # En superior y pico: largo_acumulado = 0 es base ancha (arriba).
+        def get_y(l_acumulado: float, cl=clave, lr=l_real) -> float:
+            if cl == "inferior":
+                return y_piezas_top + (lr - l_acumulado) * factor
+            else:
+                return y_piezas_top + l_acumulado * factor
+
+        # Puntos de contorno y costura
+        pts_left_cut = []
+        pts_right_cut = []
+        pts_left_seam = []
+        pts_right_seam = []
+
+        for p in sec.puntos:
+            y = get_y(p.largo_acumulado)
+            w_cut = p.ancho_medio * factor
+            w_seam = (p.ancho_medio - costura / 2.0) * factor
+            pts_left_cut.append((cx - w_cut, y))
+            pts_right_cut.append((cx + w_cut, y))
+            pts_left_seam.append((cx - w_seam, y))
+            pts_right_seam.append((cx + w_seam, y))
+
+        path_cut = "M " + " L ".join(f"{x:.2f},{y:.2f}" for x, y in pts_right_cut)
+        path_cut += " L " + " L ".join(f"{x:.2f},{y:.2f}" for x, y in reversed(pts_left_cut))
+        path_cut += " Z"
+
+        path_seam = "M " + " L ".join(f"{x:.2f},{y:.2f}" for x, y in pts_right_seam)
+        path_seam += " L " + " L ".join(f"{x:.2f},{y:.2f}" for x, y in reversed(pts_left_seam))
+        path_seam += " Z"
+
+        # Rótulo de texto
+        if clave == "pico":
+            cant_str = f"Cantidad: {sec.cantidad} triángulos ({resultado.num_piramides} pirámides × 4)"
+        else:
+            cant_str = f"Cantidad: {sec.cantidad} piezas"
+        info_str = f"{cant_str} · Largo total {l_real:.2f} cm"
+
+        lines.append(f'  <g id="grupo-{clave}" inkscape:label="{nombre}">')
+        
+        # Rótulo superior
+        lines.append(f'    <text x="{cx:.2f}" y="{margen_mm + 4.0:.2f}" font-size="4" font-weight="bold" fill="black" text-anchor="middle" id="titulo-{clave}">{nombre}</text>')
+        lines.append(f'    <text x="{cx:.2f}" y="{margen_mm + 9.0:.2f}" font-size="2.6" fill="#444444" text-anchor="middle" id="info-{clave}">{info_str}</text>')
+
+        # Cuadrícula
+        lines.append(f'    <g id="cuadricula-{clave}" inkscape:groupmode="layer" inkscape:label="cuadricula-{clave}">')
+        lines.append(f'      <line x1="{cx:.2f}" y1="{y_piezas_top:.2f}" x2="{cx:.2f}" y2="{y_piezas_top + l_real*factor:.2f}" stroke="blue" stroke-width="0.2" id="grid-center-{clave}"/>')
+        for idx, p in enumerate(sec.puntos):
+            y = get_y(p.largo_acumulado)
+            w_cut = p.ancho_medio * factor
+            lines.append(f'      <line x1="{cx - w_cut:.2f}" y1="{y:.2f}" x2="{cx + w_cut:.2f}" y2="{y:.2f}" stroke="blue" stroke-width="0.2" id="grid-step-{clave}-{idx}"/>')
+            lines.append(f'      <text x="{cx - w_cut + 1.0:.2f}" y="{y - 0.8:.2f}" font-size="1.8" fill="blue" id="label-step-{clave}-{idx+1}">{idx+1}</text>')
+        lines.append('    </g>')
+
+        # Costura
+        lines.append(f'    <g id="costura-{clave}" inkscape:groupmode="layer" inkscape:label="costura-{clave}">')
+        lines.append(f'      <path d="{path_seam}" fill="none" stroke="red" stroke-width="0.4" stroke-dasharray="2,2" id="path-seam-{clave}"/>')
+        lines.append('    </g>')
+
+        # Contorno
+        lines.append(f'    <g id="contorno-{clave}" inkscape:groupmode="layer" inkscape:label="contorno-{clave}">')
+        lines.append(f'      <path d="{path_cut}" fill="none" stroke="black" stroke-width="0.8" id="path-cut-{clave}"/>')
+        lines.append('    </g>')
+
+        # Pestaña en cono inferior
+        if clave == "inferior" and pestana_mm > 0:
+            lines.append(f'    <g id="pestana-{clave}" inkscape:groupmode="layer" inkscape:label="pestana-{clave}">')
+            y_boca = get_y(0.0)
+            w_boca = sec.puntos[0].ancho_medio * factor
+            x_rec = cx - w_boca
+            lines.append(f'      <rect x="{x_rec:.2f}" y="{y_boca:.2f}" width="{w_boca*2:.2f}" height="{pestana_mm:.2f}" fill="none" stroke="green" stroke-width="0.4" stroke-dasharray="2,2" id="rect-pestana-{clave}"/>')
+            lines.append('    </g>')
+
+        lines.append('  </g>')
+
+        x_cur += w_mm + sep_mm
+
+    lines.append('</svg>')
+    return "\n".join(lines)
