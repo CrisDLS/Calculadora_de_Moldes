@@ -100,6 +100,45 @@ class VistaTrompo(ft.Container):
         )
         self.lbl_tema = ft.Text("Tema", size=13, color=ft.Colors.ON_SURFACE_VARIANT)
         self.lbl_titulo_app = ft.Text("Trompo estrella", size=24, weight=ft.FontWeight.BOLD, color=ft.Colors.ON_SURFACE)
+
+        # Controles de Proyecto (F3)
+        self.lbl_nombre_proyecto = ft.Text(
+            "Sin título",
+            size=12,
+            weight=ft.FontWeight.BOLD,
+            color=ft.Colors.ON_SURFACE,
+            no_wrap=True,
+            overflow=ft.TextOverflow.ELLIPSIS,
+        )
+        self.lbl_estado_proyecto = ft.Text(
+            "",
+            size=11,
+            color=self.paleta.color_aviso,
+        )
+        self.btn_proyecto_nuevo = ft.IconButton(
+            icon=ft.Icons.NOTE_ADD_OUTLINED,
+            tooltip="Nuevo proyecto",
+            icon_size=18,
+            on_click=self.on_proyecto_nuevo,
+        )
+        self.btn_proyecto_abrir = ft.IconButton(
+            icon=ft.Icons.FOLDER_OPEN_OUTLINED,
+            tooltip="Abrir proyecto…",
+            icon_size=18,
+            on_click=self.on_proyecto_abrir,
+        )
+        self.btn_proyecto_guardar = ft.IconButton(
+            icon=ft.Icons.SAVE_OUTLINED,
+            tooltip="Guardar proyecto",
+            icon_size=18,
+            on_click=self.on_proyecto_guardar,
+        )
+        self.btn_proyecto_guardar_como = ft.IconButton(
+            icon=ft.Icons.SAVE_AS_OUTLINED,
+            tooltip="Guardar como…",
+            icon_size=18,
+            on_click=self.on_proyecto_guardar_como,
+        )
         
         self.panel_izquierdo = ft.Container(
             width=300,
@@ -124,6 +163,29 @@ class VistaTrompo(ft.Container):
                             ],
                             spacing=10
                         )
+                    ),
+                    ft.Divider(color=ft.Colors.OUTLINE),
+                    ft.Row(
+                        controls=[
+                            ft.Column(
+                                controls=[
+                                    self.lbl_nombre_proyecto,
+                                    self.lbl_estado_proyecto,
+                                ],
+                                spacing=0,
+                                expand=True,
+                            ),
+                            ft.Row(
+                                controls=[
+                                    self.btn_proyecto_nuevo,
+                                    self.btn_proyecto_abrir,
+                                    self.btn_proyecto_guardar,
+                                    self.btn_proyecto_guardar_como,
+                                ],
+                                spacing=0,
+                            ),
+                        ],
+                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                     ),
                     ft.Divider(color=ft.Colors.OUTLINE),
                     ft.Row(
@@ -670,17 +732,17 @@ class VistaTrompo(ft.Container):
         self.tabla_componente.actualizar_paleta(self.paleta)
 
     def on_change_input(self, e):
+        self._leer_vista_a_controlador()
         self.controlador.marcar_desactualizado()
         vm = self.controlador.get_view_model()
         self._sync_controlador_a_vista(vm)
 
     def on_switch_avanzado(self, e):
         self.panel_avanzado.visible = self.switch_avanzado.value
+        self._leer_vista_a_controlador()
         self.controlador.marcar_desactualizado()
-        try:
-            self.update()
-        except RuntimeError:
-            pass
+        vm = self.controlador.get_view_model()
+        self._sync_controlador_a_vista(vm)
 
     def on_cambio_pieza_tabla(self, e):
         self._renderizar_tabla_seleccionada()
@@ -1093,6 +1155,11 @@ class VistaTrompo(ft.Container):
             self.lbl_vacio_hoja.visible = True
             self.panel_contenido_hoja.visible = False
 
+        # 8. Proyecto (F3)
+        self.lbl_nombre_proyecto.value = vm.nombre_proyecto
+        self.lbl_estado_proyecto.value = "Sin guardar" if vm.sin_guardar else ""
+        self._actualizar_titulo_ventana()
+
         if not diferir_update:
             try:
                 self.update()
@@ -1105,6 +1172,95 @@ class VistaTrompo(ft.Container):
             if hasattr(self, "file_picker") and self.file_picker not in page.services:
                 page.services.append(self.file_picker)
                 page.update()
+            self._actualizar_titulo_ventana()
+
+    def _actualizar_titulo_ventana(self):
+        page = self.obtener_pagina
+        if page:
+            ast = " *" if self.controlador.sin_guardar else ""
+            nom = self.controlador.nombre_proyecto
+            page.title = f"Calculadora de moldes — {nom}{ast}"
+            try:
+                page.update()
+            except Exception:
+                pass
+
+    def _cargar_entradas_desde_controlador(self):
+        self.txt_altura.value = str(self.controlador.altura)
+        self.txt_gajos.value = str(self.controlador.gajos)
+        self.txt_hileras.value = str(self.controlador.hileras)
+        self.txt_costura.value = str(self.controlador.costura)
+        self.switch_avanzado.value = bool(self.controlador.avanzado)
+        self.panel_avanzado.visible = bool(self.controlador.avanzado)
+
+        self.txt_boca.value = str(self.controlador.boca or "")
+        self.txt_pestana.value = str(self.controlador.pestana or "")
+        self.txt_d_mecha.value = str(self.controlador.diametro_mecha or "")
+        self.txt_p_mecha.value = str(self.controlador.peso_mecha or "")
+        self.txt_alambre.value = str(self.controlador.alambre or "")
+        self.txt_varillas.value = str(self.controlador.varillas or "")
+        self.txt_llama.value = str(self.controlador.altura_llama or "")
+        self.txt_holgura.value = str(self.controlador.holgura or "")
+
+        self.dd_modo_esquema.value = self.controlador.esquema_modo
+        self.txt_tam_grupo.value = str(self.controlador.esquema_tam_grupo)
+        self.txt_ciclo_personalizado.value = self.controlador.esquema_ciclo_texto
+        self.txt_ciclo_personalizado.visible = (self.controlador.esquema_modo == "personalizado")
+        self.txt_tam_grupo.visible = (self.controlador.esquema_modo != "personalizado")
+
+        self.dd_hoja.value = self.controlador.hoja_tipo
+        self.dd_escala.value = str(self.controlador.hoja_escala)
+        self.selector_pieza_hoja.selected = [self.controlador.hoja_pieza]
+
+    def on_proyecto_nuevo(self, e):
+        self.controlador.nuevo()
+        self._cargar_entradas_desde_controlador()
+        self._sync_controlador_a_vista(self.controlador.get_view_model(), reset_zoom=True)
+        self._mostrar_snackbar("Nuevo proyecto iniciado")
+
+    async def on_proyecto_abrir(self, e):
+        archivos = await self.file_picker.pick_files(
+            dialog_title="Abrir proyecto",
+            file_type=ft.FilePickerFileType.CUSTOM,
+            allowed_extensions=["json"],
+            allow_multiple=False,
+        )
+        if archivos and len(archivos) > 0 and archivos[0].path:
+            ruta = archivos[0].path
+            ok, msg = self.controlador.abrir(ruta)
+            if ok:
+                self._cargar_entradas_desde_controlador()
+                self._sync_controlador_a_vista(self.controlador.get_view_model(), reset_zoom=True)
+                self._mostrar_snackbar(f"Proyecto abierto: {os.path.basename(ruta)}")
+            else:
+                self._mostrar_snackbar(f"Error al abrir: {msg}")
+
+    async def on_proyecto_guardar(self, e):
+        if not self.controlador.ruta_proyecto:
+            await self.on_proyecto_guardar_como(e)
+            return
+        ok, msg = self.controlador.guardar()
+        if ok:
+            self._sync_controlador_a_vista(self.controlador.get_view_model())
+            self._mostrar_snackbar(f"Proyecto guardado: {os.path.basename(self.controlador.ruta_proyecto)}")
+        else:
+            self._mostrar_snackbar(f"Error al guardar: {msg}")
+
+    async def on_proyecto_guardar_como(self, e):
+        nombre_def = f"{self.controlador.nombre_proyecto}.json"
+        ruta = await self.file_picker.save_file(
+            dialog_title="Guardar proyecto como",
+            file_name=nombre_def,
+            file_type=ft.FilePickerFileType.CUSTOM,
+            allowed_extensions=["json"],
+        )
+        if ruta:
+            ok, msg = self.controlador.guardar(ruta)
+            if ok:
+                self._sync_controlador_a_vista(self.controlador.get_view_model())
+                self._mostrar_snackbar(f"Proyecto guardado como: {os.path.basename(ruta)}")
+            else:
+                self._mostrar_snackbar(f"Error al guardar: {msg}")
 
     def on_cambio_pieza_hoja(self, e):
         sel = self.selector_pieza_hoja.selected[0] if self.selector_pieza_hoja.selected else "superior"

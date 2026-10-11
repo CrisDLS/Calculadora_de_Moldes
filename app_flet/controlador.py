@@ -102,9 +102,9 @@ class ControladorTrompo:
         self.sin_guardar: bool = False
 
     def marcar_desactualizado(self):
+        self.sin_guardar = True
         if self.resultado is not None:
             self.desactualizado = True
-            self.sin_guardar = True
             self._vaciar_datos_calculados()
 
     def marcar_cambio_diseno(self):
