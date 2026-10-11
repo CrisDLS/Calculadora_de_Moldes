@@ -116,15 +116,23 @@ def _calcular_escala_comun_hojas(
     return max(escalas_minimas)
 
 
+from logic.diseno.pintura import EsquemaPintura
+from logic.exportacion.escena3d import escena_a_dict
+from logic.exportacion.visor3d import exportar_visor_autocontenido, _directorio_assets
+import json
+
 def generar_paquete(
     resultado: BalloonCalculationResult,
     entrada: BalloonInput,
     esquema: EsquemaDiseno,
     hoja: str = "carta",
-    escala: Union[str, float, int] = "auto"
+    escala: Union[str, float, int] = "auto",
+    pintura: Optional[EsquemaPintura] = None,
+    incluir_3d: bool = False
 ) -> Dict[str, str]:
-    """Genera un diccionario de nombre_archivo -> contenido_SVG con las 3 hojas, el perfil y el conjunto.
+    """Genera un diccionario de nombre_archivo -> contenido_SVG/HTML con las 3 hojas, el perfil y el conjunto.
     
+    Opcionalmente incluye el visor 3D si incluir_3d=True.
     Todas las hojas usan la misma escala y el estilo IMPRESION.
     """
     if escala == "auto":
@@ -151,6 +159,39 @@ def generar_paquete(
 
     # 3. Conjunto de moldes
     archivos["conjunto_moldes.svg"] = svg_conjunto(resultado, entrada, escala=escala_comun, estilo=IMPRESION)
+
+    # 4. Visor 3D interactivo autocontenido (opcional)
+    if incluir_3d:
+        try:
+            escena = escena_a_dict(entrada, resultado, esquema_pintura=pintura, esquema_diseno=esquema)
+            assets = _directorio_assets()
+            with open(os.path.join(assets, "vendor", "three.min.js"), "r", encoding="utf-8") as f:
+                three_js = f.read()
+            with open(os.path.join(assets, "vendor", "OrbitControls.js"), "r", encoding="utf-8") as f:
+                orbit_js = f.read()
+            with open(os.path.join(assets, "visor.js"), "r", encoding="utf-8") as f:
+                visor_js = f.read()
+            with open(os.path.join(assets, "visor.html"), "r", encoding="utf-8") as f:
+                html = f.read()
+
+            script_bundle = f"""
+  <script>{three_js}</script>
+  <script>{orbit_js}</script>
+  <script>
+    window.__DATOS_ESCENA_3D__ = {json.dumps(escena, ensure_ascii=False)};
+  </script>
+  <script>{visor_js}</script>
+"""
+            tags_a_reemplazar = """  <script src="/vendor/three.min.js"></script>
+  <script src="/vendor/OrbitControls.js"></script>
+  <script src="/visor.js"></script>"""
+            if tags_a_reemplazar in html:
+                html_3d = html.replace(tags_a_reemplazar, script_bundle)
+            else:
+                html_3d = html.replace("</body>", f"{script_bundle}</body>")
+            archivos["visor_3d.html"] = html_3d
+        except Exception:
+            pass
 
     return archivos
 
