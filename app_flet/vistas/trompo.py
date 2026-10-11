@@ -2,6 +2,7 @@
 import os
 import time
 import asyncio
+import webbrowser
 from typing import Optional, Tuple
 import flet as ft
 from app_flet.controlador import ControladorTrompo, ViewModelTrompo
@@ -19,6 +20,8 @@ from logic.exportacion.vista_svg import (
 )
 from presentacion.trompo_estrella import tabla_a_texto, TablaMolde
 from logic.exportacion.paquete import generar_paquete, guardar_paquete
+from logic.diseno.paleta import cargar_catalogo
+from logic.exportacion.visor3d import exportar_visor_autocontenido
 
 class VistaTrompo(ft.Container):
     def __init__(self, servicio_clipboard=None, servicio_file_picker=None):
@@ -623,10 +626,124 @@ class VistaTrompo(ft.Container):
             ),
         )
 
-        # 5. Pestaña Vista 3D
-        tab_3d = ft.Container(
-            content=ft.Text("3D llegará en F4", color=ft.Colors.ON_SURFACE_VARIANT),
+        # 5. Pestaña Vista 3D (F4)
+        catalogo = cargar_catalogo()
+        opciones_colores = [
+            ft.DropdownOption(key=col.id, text=f"{col.nombre} ({col.id})")
+            for col in catalogo
+        ]
+
+        self.dd_color_sup = ft.Dropdown(
+            label="Color cono superior",
+            options=opciones_colores,
+            value=self.controlador.pintura.color_superior,
+            on_select=self.on_cambio_pintura,
+            dense=True,
+            width=240,
+        )
+        self.dd_color_pic = ft.Dropdown(
+            label="Color picos",
+            options=opciones_colores,
+            value=self.controlador.pintura.color_pico,
+            on_select=self.on_cambio_pintura,
+            dense=True,
+            width=240,
+        )
+        self.dd_color_inf = ft.Dropdown(
+            label="Color cono inferior",
+            options=opciones_colores,
+            value=self.controlador.pintura.color_inferior,
+            on_select=self.on_cambio_pintura,
+            dense=True,
+            width=240,
+        )
+
+        self.btn_abrir_visor_3d = ft.FilledButton(
+            "Abrir visor 3D en navegador",
+            icon=ft.Icons.OPEN_IN_BROWSER,
+            on_click=self.on_abrir_visor_3d,
+        )
+        self.btn_exportar_visor_3d = ft.OutlinedButton(
+            "Exportar visor 3D (.html)…",
+            icon=ft.Icons.FILE_DOWNLOAD_OUTLINED,
+            on_click=self.on_exportar_visor_3d,
+        )
+        self.btn_copiar_compra = ft.FilledButton(
+            "Copiar lista de compra",
+            icon=ft.Icons.COPY,
+            on_click=self.on_copiar_lista_compra,
+        )
+
+        self.tabla_compra = ft.DataTable(
+            columns=[
+                ft.DataColumn(ft.Text("Color", weight=ft.FontWeight.BOLD)),
+                ft.DataColumn(ft.Text("Superior", weight=ft.FontWeight.BOLD), numeric=True),
+                ft.DataColumn(ft.Text("Pico", weight=ft.FontWeight.BOLD), numeric=True),
+                ft.DataColumn(ft.Text("Inferior", weight=ft.FontWeight.BOLD), numeric=True),
+                ft.DataColumn(ft.Text("Total piezas", weight=ft.FontWeight.BOLD), numeric=True),
+                ft.DataColumn(ft.Text("Área (m²)", weight=ft.FontWeight.BOLD), numeric=True),
+                ft.DataColumn(ft.Text("Pliegos", weight=ft.FontWeight.BOLD), numeric=True),
+            ],
+            rows=[],
+            heading_row_height=36,
+            data_row_min_height=32,
+            data_row_max_height=36,
+            column_spacing=18,
+        )
+
+        self.lbl_vacio_3d = ft.Container(
+            content=ft.Text("Calcula para ver la vista 3D y lista de compra", size=16, color=ft.Colors.ON_SURFACE_VARIANT),
             alignment=ft.Alignment(0, 0),
+            expand=True,
+            visible=True,
+        )
+
+        self.panel_contenido_3d = ft.Column(
+            expand=True,
+            visible=False,
+            scroll=ft.ScrollMode.AUTO,
+            controls=[
+                ft.Text("Paleta de colores del globo", size=15, weight=ft.FontWeight.BOLD),
+                ft.Row(
+                    controls=[self.dd_color_sup, self.dd_color_pic, self.dd_color_inf],
+                    wrap=True,
+                    spacing=12,
+                ),
+                ft.Divider(color=ft.Colors.OUTLINE),
+                ft.Text("Visor 3D interactivo (three.js)", size=15, weight=ft.FontWeight.BOLD),
+                ft.Text("Abre el modelo 3D en tu navegador local con luces realistas, rotación orbital y modos día/noche.", size=12, color=ft.Colors.ON_SURFACE_VARIANT),
+                ft.Row(
+                    controls=[self.btn_abrir_visor_3d, self.btn_exportar_visor_3d],
+                    spacing=10,
+                ),
+                ft.Divider(color=ft.Colors.OUTLINE),
+                ft.Row(
+                    controls=[
+                        ft.Text("Lista de compra de papel china", size=15, weight=ft.FontWeight.BOLD),
+                        self.btn_copiar_compra,
+                    ],
+                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                ),
+                ft.Container(
+                    content=self.tabla_compra,
+                    bgcolor=ft.Colors.SURFACE_CONTAINER,
+                    border_radius=8,
+                    padding=8,
+                ),
+            ],
+            spacing=10,
+        )
+
+        tab_3d = ft.Container(
+            padding=15,
+            expand=True,
+            content=ft.Column(
+                expand=True,
+                controls=[
+                    self.lbl_vacio_3d,
+                    self.panel_contenido_3d,
+                ],
+            ),
         )
 
         # Tabs generales (5 pestañas)
@@ -1155,7 +1272,38 @@ class VistaTrompo(ft.Container):
             self.lbl_vacio_hoja.visible = True
             self.panel_contenido_hoja.visible = False
 
-        # 8. Proyecto (F3)
+        # 8. Vista 3D y lista de compra (F4)
+        if vm.items_compra and not vm.desactualizado:
+            self.lbl_vacio_3d.visible = False
+            self.panel_contenido_3d.visible = True
+            
+            # Actualizar dropdowns si cambiaron
+            if vm.pintura:
+                self.dd_color_sup.value = vm.pintura.color_superior
+                self.dd_color_pic.value = vm.pintura.color_pico
+                self.dd_color_inf.value = vm.pintura.color_inferior
+
+            # Actualizar filas de tabla de compra
+            self.tabla_compra.rows.clear()
+            for it in vm.items_compra:
+                self.tabla_compra.rows.append(
+                    ft.DataRow(
+                        cells=[
+                            ft.DataCell(ft.Text(f"{it.color.nombre} ({it.color.id})")),
+                            ft.DataCell(ft.Text(str(it.piezas_superior))),
+                            ft.DataCell(ft.Text(str(it.piezas_pico))),
+                            ft.DataCell(ft.Text(str(it.piezas_inferior))),
+                            ft.DataCell(ft.Text(str(it.piezas_totales), weight=ft.FontWeight.BOLD)),
+                            ft.DataCell(ft.Text(f"{it.area_m2:.2f}")),
+                            ft.DataCell(ft.Text(str(it.pliegos), weight=ft.FontWeight.BOLD)),
+                        ]
+                    )
+                )
+        else:
+            self.lbl_vacio_3d.visible = True
+            self.panel_contenido_3d.visible = False
+
+        # 9. Proyecto (F3)
         self.lbl_nombre_proyecto.value = vm.nombre_proyecto
         self.lbl_estado_proyecto.value = "Sin guardar" if vm.sin_guardar else ""
         self._actualizar_titulo_ventana(diferir_update=diferir_update)
@@ -1329,6 +1477,82 @@ class VistaTrompo(ft.Container):
                 self._mostrar_snackbar(f"Paquete exportado: {len(archivos_escritos)} archivos guardados")
             except Exception as err:
                 self._mostrar_snackbar(f"Error al exportar paquete: {err}")
+
+    def on_cambio_pintura(self, e):
+        col_sup = self.dd_color_sup.value
+        col_pic = self.dd_color_pic.value
+        col_inf = self.dd_color_inf.value
+        self.controlador.actualizar_pintura(color_sup=col_sup, color_pic=col_pic, color_inf=col_inf)
+        vm = self.controlador.get_view_model()
+        self._sync_controlador_a_vista(vm)
+
+    def on_abrir_visor_3d(self, e):
+        servidor = self.controlador.obtener_servidor_3d()
+        if servidor and servidor.url:
+            webbrowser.open(servidor.url)
+            self._mostrar_snackbar(f"Abriendo visor 3D en {servidor.url}")
+        else:
+            self._mostrar_snackbar("No se pudo iniciar el servidor 3D local")
+
+    async def on_exportar_visor_3d(self, e):
+        if not (self.controlador.resultado and self.controlador.entrada_actual):
+            self._mostrar_snackbar("Calcula el modelo antes de exportar el visor 3D")
+            return
+        nombre_def = f"{self.controlador.nombre_proyecto}_visor3d.html"
+        ruta = await self.file_picker.save_file(
+            dialog_title="Exportar visor 3D autocontenido",
+            file_name=nombre_def,
+            file_type=ft.FilePickerFileType.CUSTOM,
+            allowed_extensions=["html"],
+        )
+        if ruta:
+            try:
+                exportar_visor_autocontenido(
+                    self.controlador.entrada_actual,
+                    self.controlador.resultado,
+                    ruta,
+                    esquema_pintura=self.controlador.pintura,
+                    esquema_diseno=self.controlador._construir_esquema(),
+                )
+                self._mostrar_snackbar(f"Visor 3D exportado: {os.path.basename(ruta)}")
+            except Exception as err:
+                self._mostrar_snackbar(f"Error al exportar visor 3D: {err}")
+
+    def on_copiar_lista_compra(self, e):
+        vm = self.controlador.get_view_model()
+        if not vm.items_compra:
+            self._mostrar_snackbar("No hay datos en la lista de compra")
+            return
+
+        lineas = ["Color\tSuperior\tPico\tInferior\tTotal piezas\tÁrea (m²)\tPliegos"]
+        for it in vm.items_compra:
+            lineas.append(
+                f"{it.color.nombre} ({it.color.id})\t{it.piezas_superior}\t{it.piezas_pico}\t{it.piezas_inferior}\t{it.piezas_totales}\t{it.area_m2:.2f}\t{it.pliegos}"
+            )
+        texto = "\n".join(lineas)
+
+        copia_exitosa = False
+        page = self.obtener_pagina
+        try:
+            if page and isinstance(self.servicio_clipboard, ft.Service):
+                if self.servicio_clipboard not in page.services:
+                    page.services.append(self.servicio_clipboard)
+
+            if hasattr(self.servicio_clipboard, "set"):
+                res = self.servicio_clipboard.set(texto)
+                if asyncio.iscoroutine(res):
+                    if page:
+                        page.run_task(self.servicio_clipboard.set, texto)
+                    else:
+                        asyncio.run(res)
+                copia_exitosa = True
+        except Exception:
+            copia_exitosa = False
+
+        if copia_exitosa:
+            self._mostrar_snackbar("Lista de compra copiada al portapapeles")
+        else:
+            self._mostrar_snackbar("No se pudo copiar la lista")
 
     def _porcentaje_zoom_hoja(self) -> float:
         if not self.vista_base_svg_hoja or not self.vista_svg_hoja or self.vista_svg_hoja.ancho <= 0:

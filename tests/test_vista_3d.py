@@ -1,0 +1,80 @@
+import pytest
+import os
+from app_flet.controlador import ControladorTrompo
+from app_flet.vistas.trompo import VistaTrompo
+from logic.diseno.pintura import EsquemaPintura
+
+class MockClipboard:
+    def __init__(self):
+        self.text = ""
+    def set(self, text):
+        self.text = text
+
+class MockFilePicker:
+    pass
+
+def test_controlador_vista_3d_y_compra():
+    c = ControladorTrompo()
+    c.altura = "950"
+    c.gajos = "30"
+    c.hileras = "2"
+    c.costura = "1"
+    vm = c.calcular()
+
+    assert vm.items_compra is not None
+    assert len(vm.items_compra) > 0
+    # Por defecto blanco y amarillo
+    colores_ids = [it.color.id for it in vm.items_compra]
+    assert "blanco" in colores_ids
+    assert "amarillo" in colores_ids
+
+    total_pliegos = sum(it.pliegos for it in vm.items_compra)
+    assert total_pliegos > 0
+
+    # Servidor 3D
+    servidor = c.obtener_servidor_3d()
+    assert servidor is not None
+    assert servidor.url.startswith("http://127.0.0.1:")
+    
+    vm2 = c.get_view_model()
+    assert vm2.url_visor_3d == servidor.url
+
+    # Actualizar pintura
+    c.actualizar_pintura(color_sup="rojo", color_pic="azul_rey", color_inf="verde_limon")
+    assert c.pintura.color_superior == "rojo"
+    assert c.pintura.color_pico == "azul_rey"
+    assert c.pintura.color_inferior == "verde_limon"
+    assert c.sin_guardar is True
+
+    vm3 = c.get_view_model()
+    colores_ids_nuevos = [it.color.id for it in vm3.items_compra]
+    assert "rojo" in colores_ids_nuevos
+    assert "azul_rey" in colores_ids_nuevos
+    assert "verde_limon" in colores_ids_nuevos
+
+def test_vista_trompo_componentes_3d():
+    mock_clip = MockClipboard()
+    mock_fp = MockFilePicker()
+    vista = VistaTrompo(servicio_clipboard=mock_clip, servicio_file_picker=mock_fp)
+
+    # Inicialmente visible el aviso de vacío para 3D
+    assert vista.lbl_vacio_3d.visible is True
+    assert vista.panel_contenido_3d.visible is False
+
+    # Calcular
+    vista.on_calcular(None)
+
+    assert vista.lbl_vacio_3d.visible is False
+    assert vista.panel_contenido_3d.visible is True
+    assert len(vista.tabla_compra.rows) > 0
+
+    # Copiar lista de compra
+    vista.on_copiar_lista_compra(None)
+    assert "Color\tSuperior\tPico" in mock_clip.text
+    assert "blanco" in mock_clip.text
+
+    # Cambiar pintura desde UI
+    vista.dd_color_sup.value = "rosa_mexicano"
+    vista.on_cambio_pintura(None)
+    assert vista.controlador.pintura.color_superior == "rosa_mexicano"
+    assert any("rosa_mexicano" in row.cells[0].content.value for row in vista.tabla_compra.rows)

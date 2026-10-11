@@ -20,6 +20,12 @@ from presentacion.trompo_estrella import (
     TablaMolde,
 )
 
+from logic.diseno.pintura import EsquemaPintura
+from logic.diseno.paleta import ColorPapel, cargar_catalogo, color_por_id
+from logic.diseno.compra import ItemCompra, lista_de_compra
+from logic.exportacion.escena3d import escena_a_dict
+from logic.exportacion.visor3d import ServidorVisor, exportar_visor_autocontenido
+
 @dataclass
 class TarjetaResumen:
     etiqueta: str
@@ -51,6 +57,10 @@ class ViewModelTrompo:
     nombre_proyecto: str = "Sin título"
     ruta_proyecto: Optional[str] = None
     sin_guardar: bool = False
+    # Vista 3D y lista de compra (F4)
+    items_compra: List[ItemCompra] = field(default_factory=list)
+    pintura: Optional[EsquemaPintura] = None
+    url_visor_3d: str = ""
 
 class ControladorTrompo:
     def __init__(self, estilo_svg: EstiloSvg = PANTALLA_OSCURO):
@@ -100,6 +110,46 @@ class ControladorTrompo:
         self.nombre_proyecto: str = "Sin título"
         self.ruta_proyecto: Optional[str] = None
         self.sin_guardar: bool = False
+
+        # Estado de pintura y visor 3D (F4)
+        self.pintura: EsquemaPintura = EsquemaPintura()
+        self.servidor_3d: Optional[ServidorVisor] = None
+
+    def obtener_servidor_3d(self) -> ServidorVisor:
+        if self.servidor_3d is None:
+            self.servidor_3d = ServidorVisor()
+            self.servidor_3d.iniciar()
+        self._actualizar_servidor_3d()
+        return self.servidor_3d
+
+    def _actualizar_servidor_3d(self):
+        if self.servidor_3d and self.resultado and self.entrada_actual:
+            try:
+                esq = self._construir_esquema()
+                escena = escena_a_dict(
+                    self.entrada_actual,
+                    self.resultado,
+                    esquema_pintura=self.pintura,
+                    esquema_diseno=esq
+                )
+                self.servidor_3d.actualizar_datos_escena(escena)
+            except Exception:
+                pass
+
+    def actualizar_pintura(
+        self,
+        color_sup: Optional[str] = None,
+        color_pic: Optional[str] = None,
+        color_inf: Optional[str] = None,
+    ):
+        if color_sup is not None:
+            self.pintura.color_superior = color_sup
+        if color_pic is not None:
+            self.pintura.color_pico = color_pic
+        if color_inf is not None:
+            self.pintura.color_inferior = color_inf
+        self.sin_guardar = True
+        self._actualizar_servidor_3d()
 
     def marcar_desactualizado(self):
         self.sin_guardar = True
@@ -237,6 +287,7 @@ class ControladorTrompo:
             # Generar tablas y SVGs
             self.tablas = formatear_tablas(self.resultado, self.entrada_actual)
             self._generar_svgs()
+            self._actualizar_servidor_3d()
             self.sin_guardar = True
         except ValueError as e:
             self.mensaje_error = str(e)
@@ -307,6 +358,7 @@ class ControladorTrompo:
             notas="",
             hoja=self.hoja_tipo,
             escala=self.hoja_escala,
+            pintura=self.pintura,
         )
 
     def desde_proyecto(self, proy: Proyecto, ruta: Optional[str] = None):
@@ -337,6 +389,11 @@ class ControladorTrompo:
 
         self.hoja_tipo = proy.hoja or "carta"
         self.hoja_escala = str(proy.escala) if proy.escala is not None else "auto"
+
+        if proy.pintura:
+            self.pintura = proy.pintura
+        else:
+            self.pintura = EsquemaPintura()
 
         self.nombre_proyecto = proy.nombre
         self.ruta_proyecto = ruta
@@ -384,15 +441,26 @@ class ControladorTrompo:
                 clase = clasificar_aviso(aviso)
                 avisos.append(AvisoFlet(texto=aviso, clase=clase))
 
-        # Derivar estado del esquema
+        # Derivar estado del esquema y lista de compra
         esquema_err = None
         res_esq = []
+        items_compra = []
         try:
             esq = self._construir_esquema()
             if self.resultado and self.entrada_actual and not self.desactualizado:
                 res_esq = resumen_esquema(esq, self.entrada_actual, self.resultado)
+                items_compra = lista_de_compra(
+                    entrada=self.entrada_actual,
+                    resultado=self.resultado,
+                    esquema_pintura=self.pintura,
+                    esquema_diseno=esq,
+                    condiciones=Condiciones(),
+                    catalogo=cargar_catalogo(),
+                )
         except Exception as e:
             esquema_err = str(e)
+
+        url_3d = self.servidor_3d.url if self.servidor_3d else ""
 
         return ViewModelTrompo(
             tarjetas=tarjetas,
@@ -412,4 +480,7 @@ class ControladorTrompo:
             nombre_proyecto=self.nombre_proyecto,
             ruta_proyecto=self.ruta_proyecto,
             sin_guardar=self.sin_guardar,
+            items_compra=items_compra if not self.desactualizado else [],
+            pintura=self.pintura,
+            url_visor_3d=url_3d,
         )
