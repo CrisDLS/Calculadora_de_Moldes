@@ -1158,7 +1158,7 @@ class VistaTrompo(ft.Container):
         # 8. Proyecto (F3)
         self.lbl_nombre_proyecto.value = vm.nombre_proyecto
         self.lbl_estado_proyecto.value = "Sin guardar" if vm.sin_guardar else ""
-        self._actualizar_titulo_ventana()
+        self._actualizar_titulo_ventana(diferir_update=diferir_update)
 
         if not diferir_update:
             try:
@@ -1174,16 +1174,17 @@ class VistaTrompo(ft.Container):
                 page.update()
             self._actualizar_titulo_ventana()
 
-    def _actualizar_titulo_ventana(self):
+    def _actualizar_titulo_ventana(self, diferir_update: bool = False):
         page = self.obtener_pagina
         if page:
             ast = " *" if self.controlador.sin_guardar else ""
             nom = self.controlador.nombre_proyecto
             page.title = f"Calculadora de moldes — {nom}{ast}"
-            try:
-                page.update()
-            except Exception:
-                pass
+            if not diferir_update:
+                try:
+                    page.update()
+                except Exception:
+                    pass
 
     def _cargar_entradas_desde_controlador(self):
         self.txt_altura.value = str(self.controlador.altura)
