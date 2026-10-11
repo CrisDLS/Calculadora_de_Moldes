@@ -32,7 +32,7 @@ def test_svg_hoja_carta_auto(calculos):
     piezas = [g for g in root.findall("{http://www.w3.org/2000/svg}g") if g.attrib.get('id', '').startswith("pieza-")]
     assert len(piezas) == 3
     
-    # Capa etiquetas: "Molde X — ×Y (Z en espejo)"
+    # Capa etiquetas: "Molde X — ×Y" y "(Z en espejo)" en líneas separadas
     # N=30, G=5 central_espejo -> 6 repeticiones.
     # eq.resumen_motivos: m0 -> (6,0), m1 -> (12, 6), m2 -> (12, 6)
     texts_found = []
@@ -40,12 +40,13 @@ def test_svg_hoja_carta_auto(calculos):
         for g in p.findall("{http://www.w3.org/2000/svg}g"):
             if "etiquetas" in g.attrib.get('{http://www.inkscape.org/namespaces/inkscape}label', ''):
                 for t in g.findall("{http://www.w3.org/2000/svg}text"):
-                    if t.text and t.text.startswith("Molde"):
+                    if t.text:
                         texts_found.append(t.text)
                         
     assert "Molde 0 — ×6" in texts_found
-    assert "Molde 1 — ×12 (6 en espejo)" in texts_found
-    assert "Molde 2 — ×12 (6 en espejo)" in texts_found
+    assert "Molde 1 — ×12" in texts_found
+    assert "Molde 2 — ×12" in texts_found
+    assert "(6 en espejo)" in texts_found
 
 def test_svg_hoja_escala_forzada(calculos):
     ent, r = calculos
@@ -80,12 +81,14 @@ def test_svg_hoja_cantidades_ejemplos_usuario():
     # 2) central_espejo G=5
     eq2 = EsquemaDiseno("central_espejo", 5)
     svg2 = svg_hoja(r, ent, "superior", eq2, escala="auto", hoja="carta")
-    assert "Molde 0 — ×4</text>" in svg2
-    assert "Molde 1 — ×8 (4 en espejo)" in svg2
-    assert "Molde 2 — ×8 (4 en espejo)" in svg2
+    assert "Molde 0 — ×4" in svg2
+    assert "Molde 1 — ×8" in svg2
+    assert "Molde 2 — ×8" in svg2
+    assert "(4 en espejo)" in svg2
     
     # 3) espejo_total G=4
     eq3 = EsquemaDiseno("espejo_total", 4)
     svg3 = svg_hoja(r, ent, "superior", eq3, escala="auto", hoja="carta")
-    assert "Molde 0 — ×10 (5 en espejo)" in svg3
-    assert "Molde 1 — ×10 (5 en espejo)" in svg3
+    assert "Molde 0 — ×10" in svg3
+    assert "Molde 1 — ×10" in svg3
+    assert "(5 en espejo)" in svg3

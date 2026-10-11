@@ -327,12 +327,18 @@ def svg_hoja(resultado: BalloonCalculationResult, entrada: BalloonInput, seccion
         t_en_esp = en_esp * cant_por_gajo
         
         if seccion == "inferior":
-            text_y = get_y(0.0) - 5
+            text_y = get_y(0.0) - 6
         else:
-            text_y = get_y(L_real) - 5
-            
-        esp_txt = f" ({t_en_esp} en espejo)" if t_en_esp > 0 else ""
-        lines.append(f'      <text x="{cx:.2f}" y="{text_y:.2f}" font-size="{fs_molde:.2f}" fill="{estilo.texto}" text-anchor="middle" id="label-info-{i}">Molde {motivo} — ×{t_tot}{esp_txt}</text>')
+            text_y = get_y(L_real) - 6
+
+        lineas_molde = [f"Molde {motivo} — ×{t_tot}"]
+        if t_en_esp > 0:
+            lineas_molde.append(f"({t_en_esp} en espejo)")
+
+        for l_idx, l_txt in enumerate(lineas_molde):
+            ly = text_y + l_idx * (fs_molde * 1.3)
+            id_attr = f' id="label-info-{i}"' if l_idx == 0 else f' id="label-info-{i}-{l_idx+1}"'
+            lines.append(f'      <text x="{cx:.2f}" y="{ly:.2f}" font-size="{fs_molde:.2f}" fill="{estilo.texto}" text-anchor="middle"{id_attr}>{l_txt}</text>')
         lines.append('    </g>')
         
         if seccion == "inferior" and entrada.usar_parametros_avanzados and entrada.pestana_boca > 0:
@@ -359,13 +365,16 @@ def svg_conjunto(resultado: BalloonCalculationResult, entrada: BalloonInput, esc
     
     Colocadas una al lado de la otra a la misma escala (por defecto 1:10),
     con la punta estrecha hacia abajo, cuadrícula numerada y rótulo
-    (nombre, cantidad y largo total) en mm reales.
+    (nombre, cantidad y largo total) en varias líneas sin encimarse.
     """
     factor = 10.0 / escala
     costura = entrada.ancho_costura
     margen_mm = 15.0
-    sep_mm = 20.0
-    alto_rotulo_mm = 14.0 * estilo.factor_texto
+    sep_base_mm = 20.0
+
+    fs_tit = 4.0 * estilo.factor_texto
+    fs_sub = 2.6 * estilo.factor_texto
+    fs_paso = 1.8 * estilo.factor_texto
 
     piezas = [
         ("superior", "Cono superior", resultado.seccion_superior),
@@ -383,6 +392,27 @@ def svg_conjunto(resultado: BalloonCalculationResult, entrada: BalloonInput, esc
         if clave == "inferior" and entrada.usar_parametros_avanzados and entrada.pestana_boca > 0:
             pestana_mm = entrada.pestana_boca * factor
             h_mm += pestana_mm
+
+        if clave == "pico":
+            lineas = [
+                nombre,
+                f"Cantidad: {sec.cantidad} triángulos",
+                f"({resultado.num_piramides} pirámides × 4)",
+                f"Largo total: {l_real:.2f} cm",
+            ]
+        else:
+            lineas = [
+                nombre,
+                f"Cantidad: {sec.cantidad} piezas",
+                f"Largo total: {l_real:.2f} cm",
+            ]
+
+        anchos_lineas = [
+            len(txt) * (fs_tit if idx == 0 else fs_sub) * 0.6
+            for idx, txt in enumerate(lineas)
+        ]
+        ancho_rotulo = max(anchos_lineas)
+
         dims.append({
             "clave": clave,
             "nombre": nombre,
@@ -391,9 +421,24 @@ def svg_conjunto(resultado: BalloonCalculationResult, entrada: BalloonInput, esc
             "h_mm": h_mm,
             "l_real": l_real,
             "pestana_mm": pestana_mm,
+            "lineas": lineas,
+            "ancho_rotulo": ancho_rotulo,
         })
 
-    ancho_total_mm = margen_mm * 2 + sum(d["w_mm"] for d in dims) + sep_mm * (len(dims) - 1)
+    # Calcular separaciones entre piezas garantizando que los rótulos no se toquen
+    margen_min_rotulos = 8.0 * estilo.factor_texto
+    seps = []
+    for i in range(len(dims) - 1):
+        w_i = dims[i]["w_mm"]
+        w_next = dims[i + 1]["w_mm"]
+        ar_i = dims[i]["ancho_rotulo"]
+        ar_next = dims[i + 1]["ancho_rotulo"]
+        sep_req = (ar_i + ar_next - (w_i + w_next)) / 2.0 + margen_min_rotulos
+        seps.append(max(sep_base_mm, sep_req))
+
+    ancho_total_mm = margen_mm * 2 + sum(d["w_mm"] for d in dims) + sum(seps)
+    max_lineas = max(len(d["lineas"]) for d in dims)
+    alto_rotulo_mm = fs_tit + (max_lineas - 1) * (fs_sub * 1.35) + 6.0 * estilo.factor_texto
     max_h_piezas_mm = max(d["h_mm"] for d in dims)
     alto_total_mm = margen_mm * 2 + alto_rotulo_mm + max_h_piezas_mm
 
@@ -415,17 +460,14 @@ def svg_conjunto(resultado: BalloonCalculationResult, entrada: BalloonInput, esc
     w_cont = 0.8 * estilo.factor_trazo
     w_pest = 0.4 * estilo.factor_trazo
 
-    fs_tit = 4.0 * estilo.factor_texto
-    fs_sub = 2.6 * estilo.factor_texto
-    fs_paso = 1.8 * estilo.factor_texto
-
-    for d in dims:
+    for idx_pieza, d in enumerate(dims):
         clave = d["clave"]
         nombre = d["nombre"]
         sec = d["sec"]
         w_mm = d["w_mm"]
         l_real = d["l_real"]
         pestana_mm = d["pestana_mm"]
+        lineas_rotulo = d["lineas"]
         cx = x_cur + w_mm / 2.0
 
         def get_y(l_acumulado: float, cl=clave, lr=l_real) -> float:
@@ -456,17 +498,18 @@ def svg_conjunto(resultado: BalloonCalculationResult, entrada: BalloonInput, esc
         path_seam += " L " + " L ".join(f"{x:.2f},{y:.2f}" for x, y in reversed(pts_left_seam))
         path_seam += " Z"
 
-        if clave == "pico":
-            cant_str = f"Cantidad: {sec.cantidad} triángulos ({resultado.num_piramides} pirámides × 4)"
-        else:
-            cant_str = f"Cantidad: {sec.cantidad} piezas"
-        info_str = f"{cant_str} · Largo total {l_real:.2f} cm"
-
         lines.append(f'  <g id="grupo-{clave}" inkscape:label="{nombre}">')
         
-        # Rótulo superior
-        lines.append(f'    <text x="{cx:.2f}" y="{margen_mm + 4.0 * estilo.factor_texto:.2f}" font-size="{fs_tit:.2f}" font-weight="bold" fill="{estilo.texto}" text-anchor="middle" id="titulo-{clave}">{nombre}</text>')
-        lines.append(f'    <text x="{cx:.2f}" y="{margen_mm + 9.0 * estilo.factor_texto:.2f}" font-size="{fs_sub:.2f}" fill="{estilo.texto}" text-anchor="middle" id="info-{clave}">{info_str}</text>')
+        # Rótulo superior centrado en varias líneas
+        y_txt = margen_mm + fs_tit
+        for l_idx, l_txt in enumerate(lineas_rotulo):
+            if l_idx == 0:
+                lines.append(f'    <text x="{cx:.2f}" y="{y_txt:.2f}" font-size="{fs_tit:.2f}" font-weight="bold" fill="{estilo.texto}" text-anchor="middle" id="titulo-{clave}">{l_txt}</text>')
+                y_txt += fs_sub * 1.35
+            else:
+                id_sub = f"info-{clave}" if l_idx == 1 else f"info-{clave}-{l_idx+1}"
+                lines.append(f'    <text x="{cx:.2f}" y="{y_txt:.2f}" font-size="{fs_sub:.2f}" fill="{estilo.texto}" text-anchor="middle" id="{id_sub}">{l_txt}</text>')
+                y_txt += fs_sub * 1.35
 
         # Cuadrícula
         lines.append(f'    <g id="cuadricula-{clave}" inkscape:groupmode="layer" inkscape:label="cuadricula-{clave}">')
@@ -499,7 +542,8 @@ def svg_conjunto(resultado: BalloonCalculationResult, entrada: BalloonInput, esc
 
         lines.append('  </g>')
 
-        x_cur += w_mm + sep_mm
+        sep_actual = seps[idx_pieza] if idx_pieza < len(seps) else 0.0
+        x_cur += w_mm + sep_actual
 
     lines.append('</svg>')
     return "\n".join(lines)

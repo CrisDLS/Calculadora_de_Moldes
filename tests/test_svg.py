@@ -103,7 +103,10 @@ def test_svg_conjunto_valido_y_dimensiones():
     w_pic = max(p.ancho_medio for p in r.seccion_picos.puntos) * 2
     w_inf = max(p.ancho_medio for p in r.seccion_inferior.puntos) * 2
     w_total_esperado = 15.0 * 2 + (w_sup + w_pic + w_inf) * 1.0 + 20.0 * 2
-    h_max_esperado = 15.0 * 2 + 14.0 + r.seccion_inferior.generatriz_total * 1.0
+    fs_tit = 4.0
+    fs_sub = 2.6
+    alto_rotulo_esperado = fs_tit + 3 * (fs_sub * 1.35) + 6.0
+    h_max_esperado = 15.0 * 2 + alto_rotulo_esperado + r.seccion_inferior.generatriz_total * 1.0
 
     w_val = float(root.attrib['width'][:-2])
     h_val = float(root.attrib['height'][:-2])
@@ -114,11 +117,76 @@ def test_svg_conjunto_valido_y_dimensiones():
     assert "Cono superior" in svg_str
     assert "Pico" in svg_str
     assert "Cono inferior" in svg_str
-    assert f"Largo total {r.seccion_superior.generatriz_total:.2f} cm" in svg_str
-    assert f"Largo total {r.seccion_picos.generatriz_total:.2f} cm" in svg_str
-    assert f"Largo total {r.seccion_inferior.generatriz_total:.2f} cm" in svg_str
+    assert f"Largo total: {r.seccion_superior.generatriz_total:.2f} cm" in svg_str
+    assert f"Largo total: {r.seccion_picos.generatriz_total:.2f} cm" in svg_str
+    assert f"Largo total: {r.seccion_inferior.generatriz_total:.2f} cm" in svg_str
     assert f"{r.seccion_superior.cantidad} piezas" in svg_str
     assert f"{r.seccion_picos.cantidad} triángulos" in svg_str
+
+
+def test_svg_conjunto_rotulos_no_se_intersectan():
+    from logic.exportacion.svg_moldes import svg_conjunto
+    from logic.exportacion.estilos import IMPRESION, PANTALLA_OSCURO, PANTALLA_CLARO
+
+    calc = TrompoEstrellaCalculator()
+    casos = [
+        BalloonInput(950, 30, 2, 1, usar_parametros_avanzados=False),
+        BalloonInput(950, 30, 2, 1, usar_parametros_avanzados=True, pestana_boca=4),
+        BalloonInput(380, 30, 2, 1, usar_parametros_avanzados=False),
+        BalloonInput(380, 30, 2, 1, usar_parametros_avanzados=True, diametro_boca=53.2),
+    ]
+    estilos = [IMPRESION, PANTALLA_OSCURO, PANTALLA_CLARO]
+
+    for entrada in casos:
+        resultado = calc.calcular(entrada)
+        for estilo in estilos:
+            svg_str = svg_conjunto(resultado, entrada, escala=10.0, estilo=estilo)
+            root = ET.fromstring(svg_str)
+
+            # Capas y grupos por pieza
+            grupos_piezas = ["grupo-superior", "grupo-pico", "grupo-inferior"]
+            boxes_por_pieza = {}
+
+            for g_id in grupos_piezas:
+                grupo = root.find(f'.//{{http://www.w3.org/2000/svg}}g[@id="{g_id}"]')
+                assert grupo is not None, f"Falta {g_id} en svg_conjunto"
+
+                # Subcapas requeridas
+                subcapas = [c.attrib.get("id") for c in grupo.findall("{http://www.w3.org/2000/svg}g")]
+                clave = g_id.replace("grupo-", "")
+                assert f"cuadricula-{clave}" in subcapas
+                assert f"costura-{clave}" in subcapas
+                assert f"contorno-{clave}" in subcapas
+
+                # Extraer rótulos (textos hijos directos de grupo-{clave})
+                textos = grupo.findall("{http://www.w3.org/2000/svg}text")
+                assert len(textos) >= 3, f"Se esperaban al menos 3 líneas de rótulo para {g_id}"
+
+                boxes = []
+                for t in textos:
+                    txt = t.text or ""
+                    fs = float(t.attrib.get("font-size", 2.6))
+                    w_est = len(txt) * fs * 0.6
+                    cx = float(t.attrib["x"])
+                    cy = float(t.attrib["y"])
+                    # Bounding box: [x1, y1, x2, y2]
+                    x1 = cx - w_est / 2.0
+                    x2 = cx + w_est / 2.0
+                    y1 = cy - fs
+                    y2 = cy
+                    boxes.append((x1, y1, x2, y2, txt))
+                boxes_por_pieza[g_id] = boxes
+
+            # Verificar que NINGÚN rótulo de una pieza se intersecta con el de otra pieza vecina
+            # Superior está a la izquierda de Pico, y Pico a la izquierda de Inferior
+            for p_izq, p_der in [("grupo-superior", "grupo-pico"), ("grupo-pico", "grupo-inferior")]:
+                max_x2_izq = max(b[2] for b in boxes_por_pieza[p_izq])
+                min_x1_der = min(b[0] for b in boxes_por_pieza[p_der])
+                assert max_x2_izq < min_x1_der, (
+                    f"Rótulos encimados entre {p_izq} (max_x={max_x2_izq:.2f}) y {p_der} (min_x={min_x1_der:.2f}) "
+                    f"con entrada {entrada.altura_cuerpo}/{entrada.num_gajos} y estilo {estilo}"
+                )
+
 
 
 def test_svg_conjunto_escala_comun():
