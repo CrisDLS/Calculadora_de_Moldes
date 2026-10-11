@@ -10,9 +10,9 @@ que el usuario ponga debe validarse como viable o explicar por qué no.
   Hoy el usuario calcula los moldes a escala en GeoGebra, los exporta a SVG, los decora/pinta en Inkscape, y al final los ajusta en una hoja tamaño Carta como referencia para imprimir y transferir.
   La app reemplaza la calculadora manual (GeoGebra) y la generación de la hoja (generando directamente SVGs configurados).
   Existen 3 modos de esquemas de pintura basados en el tamaño de grupo ($G$):
-  - Repetición: Los $G$ gajos son motivos distintos ($G$ motivos en total), repetidos secuencialmente sin espejos.
-  - Central con espejo: $G$ debe ser impar. Hay un motivo central (no espejeado) y los demás se espejean simétricamente hacia los bordes.
-  - Espejo total: $G$ debe ser par. Los motivos se abren en espejo desde el centro del grupo (sin un motivo impar al medio) y el espejo continúa en la unión entre grupos.
+  - Repetición: Los $G$ gajos son motivos distintos ($G$ motivos en total), repetidos secuencialmente sin espejos. (Ejemplo: con $N=20$ y $G=5$, 4 grupos de motivos 1-2-3-4-5).
+  - Central con espejo: $G$ debe ser impar. Hay un motivo central (no espejeado) y los demás se espejean simétricamente hacia los bordes. (Ejemplo: con $N=20$ y $G=5$, motivo central 3 con vecinos 2, 1 espejeados: 1-2-3-2'-1').
+  - Espejo total: $G$ debe ser par. Los motivos se abren en espejo desde el centro del grupo (sin un motivo impar al medio) y el espejo continúa en la unión entre grupos. (Ejemplo: con $N=20$ y $G=4$, mitad y mitad en espejo: 1-2-2'-1').
 
 ## Estructura real del repositorio
 - `main.py` → punto de entrada de la app en Flet (`ft.run(main)`).
@@ -29,8 +29,7 @@ que el usuario ponga debe validarse como viable o explicar por qué no.
   - `exportacion/svg_moldes.py` (generación de moldes sueltos en mm a escala real y hojas de trazo automáticas en Carta/A4 con múltiples copias).
   - `geometria/malla_trompo.py` para construir una malla 3D exacta mapeando isométricamente 2D a 3D (para exportar a JSON/three.js).
   - `gestor_archivos.py` (`GestorArchivos`: guarda/carga/lista JSON en `guardados/`).
-- `presentacion/` → capa pura compartida de formateo de datos para la UI (`presentacion/trompo_estrella.py`).
-- `configuracion/constantes.py` → constantes del negocio y formatos (`DECIMALES_TABLA`).
+- `presentacion/` → capa pura compartida de formateo de datos para la UI (`presentacion/trompo_estrella.py`, define `DECIMALES_TABLA`).
 - `recursos/` → iconos e imágenes del proyecto.
 - `scripts/reporte_trompo_estrella.py` → runner de consola (argparse: altura gajos hileras costura `--avanzado`).
 - `referencia/trompo_estrella.py` → prototipo autocontenido con la lógica CORRECTA y validada.
@@ -87,7 +86,7 @@ con hipotenusa) NO coincide con el Excel: reemplazarla.
 
 ## Supuestos por calibrar con prototipo (no son datos publicados)
 pestaña 4 cm · holgura 10 cm · altura de llama 40 cm · 70 °C interior · +20 % pegamento ·
-pico = triángulo, uno por gajo y por hilera. Prototipo mínimo recomendado: ~380 cm de papel.
+Cada pico es una pirámide de base cuadrada armada con 4 triángulos del molde del pico, una pirámide por gajo y por hilera. Prototipo mínimo recomendado: ~380 cm de papel.
 
 ## Reglas para el agente
 - Antes de cambiar una fórmula, di cuál y por qué; no toques las constantes sin avisar.

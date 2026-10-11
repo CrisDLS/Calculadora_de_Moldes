@@ -172,7 +172,7 @@ def clasificar_aviso(texto: str) -> str:
 
 
 from dataclasses import dataclass
-from configuracion.constantes import DECIMALES_TABLA
+DECIMALES_TABLA: int = 2
 
 @dataclass
 class TablaMolde:

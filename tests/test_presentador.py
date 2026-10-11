@@ -155,8 +155,7 @@ def test_clasifica_avisos_reales_del_calculo():
     assert [clasificar_aviso(a) for a in _calc(True).avisos] == ["ok"]
 
 # --------------------------------------------------------- formatear_tablas / tabla_a_texto
-from presentacion.trompo_estrella import formatear_tablas, tabla_a_texto, TablaMolde
-from configuracion.constantes import DECIMALES_TABLA
+from presentacion.trompo_estrella import formatear_tablas, tabla_a_texto, TablaMolde, DECIMALES_TABLA
 
 def test_formatear_tablas_y_tabla_a_texto_avanzado():
     r = _calc(True)
