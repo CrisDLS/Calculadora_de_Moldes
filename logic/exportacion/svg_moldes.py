@@ -275,7 +275,8 @@ def svg_hoja(resultado: BalloonCalculationResult, entrada: BalloonInput, seccion
     off_x = (w_page - total_w_content) / 2
     off_y = (h_page - total_h_content) / 2
 
-    resumen = esquema.resumen_moldes()
+    asignaciones = esquema.asignar(entrada.num_gajos)
+    resumen = esquema.resumen_motivos(asignaciones)
 
     fs_header = 4 * estilo.factor_texto
     lines.append('  <g inkscape:groupmode="layer" inkscape:label="encabezado" id="layer-encabezado">')
