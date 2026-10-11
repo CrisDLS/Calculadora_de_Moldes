@@ -107,3 +107,19 @@ def test_controlador_tablas_avanzado_con_nota():
     assert c.tablas == []
     assert c.svg_conjunto == ""
     assert c.svg_superior == ""
+
+def test_controlador_cambiar_estilo():
+    from logic.exportacion.estilos import PANTALLA_OSCURO, PANTALLA_CLARO
+    c = ControladorTrompo()
+    assert c.estilo_svg == PANTALLA_OSCURO
+
+    c.calcular()
+    res_orig = c.resultado
+    assert PANTALLA_OSCURO.contorno in c.svg_conjunto
+
+    # Cambiar estilo sin recalcular
+    vm = c.cambiar_estilo(PANTALLA_CLARO)
+    assert c.estilo_svg == PANTALLA_CLARO
+    assert c.resultado is res_orig  # No recalcula
+    assert PANTALLA_CLARO.contorno in c.svg_conjunto
+    assert vm.svg_conjunto == c.svg_conjunto

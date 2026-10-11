@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 from typing import List, Optional, Tuple
 from logic.calculators.trompo_estrella import TrompoEstrellaCalculator
 from logic.models import BalloonInput, BalloonCalculationResult
+from logic.exportacion.estilos import EstiloSvg, PANTALLA_OSCURO
 from logic.exportacion.svg_moldes import svg_pieza, svg_conjunto
 from presentacion.trompo_estrella import (
     leer_entrada,
@@ -35,12 +36,13 @@ class ViewModelTrompo:
     svg_inferior: str = ""
 
 class ControladorTrompo:
-    def __init__(self):
+    def __init__(self, estilo_svg: EstiloSvg = PANTALLA_OSCURO):
         self.calculadora = TrompoEstrellaCalculator()
         self.resultado: Optional[BalloonCalculationResult] = None
         self.entrada_actual: Optional[BalloonInput] = None
         self.desactualizado = False
         self.mensaje_error: Optional[str] = None
+        self.estilo_svg: EstiloSvg = estilo_svg
         
         # Tablas y SVGs expuestos
         self.tablas: List[TablaMolde] = []
@@ -77,6 +79,19 @@ class ControladorTrompo:
         self.svg_pico = ""
         self.svg_inferior = ""
 
+    def _generar_svgs(self):
+        if self.resultado and self.entrada_actual:
+            self.svg_conjunto = svg_conjunto(self.resultado, self.entrada_actual, escala=10.0, estilo=self.estilo_svg)
+            self.svg_superior = svg_pieza(self.resultado, self.entrada_actual, "superior", escala=10.0, estilo=self.estilo_svg)
+            self.svg_pico = svg_pieza(self.resultado, self.entrada_actual, "pico", escala=10.0, estilo=self.estilo_svg)
+            self.svg_inferior = svg_pieza(self.resultado, self.entrada_actual, "inferior", escala=10.0, estilo=self.estilo_svg)
+
+    def cambiar_estilo(self, estilo: EstiloSvg) -> ViewModelTrompo:
+        self.estilo_svg = estilo
+        if self.resultado and self.entrada_actual and not self.desactualizado:
+            self._generar_svgs()
+        return self.get_view_model()
+
     def limpiar(self):
         self.resultado = None
         self.entrada_actual = None
@@ -110,10 +125,7 @@ class ControladorTrompo:
             
             # Generar tablas y SVGs
             self.tablas = formatear_tablas(self.resultado, self.entrada_actual)
-            self.svg_conjunto = svg_conjunto(self.resultado, self.entrada_actual, escala=10.0)
-            self.svg_superior = svg_pieza(self.resultado, self.entrada_actual, "superior", escala=10.0)
-            self.svg_pico = svg_pieza(self.resultado, self.entrada_actual, "pico", escala=10.0)
-            self.svg_inferior = svg_pieza(self.resultado, self.entrada_actual, "inferior", escala=10.0)
+            self._generar_svgs()
         except ValueError as e:
             self.mensaje_error = str(e)
 

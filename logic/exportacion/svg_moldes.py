@@ -1,7 +1,8 @@
 from typing import List, Optional
 from logic.models import BalloonInput, BalloonCalculationResult, SectionResult, Point2D
+from logic.exportacion.estilos import EstiloSvg, IMPRESION
 
-def svg_pieza(resultado: BalloonCalculationResult, entrada: BalloonInput, seccion: str, escala: float = 10.0) -> str:
+def svg_pieza(resultado: BalloonCalculationResult, entrada: BalloonInput, seccion: str, escala: float = 10.0, estilo: EstiloSvg = IMPRESION) -> str:
     if seccion == "superior":
         sec_res = resultado.seccion_superior
     elif seccion == "inferior":
@@ -18,7 +19,6 @@ def svg_pieza(resultado: BalloonCalculationResult, entrada: BalloonInput, seccio
     L_real = sec_res.generatriz_total
     
     # Ancho máximo de la pieza
-    # El ancho máximo será el ancho máximo registrado en los puntos (incluye costura) por 2
     max_ancho_medio = max(p.ancho_medio for p in sec_res.puntos)
     W_real = max_ancho_medio * 2
 
@@ -36,11 +36,8 @@ def svg_pieza(resultado: BalloonCalculationResult, entrada: BalloonInput, seccio
     cx = svg_w / 2
 
     def get_y(l_acumulado: float) -> float:
-        # Queremos punta estrecha ABAJO. 
-        # En inferior: largo_acumulado = 0 es la boca (estrecha). -> Y = L_real
         if seccion == "inferior":
             y = (L_real - l_acumulado) * factor
-        # En superior y pico: largo_acumulado = 0 es la banda (ancha), l = L_real es apex (estrecha) -> Y = l_acumulado
         else:
             y = l_acumulado * factor
         return y
@@ -61,8 +58,6 @@ def svg_pieza(resultado: BalloonCalculationResult, entrada: BalloonInput, seccio
         pts_left_seam.append((cx - w_seam, y))
         pts_right_seam.append((cx + w_seam, y))
 
-    # Path data: right side down, left side up
-    # Since pts_right_cut goes from first point to last
     path_cut = "M " + " L ".join(f"{x:.2f},{y:.2f}" for x, y in pts_right_cut)
     path_cut += " L " + " L ".join(f"{x:.2f},{y:.2f}" for x, y in reversed(pts_left_cut))
     path_cut += " Z"
@@ -78,39 +73,48 @@ def svg_pieza(resultado: BalloonCalculationResult, entrada: BalloonInput, seccio
         f'     xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape">',
     ]
 
+    if estilo.fondo:
+        lines.append(f'  <rect width="100%" height="100%" fill="{estilo.fondo}" id="fondo"/>')
+
     # Cuadricula
     lines.append('  <g inkscape:groupmode="layer" inkscape:label="cuadricula" id="layer-cuadricula">')
     # linea vertical central
-    lines.append(f'    <line x1="{cx:.2f}" y1="0" x2="{cx:.2f}" y2="{L_real*factor:.2f}" stroke="blue" stroke-width="0.2" id="grid-center"/>')
+    w_eje = 0.2 * estilo.factor_trazo
+    w_cuad = 0.2 * estilo.factor_trazo
+    lines.append(f'    <line x1="{cx:.2f}" y1="0" x2="{cx:.2f}" y2="{L_real*factor:.2f}" stroke="{estilo.eje}" stroke-width="{w_eje:.2f}" id="grid-center"/>')
     for i, p in enumerate(sec_res.puntos):
         y = get_y(p.largo_acumulado)
         w_cut = p.ancho_medio * factor
-        lines.append(f'    <line x1="{cx - w_cut:.2f}" y1="{y:.2f}" x2="{cx + w_cut:.2f}" y2="{y:.2f}" stroke="blue" stroke-width="0.2" id="grid-step-{i}"/>')
+        lines.append(f'    <line x1="{cx - w_cut:.2f}" y1="{y:.2f}" x2="{cx + w_cut:.2f}" y2="{y:.2f}" stroke="{estilo.cuadricula}" stroke-width="{w_cuad:.2f}" id="grid-step-{i}"/>')
     lines.append('  </g>')
 
     # Costura
+    w_cost = 0.5 * estilo.factor_trazo
     lines.append('  <g inkscape:groupmode="layer" inkscape:label="costura" id="layer-costura">')
-    lines.append(f'    <path d="{path_seam}" fill="none" stroke="red" stroke-width="0.5" stroke-dasharray="2,2" id="path-seam"/>')
+    lines.append(f'    <path d="{path_seam}" fill="none" stroke="{estilo.costura}" stroke-width="{w_cost:.2f}" stroke-dasharray="2,2" id="path-seam"/>')
     lines.append('  </g>')
 
     # Contorno
+    w_cont = 1.0 * estilo.factor_trazo
     lines.append('  <g inkscape:groupmode="layer" inkscape:label="contorno" id="layer-contorno">')
-    lines.append(f'    <path d="{path_cut}" fill="none" stroke="black" stroke-width="1.0" id="path-cut"/>')
+    lines.append(f'    <path d="{path_cut}" fill="none" stroke="{estilo.contorno}" stroke-width="{w_cont:.2f}" id="path-cut"/>')
     lines.append('  </g>')
 
     # Etiquetas
+    fs_paso = 2 * estilo.factor_texto
+    fs_info = 4 * estilo.factor_texto
     lines.append('  <g inkscape:groupmode="layer" inkscape:label="etiquetas" id="layer-etiquetas">')
     for i, p in enumerate(sec_res.puntos):
         y = get_y(p.largo_acumulado)
         w_cut = p.ancho_medio * factor
-        lines.append(f'    <text x="{cx - w_cut + 1:.2f}" y="{y - 1:.2f}" font-size="2" fill="blue" id="label-step-{i+1}">{i+1}</text>')
+        lines.append(f'    <text x="{cx - w_cut + 1:.2f}" y="{y - 1:.2f}" font-size="{fs_paso:.2f}" fill="{estilo.cuadricula}" id="label-step-{i+1}">{i+1}</text>')
     
     # Etiqueta general cerca de la punta
     if seccion == "inferior":
         text_y = get_y(0.0) - 10 # 1 cm arriba de la boca
     else:
         text_y = get_y(L_real) - 10 # 1 cm arriba del pico
-    lines.append(f'    <text x="{cx:.2f}" y="{text_y:.2f}" font-size="4" fill="black" text-anchor="middle" id="label-info">{seccion.capitalize()} | {sec_res.cantidad} piezas | Escala 1:{escala} | Largo {L_real:.2f} cm</text>')
+    lines.append(f'    <text x="{cx:.2f}" y="{text_y:.2f}" font-size="{fs_info:.2f}" fill="{estilo.texto}" text-anchor="middle" id="label-info">{seccion.capitalize()} | {sec_res.cantidad} piezas | Escala 1:{escala} | Largo {L_real:.2f} cm</text>')
     lines.append('  </g>')
 
     # Pestaña (solo inferior avanzado)
@@ -123,7 +127,8 @@ def svg_pieza(resultado: BalloonCalculationResult, entrada: BalloonInput, seccio
         w_boca = sec_res.puntos[0].ancho_medio * factor
         x1 = cx - w_boca
         x2 = cx + w_boca
-        lines.append(f'    <rect x="{x1:.2f}" y="{y_boca:.2f}" width="{w_boca*2:.2f}" height="{p_pestana:.2f}" fill="none" stroke="green" stroke-width="0.5" stroke-dasharray="2,2" id="rect-pestana"/>')
+        w_pest = 0.5 * estilo.factor_trazo
+        lines.append(f'    <rect x="{x1:.2f}" y="{y_boca:.2f}" width="{w_boca*2:.2f}" height="{p_pestana:.2f}" fill="none" stroke="{estilo.pestana}" stroke-width="{w_pest:.2f}" stroke-dasharray="2,2" id="rect-pestana"/>')
         lines.append('  </g>')
 
     # Diseño
@@ -140,7 +145,7 @@ def guardar_svg(ruta: str, svg: str) -> None:
 
 
 def svg_hoja(resultado: BalloonCalculationResult, entrada: BalloonInput, seccion: str,
-             esquema, escala="auto", hoja="carta", margen_mm=10.0) -> str:
+             esquema, escala="auto", hoja="carta", margen_mm=10.0, estilo: EstiloSvg = IMPRESION) -> str:
     import warnings
     
     if seccion == "superior":
@@ -228,6 +233,9 @@ def svg_hoja(resultado: BalloonCalculationResult, entrada: BalloonInput, seccion
         f'     xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape">',
     ]
 
+    if estilo.fondo:
+        lines.append(f'  <rect width="100%" height="100%" fill="{estilo.fondo}" id="fondo"/>')
+
     W_svg = W_real * factor
     H_svg = H_real * factor
     cx = W_svg / 2
@@ -239,36 +247,48 @@ def svg_hoja(resultado: BalloonCalculationResult, entrada: BalloonInput, seccion
         else:
             y = l_acumulado * factor
         return y
-        
-    pts_left_cut, pts_right_cut = [], []
-    pts_left_seam, pts_right_seam = [], []
-    
+
+    pts_left_cut = []
+    pts_right_cut = []
+    pts_left_seam = []
+    pts_right_seam = []
+
     for p in sec_res.puntos:
         y = get_y(p.largo_acumulado)
         w_cut = p.ancho_medio * factor
         w_seam = (p.ancho_medio - costura/2) * factor
-        
         pts_left_cut.append((cx - w_cut, y))
         pts_right_cut.append((cx + w_cut, y))
         pts_left_seam.append((cx - w_seam, y))
         pts_right_seam.append((cx + w_seam, y))
-        
+
     path_cut = "M " + " L ".join(f"{x:.2f},{y:.2f}" for x, y in pts_right_cut)
-    path_cut += " L " + " L ".join(f"{x:.2f},{y:.2f}" for x, y in reversed(pts_left_cut)) + " Z"
+    path_cut += " L " + " L ".join(f"{x:.2f},{y:.2f}" for x, y in reversed(pts_left_cut))
+    path_cut += " Z"
 
     path_seam = "M " + " L ".join(f"{x:.2f},{y:.2f}" for x, y in pts_right_seam)
-    path_seam += " L " + " L ".join(f"{x:.2f},{y:.2f}" for x, y in reversed(pts_left_seam)) + " Z"
-    
-    total_w = cols * W_svg + (cols - 1) * gap_mm
-    total_h = rows * H_svg + (rows - 1) * gap_mm
-    off_x = (w_page - total_w) / 2
-    off_y = (h_page - total_h) / 2
-    
-    resumen = esquema.resumen_motivos(esquema.asignar(entrada.num_gajos))
-    
-    lines.append('  <g inkscape:groupmode="layer" inkscape:label="info-hoja" id="layer-info-hoja">')
-    lines.append(f'    <text x="10" y="10" font-size="4" fill="black">Escala 1:{factor_S:.1f} | Hoja {hoja.capitalize()}</text>')
+    path_seam += " L " + " L ".join(f"{x:.2f},{y:.2f}" for x, y in reversed(pts_left_seam))
+    path_seam += " Z"
+
+    total_w_content = cols * W_svg + (cols - 1) * gap_mm
+    total_h_content = rows * H_svg + (rows - 1) * gap_mm
+    off_x = (w_page - total_w_content) / 2
+    off_y = (h_page - total_h_content) / 2
+
+    resumen = esquema.resumen_moldes()
+
+    fs_header = 4 * estilo.factor_texto
+    lines.append('  <g inkscape:groupmode="layer" inkscape:label="encabezado" id="layer-encabezado">')
+    lines.append(f'    <text x="10" y="10" font-size="{fs_header:.2f}" fill="{estilo.texto}">Escala 1:{factor_S:.1f} | Hoja {hoja.capitalize()}</text>')
     lines.append('  </g>')
+
+    w_eje = 0.2 * estilo.factor_trazo
+    w_cuad = 0.2 * estilo.factor_trazo
+    w_cost = 0.5 * estilo.factor_trazo
+    w_cont = 1.0 * estilo.factor_trazo
+    w_pest = 0.5 * estilo.factor_trazo
+    fs_paso = 2 * estilo.factor_texto
+    fs_molde = 3 * estilo.factor_texto
 
     for i, motivo in enumerate(motivos):
         c = i % cols
@@ -279,26 +299,26 @@ def svg_hoja(resultado: BalloonCalculationResult, entrada: BalloonInput, seccion
         lines.append(f'  <g transform="translate({tx:.2f}, {ty:.2f})" id="pieza-{i}">')
         
         lines.append(f'    <g inkscape:groupmode="layer" inkscape:label="cuadricula-{i}" id="layer-cuadricula-{i}">')
-        lines.append(f'      <line x1="{cx:.2f}" y1="0" x2="{cx:.2f}" y2="{L_real*factor:.2f}" stroke="blue" stroke-width="0.2" id="grid-center-{i}"/>')
+        lines.append(f'      <line x1="{cx:.2f}" y1="0" x2="{cx:.2f}" y2="{L_real*factor:.2f}" stroke="{estilo.eje}" stroke-width="{w_eje:.2f}" id="grid-center-{i}"/>')
         for j, p in enumerate(sec_res.puntos):
             y = get_y(p.largo_acumulado)
             w_cut = p.ancho_medio * factor
-            lines.append(f'      <line x1="{cx - w_cut:.2f}" y1="{y:.2f}" x2="{cx + w_cut:.2f}" y2="{y:.2f}" stroke="blue" stroke-width="0.2" id="grid-step-{i}-{j}"/>')
+            lines.append(f'      <line x1="{cx - w_cut:.2f}" y1="{y:.2f}" x2="{cx + w_cut:.2f}" y2="{y:.2f}" stroke="{estilo.cuadricula}" stroke-width="{w_cuad:.2f}" id="grid-step-{i}-{j}"/>')
         lines.append('    </g>')
         
         lines.append(f'    <g inkscape:groupmode="layer" inkscape:label="costura-{i}" id="layer-costura-{i}">')
-        lines.append(f'      <path d="{path_seam}" fill="none" stroke="red" stroke-width="0.5" stroke-dasharray="2,2" id="path-seam-{i}"/>')
+        lines.append(f'      <path d="{path_seam}" fill="none" stroke="{estilo.costura}" stroke-width="{w_cost:.2f}" stroke-dasharray="2,2" id="path-seam-{i}"/>')
         lines.append('    </g>')
         
         lines.append(f'    <g inkscape:groupmode="layer" inkscape:label="contorno-{i}" id="layer-contorno-{i}">')
-        lines.append(f'      <path d="{path_cut}" fill="none" stroke="black" stroke-width="1.0" id="path-cut-{i}"/>')
+        lines.append(f'      <path d="{path_cut}" fill="none" stroke="{estilo.contorno}" stroke-width="{w_cont:.2f}" id="path-cut-{i}"/>')
         lines.append('    </g>')
         
         lines.append(f'    <g inkscape:groupmode="layer" inkscape:label="etiquetas-{i}" id="layer-etiquetas-{i}">')
         for j, p in enumerate(sec_res.puntos):
             y = get_y(p.largo_acumulado)
             w_cut = p.ancho_medio * factor
-            lines.append(f'      <text x="{cx - w_cut + 1:.2f}" y="{y - 1:.2f}" font-size="2" fill="blue" id="label-step-{i}-{j+1}">{j+1}</text>')
+            lines.append(f'      <text x="{cx - w_cut + 1:.2f}" y="{y - 1:.2f}" font-size="{fs_paso:.2f}" fill="{estilo.cuadricula}" id="label-step-{i}-{j+1}">{j+1}</text>')
         
         tot, en_esp, sin_esp = resumen[motivo]
         cant_por_gajo = sec_res.cantidad // entrada.num_gajos
@@ -311,7 +331,7 @@ def svg_hoja(resultado: BalloonCalculationResult, entrada: BalloonInput, seccion
             text_y = get_y(L_real) - 5
             
         esp_txt = f" ({t_en_esp} en espejo)" if t_en_esp > 0 else ""
-        lines.append(f'      <text x="{cx:.2f}" y="{text_y:.2f}" font-size="3" fill="black" text-anchor="middle" id="label-info-{i}">Molde {motivo} — ×{t_tot}{esp_txt}</text>')
+        lines.append(f'      <text x="{cx:.2f}" y="{text_y:.2f}" font-size="{fs_molde:.2f}" fill="{estilo.texto}" text-anchor="middle" id="label-info-{i}">Molde {motivo} — ×{t_tot}{esp_txt}</text>')
         lines.append('    </g>')
         
         if seccion == "inferior" and entrada.usar_parametros_avanzados and entrada.pestana_boca > 0:
@@ -320,7 +340,7 @@ def svg_hoja(resultado: BalloonCalculationResult, entrada: BalloonInput, seccion
             y_boca = get_y(0.0)
             w_boca = sec_res.puntos[0].ancho_medio * factor
             x1 = cx - w_boca
-            lines.append(f'      <rect x="{x1:.2f}" y="{y_boca:.2f}" width="{w_boca*2:.2f}" height="{p_pestana:.2f}" fill="none" stroke="green" stroke-width="0.5" stroke-dasharray="2,2" id="rect-pestana-{i}"/>')
+            lines.append(f'      <rect x="{x1:.2f}" y="{y_boca:.2f}" width="{w_boca*2:.2f}" height="{p_pestana:.2f}" fill="none" stroke="{estilo.pestana}" stroke-width="{w_pest:.2f}" stroke-dasharray="2,2" id="rect-pestana-{i}"/>')
             lines.append('    </g>')
             
         lines.append(f'    <g inkscape:groupmode="layer" inkscape:label="diseno-motivo-{motivo}" id="layer-diseno-{i}">')
@@ -333,7 +353,7 @@ def svg_hoja(resultado: BalloonCalculationResult, entrada: BalloonInput, seccion
     return "\n".join(lines)
 
 
-def svg_conjunto(resultado: BalloonCalculationResult, entrada: BalloonInput, escala: float = 10.0) -> str:
+def svg_conjunto(resultado: BalloonCalculationResult, entrada: BalloonInput, escala: float = 10.0, estilo: EstiloSvg = IMPRESION) -> str:
     """Genera UN SVG con las 3 piezas (cono superior, pico, cono inferior) juntas.
     
     Colocadas una al lado de la otra a la misma escala (por defecto 1:10),
@@ -344,7 +364,7 @@ def svg_conjunto(resultado: BalloonCalculationResult, entrada: BalloonInput, esc
     costura = entrada.ancho_costura
     margen_mm = 15.0
     sep_mm = 20.0
-    alto_rotulo_mm = 14.0
+    alto_rotulo_mm = 14.0 * estilo.factor_texto
 
     piezas = [
         ("superior", "Cono superior", resultado.seccion_superior),
@@ -352,7 +372,6 @@ def svg_conjunto(resultado: BalloonCalculationResult, entrada: BalloonInput, esc
         ("inferior", "Cono inferior", resultado.seccion_inferior),
     ]
 
-    # Calcular dimensiones de cada pieza
     dims = []
     for clave, nombre, sec in piezas:
         w_real = max(p.ancho_medio for p in sec.puntos) * 2
@@ -373,7 +392,6 @@ def svg_conjunto(resultado: BalloonCalculationResult, entrada: BalloonInput, esc
             "pestana_mm": pestana_mm,
         })
 
-    # Dimensiones globales del lienzo SVG
     ancho_total_mm = margen_mm * 2 + sum(d["w_mm"] for d in dims) + sep_mm * (len(dims) - 1)
     max_h_piezas_mm = max(d["h_mm"] for d in dims)
     alto_total_mm = margen_mm * 2 + alto_rotulo_mm + max_h_piezas_mm
@@ -384,8 +402,21 @@ def svg_conjunto(resultado: BalloonCalculationResult, entrada: BalloonInput, esc
         '     xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape">',
     ]
 
+    if estilo.fondo:
+        lines.append(f'  <rect width="100%" height="100%" fill="{estilo.fondo}" id="fondo"/>')
+
     x_cur = margen_mm
     y_piezas_top = margen_mm + alto_rotulo_mm
+
+    w_eje = 0.2 * estilo.factor_trazo
+    w_cuad = 0.2 * estilo.factor_trazo
+    w_cost = 0.4 * estilo.factor_trazo
+    w_cont = 0.8 * estilo.factor_trazo
+    w_pest = 0.4 * estilo.factor_trazo
+
+    fs_tit = 4.0 * estilo.factor_texto
+    fs_sub = 2.6 * estilo.factor_texto
+    fs_paso = 1.8 * estilo.factor_texto
 
     for d in dims:
         clave = d["clave"]
@@ -396,16 +427,12 @@ def svg_conjunto(resultado: BalloonCalculationResult, entrada: BalloonInput, esc
         pestana_mm = d["pestana_mm"]
         cx = x_cur + w_mm / 2.0
 
-        # Función de coordenadas Y para punta estrecha abajo
-        # En inferior: largo_acumulado = 0 es boca estrecha (abajo).
-        # En superior y pico: largo_acumulado = 0 es base ancha (arriba).
         def get_y(l_acumulado: float, cl=clave, lr=l_real) -> float:
             if cl == "inferior":
                 return y_piezas_top + (lr - l_acumulado) * factor
             else:
                 return y_piezas_top + l_acumulado * factor
 
-        # Puntos de contorno y costura
         pts_left_cut = []
         pts_right_cut = []
         pts_left_seam = []
@@ -428,7 +455,6 @@ def svg_conjunto(resultado: BalloonCalculationResult, entrada: BalloonInput, esc
         path_seam += " L " + " L ".join(f"{x:.2f},{y:.2f}" for x, y in reversed(pts_left_seam))
         path_seam += " Z"
 
-        # Rótulo de texto
         if clave == "pico":
             cant_str = f"Cantidad: {sec.cantidad} triángulos ({resultado.num_piramides} pirámides × 4)"
         else:
@@ -438,27 +464,27 @@ def svg_conjunto(resultado: BalloonCalculationResult, entrada: BalloonInput, esc
         lines.append(f'  <g id="grupo-{clave}" inkscape:label="{nombre}">')
         
         # Rótulo superior
-        lines.append(f'    <text x="{cx:.2f}" y="{margen_mm + 4.0:.2f}" font-size="4" font-weight="bold" fill="black" text-anchor="middle" id="titulo-{clave}">{nombre}</text>')
-        lines.append(f'    <text x="{cx:.2f}" y="{margen_mm + 9.0:.2f}" font-size="2.6" fill="#444444" text-anchor="middle" id="info-{clave}">{info_str}</text>')
+        lines.append(f'    <text x="{cx:.2f}" y="{margen_mm + 4.0 * estilo.factor_texto:.2f}" font-size="{fs_tit:.2f}" font-weight="bold" fill="{estilo.texto}" text-anchor="middle" id="titulo-{clave}">{nombre}</text>')
+        lines.append(f'    <text x="{cx:.2f}" y="{margen_mm + 9.0 * estilo.factor_texto:.2f}" font-size="{fs_sub:.2f}" fill="{estilo.texto}" text-anchor="middle" id="info-{clave}">{info_str}</text>')
 
         # Cuadrícula
         lines.append(f'    <g id="cuadricula-{clave}" inkscape:groupmode="layer" inkscape:label="cuadricula-{clave}">')
-        lines.append(f'      <line x1="{cx:.2f}" y1="{y_piezas_top:.2f}" x2="{cx:.2f}" y2="{y_piezas_top + l_real*factor:.2f}" stroke="blue" stroke-width="0.2" id="grid-center-{clave}"/>')
+        lines.append(f'      <line x1="{cx:.2f}" y1="{y_piezas_top:.2f}" x2="{cx:.2f}" y2="{y_piezas_top + l_real*factor:.2f}" stroke="{estilo.eje}" stroke-width="{w_eje:.2f}" id="grid-center-{clave}"/>')
         for idx, p in enumerate(sec.puntos):
             y = get_y(p.largo_acumulado)
             w_cut = p.ancho_medio * factor
-            lines.append(f'      <line x1="{cx - w_cut:.2f}" y1="{y:.2f}" x2="{cx + w_cut:.2f}" y2="{y:.2f}" stroke="blue" stroke-width="0.2" id="grid-step-{clave}-{idx}"/>')
-            lines.append(f'      <text x="{cx - w_cut + 1.0:.2f}" y="{y - 0.8:.2f}" font-size="1.8" fill="blue" id="label-step-{clave}-{idx+1}">{idx+1}</text>')
+            lines.append(f'      <line x1="{cx - w_cut:.2f}" y1="{y:.2f}" x2="{cx + w_cut:.2f}" y2="{y:.2f}" stroke="{estilo.cuadricula}" stroke-width="{w_cuad:.2f}" id="grid-step-{clave}-{idx}"/>')
+            lines.append(f'      <text x="{cx - w_cut + 1.0:.2f}" y="{y - 0.8:.2f}" font-size="{fs_paso:.2f}" fill="{estilo.cuadricula}" id="label-step-{clave}-{idx+1}">{idx+1}</text>')
         lines.append('    </g>')
 
         # Costura
         lines.append(f'    <g id="costura-{clave}" inkscape:groupmode="layer" inkscape:label="costura-{clave}">')
-        lines.append(f'      <path d="{path_seam}" fill="none" stroke="red" stroke-width="0.4" stroke-dasharray="2,2" id="path-seam-{clave}"/>')
+        lines.append(f'      <path d="{path_seam}" fill="none" stroke="{estilo.costura}" stroke-width="{w_cost:.2f}" stroke-dasharray="2,2" id="path-seam-{clave}"/>')
         lines.append('    </g>')
 
         # Contorno
         lines.append(f'    <g id="contorno-{clave}" inkscape:groupmode="layer" inkscape:label="contorno-{clave}">')
-        lines.append(f'      <path d="{path_cut}" fill="none" stroke="black" stroke-width="0.8" id="path-cut-{clave}"/>')
+        lines.append(f'      <path d="{path_cut}" fill="none" stroke="{estilo.contorno}" stroke-width="{w_cont:.2f}" id="path-cut-{clave}"/>')
         lines.append('    </g>')
 
         # Pestaña en cono inferior
@@ -467,7 +493,7 @@ def svg_conjunto(resultado: BalloonCalculationResult, entrada: BalloonInput, esc
             y_boca = get_y(0.0)
             w_boca = sec.puntos[0].ancho_medio * factor
             x_rec = cx - w_boca
-            lines.append(f'      <rect x="{x_rec:.2f}" y="{y_boca:.2f}" width="{w_boca*2:.2f}" height="{pestana_mm:.2f}" fill="none" stroke="green" stroke-width="0.4" stroke-dasharray="2,2" id="rect-pestana-{clave}"/>')
+            lines.append(f'      <rect x="{x_rec:.2f}" y="{y_boca:.2f}" width="{w_boca*2:.2f}" height="{pestana_mm:.2f}" fill="none" stroke="{estilo.pestana}" stroke-width="{w_pest:.2f}" stroke-dasharray="2,2" id="rect-pestana-{clave}"/>')
             lines.append('    </g>')
 
         lines.append('  </g>')
