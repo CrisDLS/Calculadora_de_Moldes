@@ -110,7 +110,11 @@ Cada pico es una pirámide de base cuadrada armada con 4 triángulos del molde d
   - `app_flet/vistas/`: árbol visual. Construye las vistas e inyecta el controlador.
 - Plan F1-F5:
   - F1: Resumen y avisos con tarjetas reactivas (HECHO).
-  - F2: Pestañas de Tablas y Moldes 2D en SVG (HECHO).
+  - F2: Pestañas de Tablas y Moldes 2D en SVG (HECHO, con ajustes visuales y arquitectónicos completados):
+    - Estilos de SVG (`logic/exportacion/estilos.py`): presets `IMPRESION` (fondo blanco, trazo base), `PANTALLA_OSCURO` (fondo `#1e1e24`, contraste WCAG ≥ 4.5), y `PANTALLA_CLARO` (fondo `#f8f9fa`), con `factor_trazo` y `factor_texto`.
+    - Temas claro y oscuro (`app_flet/tema.py`): paleta fuertemente tipada `PaletaTema` (`PALETA_OSCURA`, `PALETA_CLARA`) y botón sol/luna para conmutación dinámica de UI y regeneración síncrona de SVG sin re-calcular el modelo.
+    - Tabla de moldes personalizada (`app_flet/vistas/tabla_molde.py`): reemplaza `ft.DataTable` para garantizar ocupación de todo el ancho, encabezado fijo, `ft.ListView` con pesos proporcionales `[7, 10, 10, 10]`, alineación derecha, filas alternadas y reinicio de scroll al cambiar de pieza.
+    - Portapapeles con API pública (`app_flet/vistas/trompo.py`): servicio inyectado para testabilidad con mock, registro en `page.services`, y retroalimentación mediante `ft.SnackBar` explícito ("Tabla copiada al portapapeles" / "No se pudo copiar").
   - F3: Hoja de trazo (esquema, grupo, Carta, escala, exportar SVG) y guardar/abrir proyecto.
   - F4: Vista 3D con three.js.
   - F5: Diseños sobre cada pieza.
