@@ -14,6 +14,7 @@ class EstiloSvg:
     fondo_referencia: str
     factor_trazo: float = 1.0
     factor_texto: float = 1.0
+    texto_proporcional: bool = False
 
 # Preset IMPRESION: exactamente los colores y proporciones de impresión original
 IMPRESION = EstiloSvg(
@@ -41,6 +42,7 @@ PANTALLA_OSCURO = EstiloSvg(
     fondo_referencia="#1e1e24",
     factor_trazo=1.5,
     factor_texto=2.0,
+    texto_proporcional=True,
 )
 
 # Preset PANTALLA_CLARO: líneas oscuras legibles sobre fondo claro #f8f9fa
@@ -55,4 +57,5 @@ PANTALLA_CLARO = EstiloSvg(
     fondo_referencia="#f8f9fa",
     factor_trazo=1.5,
     factor_texto=2.0,
+    texto_proporcional=True,
 )

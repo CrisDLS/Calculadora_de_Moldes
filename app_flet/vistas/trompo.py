@@ -39,6 +39,9 @@ class VistaTrompo(ft.Container):
         self._ultimo_render_time: float = 0.0
         self._acum_dx: float = 0.0
         self._acum_dy: float = 0.0
+        # Telemetría de rendimiento del visor (últimas 20 muestras)
+        self._tiempos_actualizacion: list[float] = []
+        self._timestamps_actualizacion: list[float] = []
         
         # --- CAMPOS SIMPLES ---
         self.txt_altura = self._crear_campo("Altura total de papel", "950", "cm")
@@ -652,13 +655,21 @@ class VistaTrompo(ft.Container):
         img_str = f"imagen {self.img_svg.width:.0f}×{self.img_svg.height:.0f}"
         v_str = f"vista {self.vista_svg.x:.1f},{self.vista_svg.y:.1f},{self.vista_svg.ancho:.1f},{self.vista_svg.alto:.1f}"
         zoom_str = f"zoom {self._porcentaje_zoom():.0f} %"
-        self.lbl_debug.value = f"{z_str} · {img_str} · {v_str} · {zoom_str}"
+
+        media_ms = (sum(self._tiempos_actualizacion) / len(self._tiempos_actualizacion)) if self._tiempos_actualizacion else 0.0
+        now = time.perf_counter()
+        # Actualizaciones en el último segundo
+        recientes = [t for t in self._timestamps_actualizacion if now - t <= 1.0]
+        fps = len(recientes)
+        telem_str = f"{media_ms:.1f} ms/act (media 20) · {fps} act/s"
+
+        self.lbl_debug.value = f"{z_str} · {img_str} · {v_str} · {zoom_str} · {telem_str}"
         try:
             self.lbl_debug.update()
         except Exception:
             pass
 
-    def _actualizar_imagen_zoom(self, force: bool = False):
+    def _actualizar_imagen_zoom(self, force: bool = False, t_inicio_evento: Optional[float] = None):
         if not self._svg_actual_raw or not self.vista_svg:
             return
         now = time.perf_counter()
@@ -669,14 +680,28 @@ class VistaTrompo(ft.Container):
         svg_con_viewbox = aplicar_viewbox(self._svg_actual_raw, self.vista_svg)
         self.img_svg.src = svg_con_viewbox.encode("utf-8")
         self.lbl_zoom_porcentaje.value = f"{self._porcentaje_zoom():.0f} %"
-        self._actualizar_debug()
+
+        # Registrar telemetría si se pasó t_inicio_evento o medir el coste del renderizado
+        t_ref = t_inicio_evento if t_inicio_evento is not None else now
         try:
             self.img_svg.update()
             self.lbl_zoom_porcentaje.update()
         except Exception:
             pass
 
+        t_fin = time.perf_counter()
+        dt_ms = (t_fin - t_ref) * 1000.0
+        self._tiempos_actualizacion.append(dt_ms)
+        if len(self._tiempos_actualizacion) > 20:
+            self._tiempos_actualizacion.pop(0)
+        self._timestamps_actualizacion.append(t_fin)
+        if len(self._timestamps_actualizacion) > 50:
+            self._timestamps_actualizacion.pop(0)
+
+        self._actualizar_debug()
+
     def _on_gesture_scroll(self, e: ft.ScrollEvent):
+        t_inicio = time.perf_counter()
         if not self.vista_svg:
             return
         # Rueda del ratón: scroll_delta.y < 0 acerca (zoom in), > 0 aleja (zoom out)
@@ -703,9 +728,10 @@ class VistaTrompo(ft.Container):
             fy=fy,
             limites=self._limites_zoom()
         )
-        self._actualizar_imagen_zoom()
+        self._actualizar_imagen_zoom(t_inicio_evento=t_inicio)
 
     def _on_gesture_pan_update(self, e: ft.DragUpdateEvent):
+        t_inicio = time.perf_counter()
         if not self.vista_svg or not self.vista_base_svg:
             return
         delta = getattr(e, "local_delta", None) or getattr(e, "global_delta", None)
@@ -716,7 +742,7 @@ class VistaTrompo(ft.Container):
             dy = delta.y * (self.vista_svg.alto / h_control)
             limites_cont = (self.vista_base_svg.ancho, self.vista_base_svg.alto)
             self.vista_svg = desplazar(self.vista_svg, dx=dx, dy=dy, limites_contenido=limites_cont)
-            self._actualizar_imagen_zoom()
+            self._actualizar_imagen_zoom(t_inicio_evento=t_inicio)
 
     def _on_gesture_double_tap(self, e):
         self._ajustar_vista()

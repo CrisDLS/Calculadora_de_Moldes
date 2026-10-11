@@ -17,15 +17,26 @@ def svg_perfil(
     alto_real = dim.alto_total
     ancho_real = dim.ancho_con_picos
 
-    # Márgenes en mm para alojar cotas y rótulos
-    # Izquierda: cota de alto total y cotas de hileras (~60 mm)
-    # Derecha: cotas de diámetros (~50 mm)
-    # Arriba: título (~30 mm)
-    # Abajo: cota de boca y notas (~40 mm)
-    margen_izq = 60.0 * estilo.factor_texto
-    margen_der = 60.0 * estilo.factor_texto
-    margen_sup = 35.0 * estilo.factor_texto
-    margen_inf = 40.0 * estilo.factor_texto
+    dim_mayor_perfil = max(ancho_real * factor, alto_real * factor)
+
+    if estilo.texto_proporcional:
+        fs_titulo = max(4.5 * estilo.factor_texto, dim_mayor_perfil * 0.022)
+        fs_sub = max(2.6 * estilo.factor_texto, dim_mayor_perfil * 0.015)
+        fs_cota = max(2.8 * estilo.factor_texto, dim_mayor_perfil * 0.018)
+        fs_nota = max(2.4 * estilo.factor_texto, dim_mayor_perfil * 0.014)
+        margen_izq = max(60.0 * estilo.factor_texto, fs_cota * 6.0)
+        margen_der = max(60.0 * estilo.factor_texto, fs_cota * 6.0)
+        margen_sup = max(35.0 * estilo.factor_texto, fs_titulo * 3.0)
+        margen_inf = max(40.0 * estilo.factor_texto, (fs_cota + fs_nota) * 3.5)
+    else:
+        fs_titulo = 4.5 * estilo.factor_texto
+        fs_sub = 2.6 * estilo.factor_texto
+        fs_cota = 2.8 * estilo.factor_texto
+        fs_nota = 2.4 * estilo.factor_texto
+        margen_izq = 60.0 * estilo.factor_texto
+        margen_der = 60.0 * estilo.factor_texto
+        margen_sup = 35.0 * estilo.factor_texto
+        margen_inf = 40.0 * estilo.factor_texto
 
     dibujo_w = ancho_real * factor
     dibujo_h = alto_real * factor
@@ -59,11 +70,6 @@ def svg_perfil(
     w_cuad = 0.25 * estilo.factor_trazo
     w_cota = 0.35 * estilo.factor_trazo
     w_pir = 0.45 * estilo.factor_trazo
-
-    fs_titulo = 4.5 * estilo.factor_texto
-    fs_sub = 2.6 * estilo.factor_texto
-    fs_cota = 2.8 * estilo.factor_texto
-    fs_nota = 2.4 * estilo.factor_texto
 
     lines = [
         '<?xml version="1.0" encoding="UTF-8" standalone="no"?>',

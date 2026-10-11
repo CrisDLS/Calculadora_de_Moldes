@@ -83,3 +83,30 @@ def test_factor_texto_y_trazo_escala():
     fs_imp = float(t_imp.attrib['font-size'])
     fs_osc = float(t_osc.attrib['font-size'])
     assert fs_osc == pytest.approx(fs_imp * PANTALLA_OSCURO.factor_texto, abs=0.01)
+
+
+def test_tamano_letra_proporcional_en_pantalla_e_impresion_invariable():
+    calc = TrompoEstrellaCalculator()
+    for (h, g, hil, c) in [(950, 30, 2, 1), (380, 30, 2, 1)]:
+        ent = BalloonInput(h, g, hil, c)
+        r = calc.calcular(ent)
+
+        # 1. IMPRESION no usa texto proporcional y mantiene factor 1.0 exacto
+        svg_imp = svg_conjunto(r, ent, escala=10.0, estilo=IMPRESION)
+        root_imp = ET.fromstring(svg_imp)
+        t_tit_imp = root_imp.find('.//{http://www.w3.org/2000/svg}text[@id="titulo-superior"]')
+        assert float(t_tit_imp.attrib['font-size']) == pytest.approx(4.0, abs=1e-3)
+
+        # 2. En pantalla (PANTALLA_OSCURO y PANTALLA_CLARO), el texto es proporcional al tamaño del SVG
+        for est_pantalla in [PANTALLA_OSCURO, PANTALLA_CLARO]:
+            svg_pant = svg_conjunto(r, ent, escala=10.0, estilo=est_pantalla)
+            root_pant = ET.fromstring(svg_pant)
+            w_svg = float(root_pant.attrib['width'].replace('mm', ''))
+            h_svg = float(root_pant.attrib['height'].replace('mm', ''))
+            dim_mayor = max(w_svg, h_svg)
+
+            t_tit_pant = root_pant.find('.//{http://www.w3.org/2000/svg}text[@id="titulo-superior"]')
+            fs_tit_pant = float(t_tit_pant.attrib['font-size'])
+            # Altura de letra entre 1.8 % y 3.5 % de la dimensión mayor
+            pct = fs_tit_pant / dim_mayor
+            assert 0.018 <= pct <= 0.035, f"Texto en {h} tiene {pct*100:.2f}% de la dimensión mayor ({dim_mayor}mm)"

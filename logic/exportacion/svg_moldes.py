@@ -101,8 +101,14 @@ def svg_pieza(resultado: BalloonCalculationResult, entrada: BalloonInput, seccio
     lines.append('  </g>')
 
     # Etiquetas
-    fs_paso = 2 * estilo.factor_texto
-    fs_info = 4 * estilo.factor_texto
+    dim_mayor_pieza = max(svg_w, svg_h)
+    if estilo.texto_proporcional:
+        fs_info = max(4.0 * estilo.factor_texto, dim_mayor_pieza * 0.020)
+        fs_paso = max(2.0 * estilo.factor_texto, dim_mayor_pieza * 0.010)
+    else:
+        fs_paso = 2 * estilo.factor_texto
+        fs_info = 4 * estilo.factor_texto
+
     lines.append('  <g inkscape:groupmode="layer" inkscape:label="etiquetas" id="layer-etiquetas">')
     for i, p in enumerate(sec_res.puntos):
         y = get_y(p.largo_acumulado)
@@ -110,10 +116,11 @@ def svg_pieza(resultado: BalloonCalculationResult, entrada: BalloonInput, seccio
         lines.append(f'    <text x="{cx - w_cut + 1:.2f}" y="{y - 1:.2f}" font-size="{fs_paso:.2f}" fill="{estilo.cuadricula}" id="label-step-{i+1}">{i+1}</text>')
     
     # Etiqueta general cerca de la punta
+    offset_info = max(10.0, fs_info * 1.5)
     if seccion == "inferior":
-        text_y = get_y(0.0) - 10 # 1 cm arriba de la boca
+        text_y = get_y(0.0) - offset_info # arriba de la boca
     else:
-        text_y = get_y(L_real) - 10 # 1 cm arriba del pico
+        text_y = get_y(L_real) - offset_info # arriba del pico
     lines.append(f'    <text x="{cx:.2f}" y="{text_y:.2f}" font-size="{fs_info:.2f}" fill="{estilo.texto}" text-anchor="middle" id="label-info">{seccion.capitalize()} | {sec_res.cantidad} piezas | Escala 1:{escala} | Largo {L_real:.2f} cm</text>')
     lines.append('  </g>')
 
@@ -372,9 +379,27 @@ def svg_conjunto(resultado: BalloonCalculationResult, entrada: BalloonInput, esc
     margen_mm = 15.0
     sep_base_mm = 20.0
 
-    fs_tit = 4.0 * estilo.factor_texto
-    fs_sub = 2.6 * estilo.factor_texto
-    fs_paso = 1.8 * estilo.factor_texto
+    # Estimación de dimensión del conjunto para texto proporcional
+    w_estimado = sum(max(p.ancho_medio for p in sec.puntos) * 2 * factor for _, _, sec in [
+        ("sup", "", resultado.seccion_superior),
+        ("pic", "", resultado.seccion_picos),
+        ("inf", "", resultado.seccion_inferior),
+    ]) + sep_base_mm * 2 + margen_mm * 2
+    h_estimado = max(
+        resultado.seccion_superior.generatriz_total,
+        resultado.seccion_picos.generatriz_total,
+        resultado.seccion_inferior.generatriz_total,
+    ) * factor + margen_mm * 2
+    dim_mayor_conjunto = max(w_estimado, h_estimado)
+
+    if estilo.texto_proporcional:
+        fs_tit = max(4.0 * estilo.factor_texto, dim_mayor_conjunto * 0.020)
+        fs_sub = max(2.6 * estilo.factor_texto, dim_mayor_conjunto * 0.014)
+        fs_paso = max(1.8 * estilo.factor_texto, dim_mayor_conjunto * 0.010)
+    else:
+        fs_tit = 4.0 * estilo.factor_texto
+        fs_sub = 2.6 * estilo.factor_texto
+        fs_paso = 1.8 * estilo.factor_texto
 
     piezas = [
         ("superior", "Cono superior", resultado.seccion_superior),
@@ -426,7 +451,7 @@ def svg_conjunto(resultado: BalloonCalculationResult, entrada: BalloonInput, esc
         })
 
     # Calcular separaciones entre piezas garantizando que los rótulos no se toquen
-    margen_min_rotulos = 8.0 * estilo.factor_texto
+    margen_min_rotulos = max(8.0 * estilo.factor_texto, fs_sub * 2.0)
     seps = []
     for i in range(len(dims) - 1):
         w_i = dims[i]["w_mm"]
@@ -438,7 +463,7 @@ def svg_conjunto(resultado: BalloonCalculationResult, entrada: BalloonInput, esc
 
     ancho_total_mm = margen_mm * 2 + sum(d["w_mm"] for d in dims) + sum(seps)
     max_lineas = max(len(d["lineas"]) for d in dims)
-    alto_rotulo_mm = fs_tit + (max_lineas - 1) * (fs_sub * 1.35) + 6.0 * estilo.factor_texto
+    alto_rotulo_mm = fs_tit + (max_lineas - 1) * (fs_sub * 1.35) + max(6.0 * estilo.factor_texto, fs_sub * 1.5)
     max_h_piezas_mm = max(d["h_mm"] for d in dims)
     alto_total_mm = margen_mm * 2 + alto_rotulo_mm + max_h_piezas_mm
 
