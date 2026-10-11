@@ -5,6 +5,8 @@ from logic.calculators.trompo_estrella import TrompoEstrellaCalculator
 from logic.models import BalloonInput, BalloonCalculationResult
 from logic.exportacion.estilos import EstiloSvg, PANTALLA_OSCURO
 from logic.exportacion.svg_moldes import svg_pieza, svg_conjunto
+from logic.geometria.perfil import perfil_armado
+from logic.exportacion.svg_perfil import svg_perfil
 from presentacion.trompo_estrella import (
     leer_entrada,
     formatear_resumen,
@@ -34,6 +36,7 @@ class ViewModelTrompo:
     svg_superior: str = ""
     svg_pico: str = ""
     svg_inferior: str = ""
+    svg_perfil: str = ""
 
 class ControladorTrompo:
     def __init__(self, estilo_svg: EstiloSvg = PANTALLA_OSCURO):
@@ -50,6 +53,7 @@ class ControladorTrompo:
         self.svg_superior: str = ""
         self.svg_pico: str = ""
         self.svg_inferior: str = ""
+        self.svg_perfil: str = ""
 
         # Estado de los campos
         self.altura = "950"
@@ -78,6 +82,7 @@ class ControladorTrompo:
         self.svg_superior = ""
         self.svg_pico = ""
         self.svg_inferior = ""
+        self.svg_perfil = ""
 
     def _generar_svgs(self):
         if self.resultado and self.entrada_actual:
@@ -85,6 +90,8 @@ class ControladorTrompo:
             self.svg_superior = svg_pieza(self.resultado, self.entrada_actual, "superior", escala=10.0, estilo=self.estilo_svg)
             self.svg_pico = svg_pieza(self.resultado, self.entrada_actual, "pico", escala=10.0, estilo=self.estilo_svg)
             self.svg_inferior = svg_pieza(self.resultado, self.entrada_actual, "inferior", escala=10.0, estilo=self.estilo_svg)
+            perf = perfil_armado(self.entrada_actual, self.resultado, mostrar_picos_al_borde=True)
+            self.svg_perfil = svg_perfil(perf, estilo=self.estilo_svg, escala=10.0)
 
     def cambiar_estilo(self, estilo: EstiloSvg) -> ViewModelTrompo:
         self.estilo_svg = estilo
@@ -154,4 +161,5 @@ class ControladorTrompo:
             svg_superior=self.svg_superior if not self.desactualizado else "",
             svg_pico=self.svg_pico if not self.desactualizado else "",
             svg_inferior=self.svg_inferior if not self.desactualizado else "",
+            svg_perfil=self.svg_perfil if not self.desactualizado else "",
         )
