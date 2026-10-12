@@ -427,6 +427,65 @@ class VistaTrompo(ft.Container):
             ],
             on_change=self.on_cambio_pieza_hoja,
         )
+        self.selector_lienzo = ft.SegmentedButton(
+            selected=["abanico"],
+            allow_multiple_selection=False,
+            segments=[
+                ft.Segment(value="abanico", label=ft.Text("Abanico (recomendado)")),
+                ft.Segment(value="separadas", label=ft.Text("Piezas separadas")),
+            ],
+            on_change=self.on_cambio_lienzo,
+        )
+        self.selector_modo_dibujo = ft.SegmentedButton(
+            selected=["completo"],
+            allow_multiple_selection=False,
+            segments=[
+                ft.Segment(value="completo", label=ft.Text("Completo")),
+                ft.Segment(value="mitad", label=ft.Text("Mitad (espejo)")),
+            ],
+            on_change=self.on_cambio_modo_dibujo,
+        )
+
+        self.dd_repeticion_pico_hoja = ft.Dropdown(
+            label="Repetición del pico",
+            value="todas_a",
+            options=[
+                ft.DropdownOption(key="todas_a", text="Todas iguales (A)"),
+                ft.DropdownOption(key="alternar_gajo", text="Alternar por gajo"),
+                ft.DropdownOption(key="alternar_hilera", text="Alternar por hilera"),
+                ft.DropdownOption(key="ajedrez", text="Ajedrez"),
+            ],
+            on_select=self.on_cambio_repeticion_pico_hoja,
+            dense=True,
+            width=200,
+        )
+        self.lbl_resumen_pico = ft.Text(
+            "",
+            size=12,
+            color=ft.Colors.ON_SURFACE_VARIANT,
+            weight=ft.FontWeight.W_500,
+        )
+        self.panel_diseno_pico_hoja = ft.Container(
+            content=ft.Column(
+                controls=[
+                    ft.Text("Diseño del pico", size=13, weight=ft.FontWeight.BOLD),
+                    ft.Row(
+                        controls=[
+                            self.dd_repeticion_pico_hoja,
+                            self.lbl_resumen_pico,
+                        ],
+                        alignment=ft.MainAxisAlignment.START,
+                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                        spacing=12,
+                    ),
+                ],
+                spacing=4,
+            ),
+            bgcolor=ft.Colors.SURFACE_CONTAINER_LOW,
+            border_radius=8,
+            padding=8,
+            visible=False,
+        )
         self.dd_modo_esquema = ft.Dropdown(
             label="Modo de diseño",
             value="repeticion",
@@ -591,7 +650,17 @@ class VistaTrompo(ft.Container):
             content=ft.Column(
                 expand=True,
                 controls=[
-                    ft.Row([self.selector_pieza_hoja], alignment=ft.MainAxisAlignment.CENTER),
+                    ft.Row(
+                        controls=[
+                            self.selector_pieza_hoja,
+                            self.selector_lienzo,
+                            self.selector_modo_dibujo,
+                        ],
+                        alignment=ft.MainAxisAlignment.CENTER,
+                        wrap=True,
+                        spacing=10,
+                    ),
+                    self.panel_diseno_pico_hoja,
                     ft.Divider(color=ft.Colors.OUTLINE),
                     ft.Row(
                         controls=[
@@ -1450,7 +1519,12 @@ class VistaTrompo(ft.Container):
             self.lbl_vacio_moldes.visible = True
             self.panel_contenido_moldes.visible = False
 
-        # 7. Hoja de trazo (F3)
+        # 7. Hoja de trazo (F3 y F5)
+        sel_hoja = self.selector_pieza_hoja.selected[0] if self.selector_pieza_hoja.selected else "superior"
+        self.panel_diseno_pico_hoja.visible = (sel_hoja == "pico")
+        if vm.resumen_pico_linea:
+            self.lbl_resumen_pico.value = vm.resumen_pico_linea
+
         if vm.esquema_error:
             self.lbl_error_esquema.value = vm.esquema_error
             self.lbl_error_esquema.visible = True
@@ -1572,6 +1646,9 @@ class VistaTrompo(ft.Container):
         self.dd_hoja.value = self.controlador.hoja_tipo
         self.dd_escala.value = str(self.controlador.hoja_escala)
         self.selector_pieza_hoja.selected = [self.controlador.hoja_pieza]
+        self.selector_lienzo.selected = [self.controlador.hoja_lienzo]
+        self.selector_modo_dibujo.selected = [self.controlador.hoja_dibujar]
+        self.dd_repeticion_pico_hoja.value = self.controlador.esquema_pico.modo_repeticion
 
         self.txt_pliegos_paquete.value = str(self.controlador.pliegos_por_paquete)
         self.txt_pliego_ancho.value = str(self.controlador.pliego_ancho)
@@ -1630,6 +1707,25 @@ class VistaTrompo(ft.Container):
     def on_cambio_pieza_hoja(self, e):
         sel = self.selector_pieza_hoja.selected[0] if self.selector_pieza_hoja.selected else "superior"
         self.controlador.actualizar_opciones_hoja(pieza=sel)
+        self.panel_diseno_pico_hoja.visible = (sel == "pico")
+        vm = self.controlador.get_view_model()
+        self._sync_controlador_a_vista(vm, reset_zoom=True)
+
+    def on_cambio_lienzo(self, e):
+        sel = self.selector_lienzo.selected[0] if self.selector_lienzo.selected else "abanico"
+        self.controlador.actualizar_opciones_hoja(lienzo=sel)
+        vm = self.controlador.get_view_model()
+        self._sync_controlador_a_vista(vm, reset_zoom=True)
+
+    def on_cambio_modo_dibujo(self, e):
+        sel = self.selector_modo_dibujo.selected[0] if self.selector_modo_dibujo.selected else "completo"
+        self.controlador.actualizar_opciones_hoja(dibujar=sel)
+        vm = self.controlador.get_view_model()
+        self._sync_controlador_a_vista(vm, reset_zoom=True)
+
+    def on_cambio_repeticion_pico_hoja(self, e):
+        rep = self.dd_repeticion_pico_hoja.value or "todas_a"
+        self.controlador.actualizar_esquema_pico(modo_repeticion=rep)
         vm = self.controlador.get_view_model()
         self._sync_controlador_a_vista(vm, reset_zoom=True)
 
