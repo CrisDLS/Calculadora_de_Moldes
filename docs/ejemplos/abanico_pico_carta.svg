@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="279.40mm" height="215.90mm" viewBox="0 0 279.40 215.90"
+     xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape">
+  <g inkscape:groupmode="layer" inkscape:label="papel" id="layer-papel">
+    <rect x="10.00" y="10.00" width="259.40" height="195.90" fill="none" stroke="blue" stroke-width="0.20" stroke-dasharray="3,3" id="margen-util"/>
+  </g>
+  <g inkscape:groupmode="layer" inkscape:label="cuadricula" id="layer-cuadricula">
+    <path d="M 127.91,172.36 L 128.00,170.81 L 128.29,169.29 L 128.78,167.82 L 129.46,166.42 L 130.31,165.13 L 131.33,163.96 L 132.49,162.93 L 133.78,162.06 L 135.16,161.38 L 136.63,160.87 L 138.15,160.57 L 139.70,160.47 L 141.25,160.57 L 142.77,160.87 L 144.24,161.38 L 145.62,162.06 L 146.91,162.93 L 148.07,163.96 L 149.09,165.13 L 149.94,166.42 L 150.62,167.82 L 151.11,169.29 L 151.40,170.81 L 151.49,172.36" fill="none" stroke="blue" stroke-width="0.20" id="cuad-paso-1"/>
+    <text x="141.20" y="160.47" font-size="3.35" fill="black" font-family="sans-serif" dominant-baseline="middle">1</text>
+    <path d="M 116.12,172.46 L 116.30,169.36 L 116.88,166.31 L 117.86,163.37 L 119.21,160.58 L 120.92,157.99 L 122.95,155.65 L 125.28,153.60 L 127.85,151.87 L 130.63,150.49 L 133.56,149.49 L 136.61,148.88 L 139.70,148.68 L 142.79,148.88 L 145.84,149.49 L 148.77,150.49 L 151.55,151.87 L 154.12,153.60 L 156.45,155.65 L 158.48,157.99 L 160.19,160.58 L 161.54,163.37 L 162.52,166.31 L 163.10,169.36 L 163.28,172.46" fill="none" stroke="blue" stroke-width="0.20" id="cuad-paso-2"/>
+    <text x="141.20" y="148.68" font-size="3.35" fill="black" font-family="sans-serif" dominant-baseline="middle">2</text>
+    <path d="M 104.33,172.56 L 104.59,167.91 L 105.47,163.34 L 106.93,158.93 L 108.97,154.74 L 111.53,150.86 L 114.58,147.35 L 118.07,144.27 L 121.93,141.67 L 126.09,139.61 L 130.50,138.10 L 135.06,137.19 L 139.70,136.89 L 144.34,137.19 L 148.90,138.10 L 153.31,139.61 L 157.47,141.67 L 161.33,144.27 L 164.82,147.35 L 167.87,150.86 L 170.43,154.74 L 172.47,158.93 L 173.93,163.34 L 174.81,167.91 L 175.07,172.56" fill="none" stroke="blue" stroke-width="0.20" id="cuad-paso-3"/>
+    <text x="141.20" y="136.89" font-size="3.35" fill="black" font-family="sans-serif" dominant-baseline="middle">3</text>
+    <path d="M 92.54,172.65 L 92.89,166.46 L 94.06,160.37 L 96.01,154.48 L 98.72,148.91 L 102.14,143.73 L 106.21,139.05 L 110.86,134.94 L 116.00,131.48 L 121.56,128.72 L 127.43,126.72 L 133.51,125.50 L 139.70,125.09 L 145.89,125.50 L 151.97,126.72 L 157.84,128.72 L 163.40,131.48 L 168.54,134.94 L 173.19,139.05 L 177.26,143.73 L 180.68,148.91 L 183.39,154.48 L 185.34,160.37 L 186.51,166.46 L 186.86,172.65" fill="none" stroke="blue" stroke-width="0.20" id="cuad-paso-4"/>
+    <text x="141.20" y="125.09" font-size="3.35" fill="black" font-family="sans-serif" dominant-baseline="middle">4</text>
+    <path d="M 80.75,172.75 L 81.19,165.01 L 82.65,157.40 L 85.09,150.04 L 88.48,143.07 L 92.75,136.60 L 97.84,130.75 L 103.65,125.61 L 110.08,121.28 L 117.02,117.84 L 124.36,115.33 L 131.96,113.81 L 139.70,113.30 L 147.44,113.81 L 155.04,115.33 L 162.38,117.84 L 169.32,121.28 L 175.75,125.61 L 181.56,130.75 L 186.65,136.60 L 190.92,143.07 L 194.31,150.04 L 196.75,157.40 L 198.21,165.01 L 198.65,172.75" fill="none" stroke="blue" stroke-width="0.20" id="cuad-paso-5"/>
+    <text x="141.20" y="113.30" font-size="3.35" fill="black" font-family="sans-serif" dominant-baseline="middle">5</text>
+    <path d="M 68.95,172.85 L 69.49,163.56 L 71.24,154.43 L 74.17,145.60 L 78.23,137.23 L 83.36,129.47 L 89.46,122.44 L 96.44,116.28 L 104.16,111.09 L 112.49,106.95 L 121.29,103.95 L 130.42,102.12 L 139.70,101.51 L 148.98,102.12 L 158.11,103.95 L 166.91,106.95 L 175.24,111.09 L 182.96,116.28 L 189.94,122.44 L 196.04,129.47 L 201.17,137.23 L 205.23,145.60 L 208.16,154.43 L 209.91,163.56 L 210.45,172.85" fill="none" stroke="blue" stroke-width="0.20" id="cuad-paso-6"/>
+    <text x="141.20" y="101.51" font-size="3.35" fill="black" font-family="sans-serif" dominant-baseline="middle">6</text>
+    <path d="M 57.16,172.95 L 57.79,162.11 L 59.83,151.45 L 63.25,141.15 L 67.99,131.39 L 73.97,122.33 L 81.09,114.14 L 89.23,106.95 L 98.23,100.89 L 107.95,96.07 L 118.23,92.56 L 128.87,90.43 L 139.70,89.72 L 150.53,90.43 L 161.17,92.56 L 171.45,96.07 L 181.17,100.89 L 190.17,106.95 L 198.31,114.14 L 205.43,122.33 L 211.41,131.39 L 216.15,141.15 L 219.57,151.45 L 221.61,162.11 L 222.24,172.95" fill="none" stroke="blue" stroke-width="0.20" id="cuad-paso-7"/>
+    <text x="141.20" y="89.72" font-size="3.35" fill="black" font-family="sans-serif" dominant-baseline="middle">7</text>
+    <path d="M 45.37,173.05 L 46.08,160.66 L 48.42,148.48 L 52.33,136.71 L 57.75,125.55 L 64.58,115.20 L 72.72,105.84 L 82.01,97.62 L 92.31,90.70 L 103.42,85.19 L 115.16,81.18 L 127.32,78.74 L 139.70,77.93 L 152.08,78.74 L 164.24,81.18 L 175.98,85.19 L 187.09,90.70 L 197.39,97.62 L 206.68,105.84 L 214.82,115.20 L 221.65,125.55 L 227.07,136.71 L 230.98,148.48 L 233.32,160.66 L 234.03,173.05" fill="none" stroke="blue" stroke-width="0.20" id="cuad-paso-8"/>
+    <text x="141.20" y="77.93" font-size="3.35" fill="black" font-family="sans-serif" dominant-baseline="middle">8</text>
+    <path d="M 33.58,173.15 L 34.38,159.22 L 37.01,145.51 L 41.40,132.26 L 47.50,119.71 L 55.19,108.07 L 64.35,97.53 L 74.80,88.29 L 86.38,80.50 L 98.88,74.30 L 112.09,69.79 L 125.77,67.06 L 139.70,66.14 L 153.63,67.06 L 167.31,69.79 L 180.52,74.30 L 193.02,80.50 L 204.60,88.29 L 215.05,97.53 L 224.21,108.07 L 231.90,119.71 L 238.00,132.26 L 242.39,145.51 L 245.02,159.22 L 245.82,173.15" fill="none" stroke="blue" stroke-width="0.20" id="cuad-paso-9"/>
+    <text x="141.20" y="66.14" font-size="3.35" fill="black" font-family="sans-serif" dominant-baseline="middle">9</text>
+    <path d="M 21.79,173.25 L 22.68,157.77 L 25.59,142.54 L 30.48,127.82 L 37.26,113.87 L 45.80,100.94 L 55.97,89.23 L 67.59,78.96 L 80.46,70.31 L 94.35,63.42 L 109.02,58.41 L 124.23,55.37 L 139.70,54.35 L 155.17,55.37 L 170.38,58.41 L 185.05,63.42 L 198.94,70.31 L 211.81,78.96 L 223.43,89.23 L 233.60,100.94 L 242.14,113.87 L 248.92,127.82 L 253.81,142.54 L 256.72,157.77 L 257.61,173.25" fill="none" stroke="blue" stroke-width="0.20" id="cuad-paso-10"/>
+    <text x="141.20" y="54.35" font-size="3.35" fill="black" font-family="sans-serif" dominant-baseline="middle">10</text>
+    <path d="M 10.00,173.34 L 10.98,156.32 L 14.18,139.56 L 19.56,123.38 L 27.01,108.03 L 36.41,93.80 L 47.60,80.93 L 60.38,69.63 L 74.53,60.11 L 89.81,52.53 L 105.96,47.02 L 122.68,43.68 L 139.70,42.56 L 156.72,43.68 L 173.44,47.02 L 189.59,52.53 L 204.87,60.11 L 219.02,69.63 L 231.80,80.93 L 242.99,93.80 L 252.39,108.03 L 259.84,123.38 L 265.22,139.56 L 268.42,156.32 L 269.40,173.34" fill="none" stroke="blue" stroke-width="0.20" id="cuad-paso-11"/>
+    <text x="141.20" y="42.56" font-size="3.35" fill="black" font-family="sans-serif" dominant-baseline="middle">11</text>
+  </g>
+  <g inkscape:groupmode="layer" inkscape:label="ejes" id="layer-ejes">
+    <line x1="139.70" y1="172.26" x2="19.56" y2="123.38" stroke="blue" stroke-width="0.30" stroke-dasharray="4,2" id="eje-gajo-0"/>
+    <line x1="139.70" y1="172.26" x2="89.81" y2="52.53" stroke="blue" stroke-width="0.30" stroke-dasharray="4,2" id="eje-gajo-1"/>
+    <line x1="139.70" y1="172.26" x2="189.59" y2="52.53" stroke="blue" stroke-width="0.30" stroke-dasharray="4,2" id="eje-gajo-2"/>
+    <line x1="139.70" y1="172.26" x2="259.84" y2="123.38" stroke="blue" stroke-width="0.30" stroke-dasharray="4,2" id="eje-gajo-3"/>
+  </g>
+  <g inkscape:groupmode="layer" inkscape:label="aristas_comunes" id="layer-aristas-comunes">
+    <line x1="139.70" y1="172.26" x2="47.60" y2="80.93" stroke="black" stroke-width="0.30" stroke-dasharray="2,2" id="arista-comun-0"/>
+    <line x1="139.70" y1="172.26" x2="139.70" y2="42.56" stroke="black" stroke-width="0.30" stroke-dasharray="2,2" id="arista-comun-1"/>
+    <line x1="139.70" y1="172.26" x2="231.80" y2="80.93" stroke="black" stroke-width="0.30" stroke-dasharray="2,2" id="arista-comun-2"/>
+  </g>
+  <g inkscape:groupmode="layer" inkscape:label="contorno" id="layer-contorno">
+    <path d="M 139.70,172.26 L 10.00,173.34 L 47.60,80.93 L 139.70,42.56 L 231.80,80.93 L 269.40,173.34 L 139.70,172.26 Z" fill="none" stroke="black" stroke-width="0.70" id="path-contorno-abanico"/>
+  </g>
+  <g inkscape:groupmode="layer" inkscape:label="costura" id="layer-costura">
+    <line x1="139.70" y1="172.26" x2="10.00" y2="172.50" stroke="red" stroke-width="0.40" stroke-dasharray="3,3" id="costura-lateral-izq"/>
+    <line x1="139.70" y1="172.26" x2="269.40" y2="172.50" stroke="red" stroke-width="0.40" stroke-dasharray="3,3" id="costura-lateral-der"/>
+  </g>
+  <g inkscape:groupmode="layer" inkscape:label="rotulos" id="layer-rotulos">
+    <text x="10.00" y="15.00" font-size="6.71" font-weight="bold" fill="black" font-family="sans-serif">Pico piramidal — Abanico completo</text>
+    <text x="10.00" y="23.05" font-size="4.19" fill="black" font-family="sans-serif">Escala 1:5.9 · CARTA (279×216 mm) · 4 gajos/caras · Ángulo total: 181.0°</text>
+    <text x="10.00" y="28.08" font-size="4.19" fill="black" font-family="sans-serif">Radio base s₁: 76.4 cm · Radio boca s₀: 0.0 cm · Largo pieza: 76.4 cm</text>
+    <text x="25.57" y="125.82" font-size="4.47" font-weight="bold" fill="black" text-anchor="middle" dominant-baseline="middle" font-family="sans-serif">Cara 1</text>
+    <text x="92.31" y="58.52" font-size="4.47" font-weight="bold" fill="black" text-anchor="middle" dominant-baseline="middle" font-family="sans-serif">Cara 2</text>
+    <text x="187.09" y="58.52" font-size="4.47" font-weight="bold" fill="black" text-anchor="middle" dominant-baseline="middle" font-family="sans-serif">Cara 3</text>
+    <text x="253.83" y="125.82" font-size="4.47" font-weight="bold" fill="black" text-anchor="middle" dominant-baseline="middle" font-family="sans-serif">Cara 4</text>
+  </g>
+</svg>
