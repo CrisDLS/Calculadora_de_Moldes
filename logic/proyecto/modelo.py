@@ -3,8 +3,7 @@ from dataclasses import dataclass, asdict
 from typing import Optional, Dict, Any, Union
 from logic.models import BalloonInput, Condiciones
 from logic.diseno.esquema import EsquemaDiseno
-
-from logic.diseno.pintura import EsquemaPintura
+from logic.diseno.pintura import EsquemaPintura, VariantePico
 
 @dataclass
 class Proyecto:
@@ -17,6 +16,7 @@ class Proyecto:
     hoja: str = "carta"
     escala: Union[str, int, float] = "auto"
     pintura: Optional[EsquemaPintura] = None
+    pliegos_por_paquete: int = 100
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Proyecto":
@@ -42,11 +42,28 @@ class Proyecto:
         pintura = None
         if data.get("pintura"):
             p_data = data["pintura"]
-            # Convertir claves enteras si vienen como strings de JSON
             col_motivos = {}
             for k, v in p_data.get("colores_motivos", {}).items():
                 col_motivos[int(k)] = v
+            
+            var_a_data = p_data.get("variante_a", {})
+            var_a = VariantePico(**var_a_data) if var_a_data else VariantePico()
+
+            var_b_data = p_data.get("variante_b", {})
+            var_b = VariantePico(**var_b_data) if var_b_data else VariantePico(color_0="rojo", color_1="rojo", color_2="rojo", color_3="rojo")
+
             pintura = EsquemaPintura(
+                modo_superior=p_data.get("modo_superior", "liso"),
+                colores_superior=p_data.get("colores_superior", [p_data.get("color_superior", "blanco")]),
+                tam_bloque_superior=p_data.get("tam_bloque_superior", 5),
+                mismo_esquema_inferior=p_data.get("mismo_esquema_inferior", False),
+                modo_inferior=p_data.get("modo_inferior", "liso"),
+                colores_inferior=p_data.get("colores_inferior", [p_data.get("color_inferior", "blanco")]),
+                tam_bloque_inferior=p_data.get("tam_bloque_inferior", 5),
+                variante_a=var_a,
+                usar_variante_b=p_data.get("usar_variante_b", False),
+                variante_b=var_b,
+                repeticion_picos=p_data.get("repeticion_picos", "todas_a"),
                 color_superior=p_data.get("color_superior", "blanco"),
                 color_pico=p_data.get("color_pico", "amarillo"),
                 color_inferior=p_data.get("color_inferior", "blanco"),
@@ -64,6 +81,7 @@ class Proyecto:
             hoja=data.get("hoja", "carta"),
             escala=data.get("escala", "auto"),
             pintura=pintura,
+            pliegos_por_paquete=data.get("pliegos_por_paquete", 100),
         )
 
 def _migrar_proyecto(data: Dict[str, Any]) -> Dict[str, Any]:
@@ -73,7 +91,6 @@ def _migrar_proyecto(data: Dict[str, Any]) -> Dict[str, Any]:
     if v > 1:
         raise ValueError(f"Versión de proyecto desconocida: {v}")
     
-    # Aquí irán las migraciones de v1 a v2, etc.
     return data
 
 def guardar_proyecto(proyecto: Proyecto, ruta: str) -> None:
