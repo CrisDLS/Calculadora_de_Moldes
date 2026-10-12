@@ -208,6 +208,8 @@ class ControladorTrompo:
         pieza: Optional[str] = None,
         tipo: Optional[str] = None,
         escala: Optional[str] = None,
+        lienzo: Optional[str] = None,
+        dibujar: Optional[str] = None,
     ):
         if pieza is not None:
             self.hoja_pieza = pieza
@@ -215,6 +217,16 @@ class ControladorTrompo:
             self.hoja_tipo = tipo
         if escala is not None:
             self.hoja_escala = escala
+        if lienzo is not None:
+            self.hoja_lienzo = lienzo
+        if dibujar is not None:
+            self.hoja_dibujar = dibujar
+        self.marcar_cambio_diseno()
+
+    def actualizar_esquema_pico(self, modo_repeticion: Optional[str] = None):
+        if modo_repeticion is not None:
+            self.esquema_pico.modo_repeticion = modo_repeticion
+            self.esquema_pico.usar_variante_b = (modo_repeticion != "todas_a")
         self.marcar_cambio_diseno()
 
     def _vaciar_datos_calculados(self):
