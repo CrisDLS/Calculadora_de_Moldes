@@ -103,6 +103,16 @@ def _color_en_patron(modo: str, colores: List[str], gajo: int, tam_bloque: int =
         return colores[indice_bloque]
     return colores[0]
 
+def variante_de_piramide(modo_repeticion: str, hilera: int, gajo: int) -> str:
+    """Determina si la pirámide en (hilera, gajo) corresponde a la variante 'A' o 'B'."""
+    if modo_repeticion == "alternar_gajo":
+        return "B" if (gajo % 2 == 1) else "A"
+    elif modo_repeticion == "alternar_hilera":
+        return "B" if (hilera % 2 == 1) else "A"
+    elif modo_repeticion == "ajedrez":
+        return "B" if ((gajo + hilera) % 2 == 1) else "A"
+    return "A"
+
 def color_de_cara(
     esquema_pintura: EsquemaPintura,
     cara: Cara,
@@ -161,17 +171,11 @@ def color_de_cara(
         sub = cara.sub if cara.sub is not None else 0
 
         # Selección de variante A o B
-        usa_var_b = False
+        var_letra = "A"
         if esquema_pintura.usar_variante_b:
-            rep = esquema_pintura.repeticion_picos
-            if rep == "alternar_gajo":
-                usa_var_b = (k % 2 == 1)
-            elif rep == "alternar_hilera":
-                usa_var_b = (j % 2 == 1)
-            elif rep == "ajedrez":
-                usa_var_b = ((k + j) % 2 == 1)
+            var_letra = variante_de_piramide(esquema_pintura.repeticion_picos, j, k)
 
-        variante = esquema_pintura.variante_b if usa_var_b else esquema_pintura.variante_a
+        variante = esquema_pintura.variante_b if var_letra == "B" else esquema_pintura.variante_a
         return variante.color_para_sub(sub)
 
     return "blanco"
