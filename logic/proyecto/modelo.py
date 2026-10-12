@@ -4,6 +4,7 @@ from typing import Optional, Dict, Any, Union
 from logic.models import BalloonInput, Condiciones
 from logic.diseno.esquema import EsquemaDiseno
 from logic.diseno.pintura import EsquemaPintura, VariantePico
+from logic.diseno.diseno_pico import EsquemaDisenoPico
 
 @dataclass
 class Proyecto:
@@ -17,6 +18,7 @@ class Proyecto:
     escala: Union[str, int, float] = "auto"
     pintura: Optional[EsquemaPintura] = None
     pliegos_por_paquete: int = 100
+    esquema_pico: Optional[EsquemaDisenoPico] = None
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Proyecto":
@@ -71,6 +73,21 @@ class Proyecto:
                 colores_caras_especificas=p_data.get("colores_caras_especificas", {})
             )
 
+        esq_pico = None
+        if data.get("esquema_pico"):
+            ep_data = data["esquema_pico"]
+            var_a_data = ep_data.get("variante_a", {})
+            var_a = VariantePico(**var_a_data) if var_a_data else VariantePico()
+            var_b_data = ep_data.get("variante_b", {})
+            var_b = VariantePico(**var_b_data) if var_b_data else VariantePico(color_0="rojo", color_1="rojo", color_2="rojo", color_3="rojo")
+            esq_pico = EsquemaDisenoPico(
+                modo_repeticion=ep_data.get("modo_repeticion", "todas_a"),
+                variante_a=var_a,
+                usar_variante_b=ep_data.get("usar_variante_b", False),
+                variante_b=var_b,
+                motivos_por_cara=ep_data.get("motivos_por_cara", [0, 1, 2, 3])
+            )
+
         return cls(
             version=data["version"],
             nombre=data["nombre"],
@@ -82,6 +99,7 @@ class Proyecto:
             escala=data.get("escala", "auto"),
             pintura=pintura,
             pliegos_por_paquete=data.get("pliegos_por_paquete", 100),
+            esquema_pico=esq_pico,
         )
 
 def _migrar_proyecto(data: Dict[str, Any]) -> Dict[str, Any]:
