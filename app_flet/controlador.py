@@ -7,11 +7,13 @@ from logic.calculators.trompo_estrella import TrompoEstrellaCalculator
 from logic.models import BalloonInput, BalloonCalculationResult, Condiciones
 from logic.exportacion.estilos import EstiloSvg, PANTALLA_OSCURO, IMPRESION
 from logic.exportacion.svg_moldes import svg_pieza, svg_conjunto, svg_hoja
+from logic.exportacion.svg_abanico import svg_abanico
 from logic.geometria.perfil import perfil_armado
 from logic.exportacion.svg_perfil import svg_perfil
 from logic.diseno.esquema import EsquemaDiseno
 from logic.exportacion.paquete import parsear_ciclo, resumen_esquema, generar_paquete, guardar_paquete
 from logic.proyecto.modelo import Proyecto, guardar_proyecto, cargar_proyecto
+from logic.diseno.diseno_pico import EsquemaDisenoPico, ResumenPico, resumen_pico
 from presentacion.trompo_estrella import (
     leer_entrada,
     formatear_resumen,
@@ -53,6 +55,8 @@ class ViewModelTrompo:
     esquema_error: Optional[str] = None
     resumen_esquema: List[str] = field(default_factory=list)
     aviso_hoja: Optional[str] = None
+    resumen_pico_linea: Optional[str] = None
+    esquema_pico: Optional[EsquemaDisenoPico] = None
     # Proyecto
     nombre_proyecto: str = "Sin título"
     ruta_proyecto: Optional[str] = None
@@ -96,13 +100,16 @@ class ControladorTrompo:
         self.altura_llama = ""
         self.holgura = ""
 
-        # Estado de diseño / hoja de trazo (F3)
+        # Estado de diseño / hoja de trazo (F3 y F5)
         self.esquema_modo: str = "repeticion"
         self.esquema_tam_grupo: int = 5
         self.esquema_ciclo_texto: str = "0, 1, 2E, 1E"
         self.hoja_tipo: str = "carta"
         self.hoja_escala: str = "auto"
         self.hoja_pieza: str = "superior"  # "superior", "pico", "inferior"
+        self.hoja_lienzo: str = "abanico"   # "abanico" | "separadas"
+        self.hoja_dibujar: str = "completo" # "completo" | "mitad"
+        self.esquema_pico: EsquemaDisenoPico = EsquemaDisenoPico()
 
         self.aviso_hoja: Optional[str] = None
 
@@ -249,15 +256,27 @@ class ControladorTrompo:
 
             with warnings.catch_warnings(record=True) as w_list:
                 warnings.simplefilter("always")
-                self.svg_hoja = svg_hoja(
-                    resultado=self.resultado,
-                    entrada=self.entrada_actual,
-                    seccion=self.hoja_pieza,
-                    esquema=esq,
-                    escala=escala_val,
-                    hoja=self.hoja_tipo,
-                    estilo=IMPRESION,
-                )
+                if self.hoja_lienzo == "abanico":
+                    self.svg_hoja = svg_abanico(
+                        resultado=self.resultado,
+                        entrada=self.entrada_actual,
+                        seccion=self.hoja_pieza,
+                        esquema=esq,
+                        escala=escala_val,
+                        hoja=self.hoja_tipo,
+                        estilo=IMPRESION,
+                        dibujar=self.hoja_dibujar,
+                    )
+                else:
+                    self.svg_hoja = svg_hoja(
+                        resultado=self.resultado,
+                        entrada=self.entrada_actual,
+                        seccion=self.hoja_pieza,
+                        esquema=esq,
+                        escala=escala_val,
+                        hoja=self.hoja_tipo,
+                        estilo=IMPRESION,
+                    )
                 if w_list:
                     self.aviso_hoja = str(w_list[-1].message)
         except Exception:
@@ -333,6 +352,9 @@ class ControladorTrompo:
         self.hoja_tipo = "carta"
         self.hoja_escala = "auto"
         self.hoja_pieza = "superior"
+        self.hoja_lienzo = "abanico"
+        self.hoja_dibujar = "completo"
+        self.esquema_pico = EsquemaDisenoPico()
 
         self.nombre_proyecto = "Sin título"
         self.ruta_proyecto = None
@@ -376,6 +398,7 @@ class ControladorTrompo:
             escala=self.hoja_escala,
             pintura=self.pintura,
             pliegos_por_paquete=self.pliegos_por_paquete,
+            esquema_pico=self.esquema_pico,
         )
 
     def desde_proyecto(self, proy: Proyecto, ruta: Optional[str] = None):
@@ -416,6 +439,11 @@ class ControladorTrompo:
         if proy.condiciones and proy.condiciones.pliego_cm:
             self.pliego_ancho = float(proy.condiciones.pliego_cm[0])
             self.pliego_alto = float(proy.condiciones.pliego_cm[1])
+
+        if getattr(proy, "esquema_pico", None):
+            self.esquema_pico = proy.esquema_pico
+        else:
+            self.esquema_pico = EsquemaDisenoPico()
 
         self.nombre_proyecto = proy.nombre
         self.ruta_proyecto = ruta
@@ -483,6 +511,14 @@ class ControladorTrompo:
         except Exception as e:
             esquema_err = str(e)
 
+        res_pico_str = None
+        if self.resultado and self.entrada_actual and not self.desactualizado:
+            try:
+                rp = resumen_pico(self.esquema_pico, self.entrada_actual, self.resultado)
+                res_pico_str = f"{rp.total_piramides} pirámides ({rp.piramides_a} tipo A, {rp.piramides_b} tipo B) · {rp.total_triangulos} triángulos en total"
+            except Exception:
+                pass
+
         url_3d = self.servidor_3d.url if self.servidor_3d else ""
 
         return ViewModelTrompo(
@@ -500,6 +536,8 @@ class ControladorTrompo:
             esquema_error=esquema_err,
             resumen_esquema=res_esq,
             aviso_hoja=self.aviso_hoja,
+            resumen_pico_linea=res_pico_str,
+            esquema_pico=self.esquema_pico,
             nombre_proyecto=self.nombre_proyecto,
             ruta_proyecto=self.ruta_proyecto,
             sin_guardar=self.sin_guardar,

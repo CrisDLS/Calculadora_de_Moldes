@@ -8,6 +8,7 @@ from logic.models import BalloonInput, BalloonCalculationResult
 from logic.diseno.esquema import EsquemaDiseno
 from logic.exportacion.estilos import IMPRESION
 from logic.exportacion.svg_moldes import svg_hoja, svg_conjunto
+from logic.exportacion.svg_abanico import svg_abanico
 from logic.geometria.perfil import perfil_armado
 from logic.exportacion.svg_perfil import svg_perfil
 
@@ -128,9 +129,12 @@ def generar_paquete(
     hoja: str = "carta",
     escala: Union[str, float, int] = "auto",
     pintura: Optional[EsquemaPintura] = None,
-    incluir_3d: bool = False
+    incluir_3d: bool = False,
+    lienzo: str = "separadas",
+    dibujar: str = "completo",
+    incluir_abanico: bool = False
 ) -> Dict[str, str]:
-    """Genera un diccionario de nombre_archivo -> contenido_SVG/HTML con las 3 hojas, el perfil y el conjunto.
+    """Genera un diccionario de nombre_archivo -> contenido_SVG/HTML con las hojas de trazo, perfil y conjunto.
     
     Opcionalmente incluye el visor 3D si incluir_3d=True.
     Todas las hojas usan la misma escala y el estilo IMPRESION.
@@ -142,22 +146,35 @@ def generar_paquete(
 
     archivos: Dict[str, str] = {}
 
-    # 1. Hojas de trazo
-    archivos["hoja_cono_superior.svg"] = svg_hoja(
-        resultado, entrada, "superior", esquema, hoja=hoja, escala=escala_comun, estilo=IMPRESION
-    )
-    archivos["hoja_pico.svg"] = svg_hoja(
-        resultado, entrada, "pico", esquema, hoja=hoja, escala=escala_comun, estilo=IMPRESION
-    )
-    archivos["hoja_cono_inferior.svg"] = svg_hoja(
-        resultado, entrada, "inferior", esquema, hoja=hoja, escala=escala_comun, estilo=IMPRESION
-    )
+    # 1. Hojas de trazo separadas (si se solicita separadas o ambas)
+    if lienzo in ("separadas", "ambas") or not (lienzo == "abanico" or incluir_abanico):
+        archivos["hoja_cono_superior.svg"] = svg_hoja(
+            resultado, entrada, "superior", esquema, hoja=hoja, escala=escala_comun, estilo=IMPRESION
+        )
+        archivos["hoja_pico.svg"] = svg_hoja(
+            resultado, entrada, "pico", esquema, hoja=hoja, escala=escala_comun, estilo=IMPRESION
+        )
+        archivos["hoja_cono_inferior.svg"] = svg_hoja(
+            resultado, entrada, "inferior", esquema, hoja=hoja, escala=escala_comun, estilo=IMPRESION
+        )
 
-    # 2. Perfil armado (estilo IMPRESION a escala 10 o la de las hojas)
+    # 2. Hojas de trazo en abanico (si se solicita abanico o ambas o incluir_abanico=True)
+    if lienzo in ("abanico", "ambas") or incluir_abanico:
+        archivos["hoja_abanico_superior.svg"] = svg_abanico(
+            resultado, entrada, "superior", esquema, hoja=hoja, escala=escala, estilo=IMPRESION, dibujar=dibujar
+        )
+        archivos["hoja_abanico_pico.svg"] = svg_abanico(
+            resultado, entrada, "pico", esquema, hoja=hoja, escala=escala, estilo=IMPRESION, dibujar=dibujar
+        )
+        archivos["hoja_abanico_inferior.svg"] = svg_abanico(
+            resultado, entrada, "inferior", esquema, hoja=hoja, escala=escala, estilo=IMPRESION, dibujar=dibujar
+        )
+
+    # 3. Perfil armado (estilo IMPRESION a escala 10 o la de las hojas)
     perf = perfil_armado(entrada, resultado, mostrar_picos_al_borde=True)
     archivos["perfil_armado.svg"] = svg_perfil(perf, estilo=IMPRESION, escala=escala_comun)
 
-    # 3. Conjunto de moldes
+    # 4. Conjunto de moldes
     archivos["conjunto_moldes.svg"] = svg_conjunto(resultado, entrada, escala=escala_comun, estilo=IMPRESION)
 
     # 4. Visor 3D interactivo autocontenido (opcional)

@@ -108,3 +108,16 @@ def test_generar_paquete_y_guardar(tmp_path):
     # Con sobrescribir=True debe permitirlo
     rutas_re = guardar_paquete(carpeta_destino, paquete, sobrescribir=True)
     assert len(rutas_re) == 5
+
+def test_generar_paquete_con_abanicos():
+    calc = TrompoEstrellaCalculator()
+    ent = BalloonInput(380, 20, 1, 1)
+    res = calc.calcular(ent)
+    esq = EsquemaDiseno("repeticion", 5)
+
+    paquete = generar_paquete(res, ent, esq, hoja="carta", escala="auto", lienzo="abanico")
+    assert "hoja_abanico_superior.svg" in paquete
+    assert "hoja_abanico_pico.svg" in paquete
+    assert "hoja_abanico_inferior.svg" in paquete
+    assert "perfil_armado.svg" in paquete
+    assert "conjunto_moldes.svg" in paquete
