@@ -22,8 +22,10 @@
       position: absolute;
       top: 16px;
       right: 16px;
-      width: 280px;
-      background: rgba(26, 26, 32, 0.88);
+      width: 290px;
+      max-height: calc(100vh - 32px);
+      overflow-y: auto;
+      background: rgba(26, 26, 32, 0.90);
       backdrop-filter: blur(12px);
       border: 1px solid rgba(255, 255, 255, 0.12);
       border-radius: 12px;
@@ -41,12 +43,12 @@
       align-items: center;
     }
     .ui-group {
-      margin-bottom: 14px;
+      margin-bottom: 12px;
     }
     .ui-label {
       font-size: 12px;
       color: #a0a0ab;
-      margin-bottom: 6px;
+      margin-bottom: 5px;
       display: flex;
       justify-content: space-between;
     }
@@ -57,19 +59,20 @@
     }
     .ui-row {
       display: flex;
-      gap: 8px;
-      margin-top: 6px;
+      gap: 6px;
+      margin-top: 4px;
     }
     .ui-btn {
       flex: 1;
-      padding: 6px 10px;
+      padding: 6px 8px;
       background: #2a2a36;
       border: 1px solid rgba(255, 255, 255, 0.15);
       border-radius: 6px;
       color: #e0e0e0;
       cursor: pointer;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 500;
+      text-align: center;
       transition: all 0.15s ease;
     }
     .ui-btn:hover {
@@ -122,7 +125,31 @@
 
     <div class="ui-group">
       <div class="ui-label">
-        <span>Luz de Llama interior</span>
+        <span>Azimut del Sol</span>
+        <span id="val-azimut">45°</span>
+      </div>
+      <input type="range" id="slider-azimut" class="ui-slider" min="0" max="360" step="5" value="45">
+    </div>
+
+    <div class="ui-group">
+      <div class="ui-label">
+        <span>Elevación del Sol</span>
+        <span id="val-elevacion">40°</span>
+      </div>
+      <input type="range" id="slider-elevacion" class="ui-slider" min="5" max="85" step="5" value="40">
+    </div>
+
+    <div class="ui-group">
+      <div class="ui-label">
+        <span>Intensidad Luz Solar</span>
+        <span id="val-sol">0.4</span>
+      </div>
+      <input type="range" id="slider-sol" class="ui-slider" min="0" max="2.5" step="0.1" value="0.4">
+    </div>
+
+    <div class="ui-group">
+      <div class="ui-label">
+        <span>Llama interior</span>
         <span id="val-llama">1.5</span>
       </div>
       <input type="range" id="slider-llama" class="ui-slider" min="0" max="3" step="0.1" value="1.5">
@@ -130,17 +157,25 @@
 
     <div class="ui-group">
       <div class="ui-label">
-        <span>Luz Solar / Ambiente</span>
-        <span id="val-sol">0.4</span>
+        <span>Exposición</span>
+        <span id="val-exposicion">1.0</span>
       </div>
-      <input type="range" id="slider-sol" class="ui-slider" min="0" max="2" step="0.1" value="0.4">
+      <input type="range" id="slider-exposicion" class="ui-slider" min="0.2" max="2.5" step="0.1" value="1.0">
     </div>
 
     <div class="ui-group">
       <div class="ui-label"><span>Visualización</span></div>
       <div class="ui-row">
-        <button id="btn-wireframe" class="ui-btn">Aristas</button>
-        <button id="btn-reset" class="ui-btn">Centrar</button>
+        <button id="btn-wireframe" class="ui-btn">Wireframe</button>
+        <button id="btn-costuras" class="ui-btn active">Costuras</button>
+      </div>
+    </div>
+
+    <div class="ui-group">
+      <div class="ui-label"><span>Cámara y Acciones</span></div>
+      <div class="ui-row">
+        <button id="btn-reset" class="ui-btn">Restablecer vista</button>
+        <button id="btn-captura" class="ui-btn">Guardar PNG</button>
       </div>
     </div>
   </div>
