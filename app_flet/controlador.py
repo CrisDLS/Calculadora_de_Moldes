@@ -114,6 +114,8 @@ class ControladorTrompo:
         # Estado de pintura y visor 3D (F4)
         self.pintura: EsquemaPintura = EsquemaPintura()
         self.pliegos_por_paquete: int = 100
+        self.pliego_ancho: float = 50.0
+        self.pliego_alto: float = 70.0
         self.servidor_3d: Optional[ServidorVisor] = None
 
     def obtener_servidor_3d(self) -> ServidorVisor:
@@ -367,7 +369,7 @@ class ControladorTrompo:
             version=1,
             nombre=self.nombre_proyecto,
             entrada=ent,
-            condiciones=Condiciones(),
+            condiciones=Condiciones(pliego_cm=(float(self.pliego_ancho), float(self.pliego_alto))),
             esquema=esq,
             notas="",
             hoja=self.hoja_tipo,
@@ -411,6 +413,9 @@ class ControladorTrompo:
             self.pintura = EsquemaPintura()
 
         self.pliegos_por_paquete = getattr(proy, "pliegos_por_paquete", 100) or 100
+        if proy.condiciones and proy.condiciones.pliego_cm:
+            self.pliego_ancho = float(proy.condiciones.pliego_cm[0])
+            self.pliego_alto = float(proy.condiciones.pliego_cm[1])
 
         self.nombre_proyecto = proy.nombre
         self.ruta_proyecto = ruta
@@ -471,7 +476,7 @@ class ControladorTrompo:
                     resultado=self.resultado,
                     esquema_pintura=self.pintura,
                     esquema_diseno=esq,
-                    condiciones=Condiciones(),
+                    condiciones=Condiciones(pliego_cm=(float(self.pliego_ancho), float(self.pliego_alto))),
                     catalogo=cargar_catalogo(),
                     pliegos_por_paquete=self.pliegos_por_paquete,
                 )

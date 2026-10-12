@@ -78,3 +78,36 @@ def test_serializacion_proyecto_con_pintura(tmp_path):
     assert p_cargado.pintura.color_pico == "verde_limon"
     assert p_cargado.pintura.color_inferior == "negro"
     assert p_cargado.pintura.colores_caras_especificas.get("superior_0") == "dorado"
+
+def test_lista_de_compra_tamano_pliego_configurable():
+    calc = TrompoEstrellaCalculator()
+    inp = BalloonInput(950, 30, 2, 1, usar_parametros_avanzados=True)
+    res = calc.calcular(inp)
+    pintura = EsquemaPintura()
+
+    # Pliego estándar 50x70 cm
+    cond_50_70 = Condiciones(pliego_cm=(50.0, 70.0))
+    items_1 = lista_de_compra(inp, res, pintura, condiciones=cond_50_70)
+    pliegos_1 = sum(it.pliegos for it in items_1)
+
+    # Pliego más grande 70x100 cm -> debe requerir menos pliegos
+    cond_70_100 = Condiciones(pliego_cm=(70.0, 100.0))
+    items_2 = lista_de_compra(inp, res, pintura, condiciones=cond_70_100)
+    pliegos_2 = sum(it.pliegos for it in items_2)
+
+    assert pliegos_2 < pliegos_1
+
+def test_controlador_pliego_configurable_y_proyecto(tmp_path):
+    from app_flet.controlador import ControladorTrompo
+    c = ControladorTrompo()
+    c.calcular()
+    c.pliego_ancho = 60.0
+    c.pliego_alto = 80.0
+
+    proy = c.a_proyecto()
+    assert proy.condiciones.pliego_cm == (60.0, 80.0)
+
+    c2 = ControladorTrompo()
+    c2.desde_proyecto(proy)
+    assert c2.pliego_ancho == 60.0
+    assert c2.pliego_alto == 80.0

@@ -779,6 +779,20 @@ class VistaTrompo(ft.Container):
         self.fila_previa_inf = ft.Row(scroll=ft.ScrollMode.AUTO, spacing=2)
 
         # Sliders y configuración de compra
+        self.txt_pliego_ancho = ft.TextField(
+            label="Ancho pliego (cm)",
+            value="50",
+            width=140,
+            dense=True,
+            on_change=self.on_cambio_tam_pliego,
+        )
+        self.txt_pliego_alto = ft.TextField(
+            label="Alto pliego (cm)",
+            value="70",
+            width=140,
+            dense=True,
+            on_change=self.on_cambio_tam_pliego,
+        )
         self.txt_pliegos_paquete = ft.TextField(
             label="Pliegos por paquete",
             value="100",
@@ -787,7 +801,7 @@ class VistaTrompo(ft.Container):
             on_change=self.on_cambio_pliegos_paquete,
         )
         self.lbl_aviso_colores = ft.Text(
-            "* Colores en pantalla aproximados. El tono real depende del fabricante de papel china.",
+            "Colores en pantalla aproximados: compara con tu pliego",
             size=11,
             color=ft.Colors.ON_SURFACE_VARIANT,
             italic=True,
@@ -905,7 +919,15 @@ class VistaTrompo(ft.Container):
                         ft.Column(
                             controls=[
                                 ft.Text("Lista de compra de papel china", size=14, weight=ft.FontWeight.BOLD),
-                                self.txt_pliegos_paquete,
+                                ft.Row(
+                                    controls=[
+                                        self.txt_pliego_ancho,
+                                        self.txt_pliego_alto,
+                                        self.txt_pliegos_paquete,
+                                    ],
+                                    spacing=10,
+                                ),
+                                self.lbl_aviso_colores,
                             ],
                             spacing=4,
                         ),
@@ -1551,6 +1573,10 @@ class VistaTrompo(ft.Container):
         self.dd_escala.value = str(self.controlador.hoja_escala)
         self.selector_pieza_hoja.selected = [self.controlador.hoja_pieza]
 
+        self.txt_pliegos_paquete.value = str(self.controlador.pliegos_por_paquete)
+        self.txt_pliego_ancho.value = str(self.controlador.pliego_ancho)
+        self.txt_pliego_alto.value = str(self.controlador.pliego_alto)
+
     def on_proyecto_nuevo(self, e):
         self.controlador.nuevo()
         self._cargar_entradas_desde_controlador()
@@ -1942,6 +1968,18 @@ class VistaTrompo(ft.Container):
         self.controlador.pliegos_por_paquete = val
         self.controlador.sin_guardar = True
         self._sync_controlador_a_vista(self.controlador.get_view_model())
+
+    def on_cambio_tam_pliego(self, e):
+        try:
+            ancho = float(self.txt_pliego_ancho.value or 50)
+            alto = float(self.txt_pliego_alto.value or 70)
+        except ValueError:
+            return
+        if ancho > 0 and alto > 0:
+            self.controlador.pliego_ancho = ancho
+            self.controlador.pliego_alto = alto
+            self.controlador.sin_guardar = True
+            self._sync_controlador_a_vista(self.controlador.get_view_model())
 
     async def on_dialogo_agregar_color(self, e):
         txt_nom = ft.TextField(label="Nombre del color", dense=True)
