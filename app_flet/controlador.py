@@ -113,6 +113,7 @@ class ControladorTrompo:
 
         # Estado de pintura y visor 3D (F4)
         self.pintura: EsquemaPintura = EsquemaPintura()
+        self.pliegos_por_paquete: int = 100
         self.servidor_3d: Optional[ServidorVisor] = None
 
     def obtener_servidor_3d(self) -> ServidorVisor:
@@ -141,13 +142,26 @@ class ControladorTrompo:
         color_sup: Optional[str] = None,
         color_pic: Optional[str] = None,
         color_inf: Optional[str] = None,
+        pintura_completa: Optional[EsquemaPintura] = None,
     ):
-        if color_sup is not None:
-            self.pintura.color_superior = color_sup
-        if color_pic is not None:
-            self.pintura.color_pico = color_pic
-        if color_inf is not None:
-            self.pintura.color_inferior = color_inf
+        if pintura_completa is not None:
+            self.pintura = pintura_completa
+        else:
+            if color_sup is not None:
+                self.pintura.color_superior = color_sup
+                if self.pintura.colores_superior:
+                    self.pintura.colores_superior[0] = color_sup
+                else:
+                    self.pintura.colores_superior = [color_sup]
+            if color_pic is not None:
+                self.pintura.color_pico = color_pic
+                self.pintura.variante_a.color_0 = color_pic
+            if color_inf is not None:
+                self.pintura.color_inferior = color_inf
+                if self.pintura.colores_inferior:
+                    self.pintura.colores_inferior[0] = color_inf
+                else:
+                    self.pintura.colores_inferior = [color_inf]
         self.sin_guardar = True
         self._actualizar_servidor_3d()
 
@@ -359,6 +373,7 @@ class ControladorTrompo:
             hoja=self.hoja_tipo,
             escala=self.hoja_escala,
             pintura=self.pintura,
+            pliegos_por_paquete=self.pliegos_por_paquete,
         )
 
     def desde_proyecto(self, proy: Proyecto, ruta: Optional[str] = None):
@@ -394,6 +409,8 @@ class ControladorTrompo:
             self.pintura = proy.pintura
         else:
             self.pintura = EsquemaPintura()
+
+        self.pliegos_por_paquete = getattr(proy, "pliegos_por_paquete", 100) or 100
 
         self.nombre_proyecto = proy.nombre
         self.ruta_proyecto = ruta
@@ -456,6 +473,7 @@ class ControladorTrompo:
                     esquema_diseno=esq,
                     condiciones=Condiciones(),
                     catalogo=cargar_catalogo(),
+                    pliegos_por_paquete=self.pliegos_por_paquete,
                 )
         except Exception as e:
             esquema_err = str(e)

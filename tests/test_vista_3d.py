@@ -70,11 +70,13 @@ def test_vista_trompo_componentes_3d():
 
     # Copiar lista de compra
     vista.on_copiar_lista_compra(None)
-    assert "Color\tSuperior\tPico" in mock_clip.text
-    assert "blanco" in mock_clip.text
+    assert "Color\tMarca\tCódigo\tSuperior\tPico" in mock_clip.text
+    assert "Blanco" in mock_clip.text
+    assert "\tPaquetes" in mock_clip.text
 
-    # Cambiar pintura desde UI
-    vista.dd_color_sup.value = "rosa_mexicano"
-    vista.on_cambio_pintura(None)
+    # Cambiar modo de superior a alternado y color a rosa_mexicano
+    vista.dd_modo_sup.value = "alternado"
+    vista.on_cambio_patron_ui(None)
+    vista.on_cambio_color_ciclo_sup(0, "rosa_mexicano")
     assert vista.controlador.pintura.color_superior == "rosa_mexicano"
-    assert any("rosa_mexicano" in row.cells[0].content.value for row in vista.tabla_compra.rows)
+    assert any("Rosa mexicano" in row.cells[0].content.value for row in vista.tabla_compra.rows)
