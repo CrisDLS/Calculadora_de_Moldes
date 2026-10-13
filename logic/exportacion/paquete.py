@@ -181,32 +181,8 @@ def generar_paquete(
     if incluir_3d:
         try:
             escena = escena_a_dict(entrada, resultado, esquema_pintura=pintura, esquema_diseno=esquema)
-            assets = _directorio_assets()
-            with open(os.path.join(assets, "vendor", "three.min.js"), "r", encoding="utf-8") as f:
-                three_js = f.read()
-            with open(os.path.join(assets, "vendor", "OrbitControls.js"), "r", encoding="utf-8") as f:
-                orbit_js = f.read()
-            with open(os.path.join(assets, "visor.js"), "r", encoding="utf-8") as f:
-                visor_js = f.read()
-            with open(os.path.join(assets, "visor.html"), "r", encoding="utf-8") as f:
-                html = f.read()
-
-            script_bundle = f"""
-  <script>{three_js}</script>
-  <script>{orbit_js}</script>
-  <script>
-    window.__DATOS_ESCENA_3D__ = {json.dumps(escena, ensure_ascii=False)};
-  </script>
-  <script>{visor_js}</script>
-"""
-            tags_a_reemplazar = """  <script src="/vendor/three.min.js"></script>
-  <script src="/vendor/OrbitControls.js"></script>
-  <script src="/visor.js"></script>"""
-            if tags_a_reemplazar in html:
-                html_3d = html.replace(tags_a_reemplazar, script_bundle)
-            else:
-                html_3d = html.replace("</body>", f"{script_bundle}</body>")
-            archivos["visor_3d.html"] = html_3d
+            from logic.exportacion.visor3d import generar_html_visor_autocontenido
+            archivos["visor_3d.html"] = generar_html_visor_autocontenido(escena)
         except Exception:
             pass
 

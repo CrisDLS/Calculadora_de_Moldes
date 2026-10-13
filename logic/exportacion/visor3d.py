@@ -107,11 +107,8 @@ class ServidorVisor:
             self._servidor = None
             self.puerto_real = 0
 
-def exportar_visor_autocontenido(datos_escena: Dict[str, Any], ruta_salida_html: str) -> None:
-    """Genera un archivo HTML autocontenido (three.js, controles y datos embebidos).
-    
-    Funciona 100 % fuera de línea al hacer doble clic en el explorador de archivos.
-    """
+def generar_html_visor_autocontenido(datos_escena: Dict[str, Any]) -> str:
+    """Genera la cadena HTML del visor 3D autocontenido (three.js, controles y datos embebidos)."""
     assets = _directorio_assets()
     with open(os.path.join(assets, "vendor", "three.min.js"), "r", encoding="utf-8") as f:
         three_js = f.read()
@@ -137,11 +134,39 @@ def exportar_visor_autocontenido(datos_escena: Dict[str, Any], ruta_salida_html:
   <script src="/visor.js"></script>"""
     
     if tags_a_reemplazar in html:
-        html_autocontenido = html.replace(tags_a_reemplazar, script_bundle)
+        return html.replace(tags_a_reemplazar, script_bundle)
     else:
-        # Fallback reemplazo genérico
-        html_autocontenido = html.replace("</body>", f"{script_bundle}</body>")
+        return html.replace("</body>", f"{script_bundle}</body>")
 
-    os.makedirs(os.path.dirname(os.path.abspath(ruta_salida_html)), exist_ok=True)
-    with open(ruta_salida_html, "w", encoding="utf-8") as f:
+def exportar_visor_autocontenido(
+    datos_escena_o_entrada: Any,
+    ruta_salida_o_resultado: Any,
+    ruta_salida_html: Optional[str] = None,
+    esquema_pintura: Optional[Any] = None,
+    esquema_diseno: Optional[Any] = None,
+) -> None:
+    """Genera un archivo HTML autocontenido (three.js, controles y datos embebidos).
+    
+    Acepta tanto la firma directa:
+        exportar_visor_autocontenido(datos_escena: Dict, ruta_salida_html: str)
+    como la firma basada en modelos:
+        exportar_visor_autocontenido(entrada, resultado, ruta_salida_html, esquema_pintura=..., esquema_diseno=...)
+    """
+    if isinstance(datos_escena_o_entrada, dict):
+        datos_escena = datos_escena_o_entrada
+        ruta = str(ruta_salida_o_resultado)
+    else:
+        from logic.exportacion.escena3d import escena_a_dict
+        datos_escena = escena_a_dict(
+            datos_escena_o_entrada,
+            ruta_salida_o_resultado,
+            esquema_pintura=esquema_pintura,
+            esquema_diseno=esquema_diseno,
+        )
+        ruta = str(ruta_salida_html)
+
+    html_autocontenido = generar_html_visor_autocontenido(datos_escena)
+    os.makedirs(os.path.dirname(os.path.abspath(ruta)), exist_ok=True)
+    with open(ruta, "w", encoding="utf-8") as f:
         f.write(html_autocontenido)
+

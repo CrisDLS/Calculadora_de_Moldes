@@ -146,6 +146,18 @@ class ControladorTrompo:
             except Exception:
                 pass
 
+    def exportar_visor_3d(self, ruta: str) -> None:
+        if not (self.resultado and self.entrada_actual):
+            raise ValueError("Calcula el modelo antes de exportar el visor 3D")
+        esq = self._construir_esquema()
+        escena = escena_a_dict(
+            self.entrada_actual,
+            self.resultado,
+            esquema_pintura=self.pintura,
+            esquema_diseno=esq
+        )
+        exportar_visor_autocontenido(escena, ruta)
+
     def actualizar_pintura(
         self,
         color_sup: Optional[str] = None,

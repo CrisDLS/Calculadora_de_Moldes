@@ -2189,13 +2189,7 @@ class VistaTrompo(ft.Container):
         )
         if ruta:
             try:
-                exportar_visor_autocontenido(
-                    self.controlador.entrada_actual,
-                    self.controlador.resultado,
-                    ruta,
-                    esquema_pintura=self.controlador.pintura,
-                    esquema_diseno=self.controlador._construir_esquema(),
-                )
+                self.controlador.exportar_visor_3d(ruta)
                 self._mostrar_snackbar(f"Visor 3D exportado: {os.path.basename(ruta)}")
             except Exception as err:
                 self._mostrar_snackbar(f"Error al exportar visor 3D: {err}")
