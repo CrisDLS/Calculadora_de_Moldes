@@ -1,10 +1,14 @@
 import math
 import warnings
+import base64
+from pathlib import Path
 from typing import List, Tuple, Optional, Union
 from logic.models import BalloonInput, BalloonCalculationResult
 from logic.diseno.esquema import EsquemaDiseno
 from logic.exportacion.estilos import EstiloSvg, IMPRESION
 from logic.geometria.abanico import pieza_a_geometria_plana, abanico, PiezaPlana, Abanico
+from logic.diseno.lienzo import Diseno, CapaDiseno
+from logic.diseno.transformaciones import construir_grupo
 
 def svg_abanico(
     resultado: BalloonCalculationResult,
@@ -15,7 +19,10 @@ def svg_abanico(
     escala: Union[str, float, int] = "auto",
     hoja: str = "carta",
     margen_mm: float = 10.0,
-    dibujar: str = "completo"
+    dibujar: str = "completo",
+    diseno: Optional[Diseno] = None,
+    unir_grupos: bool = False,
+    carpeta_recursos: Optional[Union[str, Path]] = None,
 ) -> str:
     """Genera un SVG con la hoja de trazo en abanico para impresión o Inkscape.
     
@@ -33,7 +40,10 @@ def svg_abanico(
         n = 4 if dibujar == "completo" else 2
     else:
         tam_g = esquema.tam_grupo if esquema else 5
-        if dibujar == "mitad":
+        if unir_grupos and esquema and esquema.modo == "repeticion":
+            reps = entrada.num_gajos // tam_g
+            n = min(entrada.num_gajos, tam_g * 2) if reps >= 2 else tam_g
+        elif dibujar == "mitad":
             n = (tam_g + 1) // 2
         else:
             n = tam_g
@@ -135,72 +145,9 @@ def svg_abanico(
     ang_min = -n * psi / 2.0
     ang_max = n * psi / 2.0
 
-    # 4. Construir elementos SVG
-    lines = [
-        f'<?xml version="1.0" encoding="UTF-8" standalone="no"?>',
-        f'<svg width="{w_page:.2f}mm" height="{h_page:.2f}mm" viewBox="0 0 {w_page:.2f} {h_page:.2f}"',
-        f'     xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape">',
-    ]
-
-    if estilo.fondo:
-        lines.append(f'  <rect width="100%" height="100%" fill="{estilo.fondo}" id="fondo"/>')
-
-    # Capa: papel
-    lines.append('  <g inkscape:groupmode="layer" inkscape:label="papel" id="layer-papel">')
-    # Margen útil punteado
-    w_papel_trazo = 0.2 * estilo.factor_trazo
-    lines.append(f'    <rect x="{margen_mm:.2f}" y="{margen_mm:.2f}" width="{avail_w:.2f}" height="{avail_h:.2f}" '
-                 f'fill="none" stroke="{estilo.cuadricula}" stroke-width="{w_papel_trazo:.2f}" stroke-dasharray="3,3" id="margen-util"/>')
-    lines.append('  </g>')
-
-    # Capa: cuadricula (arcos o rectas de cada paso)
-    lines.append('  <g inkscape:groupmode="layer" inkscape:label="cuadricula" id="layer-cuadricula">')
-    w_cuad = 0.2 * estilo.factor_trazo
-    pasos_arco = max(8, n * 6)
-
-    for idx_paso, y_paso in enumerate(ab.pasos_radiales):
-        r_paso = y_paso
-        if r_paso <= 1e-4:
-            continue
-        pts_paso_svg = []
-        for st in range(pasos_arco + 1):
-            ang = ang_min + (ang_max - ang_min) * (st / pasos_arco)
-            pts_paso_svg.append(to_svg(r_paso * math.sin(ang), r_paso * math.cos(ang)))
-        d_arco = "M " + " L ".join(f"{x:.2f},{y:.2f}" for x, y in pts_paso_svg)
-        lines.append(f'    <path d="{d_arco}" fill="none" stroke="{estilo.cuadricula}" stroke-width="{w_cuad:.2f}" id="cuad-paso-{idx_paso}"/>')
-
-        # Número de paso sobre el eje central
-        px_num, py_num = to_svg(0.0, r_paso)
-        fs_paso = max(1.8 * estilo.factor_texto, w_page * 0.012)
-        lines.append(f'    <text x="{px_num + 1.5:.2f}" y="{py_num:.2f}" font-size="{fs_paso:.2f}" fill="{estilo.texto}" '
-                     f'font-family="sans-serif" dominant-baseline="middle">{idx_paso}</text>')
-    lines.append('  </g>')
-
-    # Capa: ejes
-    lines.append('  <g inkscape:groupmode="layer" inkscape:label="ejes" id="layer-ejes">')
-    w_eje = 0.3 * estilo.factor_trazo
-    for i, (p0, p1) in enumerate(ab.ejes):
-        p0_svg = to_svg(p0[0], p0[1])
-        p1_svg = to_svg(p1[0], p1[1])
-        lines.append(f'    <line x1="{p0_svg[0]:.2f}" y1="{p0_svg[1]:.2f}" x2="{p1_svg[0]:.2f}" y2="{p1_svg[1]:.2f}" '
-                     f'stroke="{estilo.eje}" stroke-width="{w_eje:.2f}" stroke-dasharray="4,2" id="eje-gajo-{i}"/>')
-    lines.append('  </g>')
-
-    # Capa: aristas_comunes
-    lines.append('  <g inkscape:groupmode="layer" inkscape:label="aristas_comunes" id="layer-aristas-comunes">')
-    w_arista = 0.3 * estilo.factor_trazo
-    for i, (p0, p1) in enumerate(ab.aristas_comunes):
-        p0_svg = to_svg(p0[0], p0[1])
-        p1_svg = to_svg(p1[0], p1[1])
-        lines.append(f'    <line x1="{p0_svg[0]:.2f}" y1="{p0_svg[1]:.2f}" x2="{p1_svg[0]:.2f}" y2="{p1_svg[1]:.2f}" '
-                     f'stroke="{estilo.contorno}" stroke-width="{w_arista:.2f}" stroke-dasharray="2,2" id="arista-comun-{i}"/>')
-    lines.append('  </g>')
-
-    # Capa: contorno exterior completo
-    lines.append('  <g inkscape:groupmode="layer" inkscape:label="contorno" id="layer-contorno">')
-    w_contorno = 0.7 * estilo.factor_trazo
-
+    # 4. Calcular contorno exterior del abanico primero (para clipPath y para la capa de contorno)
     pts_contorno_svg: List[Tuple[float, float]] = []
+    pasos_arco = max(8, n * 6)
     if s0 > 1e-4:
         # Cono inferior:
         # 1. Lateral izquierdo (s0 a s1 en ang_min)
@@ -232,8 +179,99 @@ def svg_abanico(
         pts_contorno_svg.append(to_svg(0.0, 0.0))
 
     d_contorno = "M " + " L ".join(f"{x:.2f},{y:.2f}" for x, y in pts_contorno_svg) + " Z"
+
+    # 5. Construir elementos SVG
+    lines = [
+        f'<?xml version="1.0" encoding="UTF-8" standalone="no"?>',
+        f'<svg width="{w_page:.2f}mm" height="{h_page:.2f}mm" viewBox="0 0 {w_page:.2f} {h_page:.2f}"',
+        f'     xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape">',
+        f'  <defs>',
+        f'    <clipPath id="clip-abanico">',
+        f'      <path d="{d_contorno}"/>',
+        f'    </clipPath>',
+        f'  </defs>',
+    ]
+
+    if estilo.fondo:
+        lines.append(f'  <rect width="100%" height="100%" fill="{estilo.fondo}" id="fondo"/>')
+
+    # Capa: papel
+    lines.append('  <g inkscape:groupmode="layer" inkscape:label="papel" id="layer-papel">')
+    # Margen útil punteado
+    w_papel_trazo = 0.2 * estilo.factor_trazo
+    lines.append(f'    <rect x="{margen_mm:.2f}" y="{margen_mm:.2f}" width="{avail_w:.2f}" height="{avail_h:.2f}" '
+                 f'fill="none" stroke="{estilo.cuadricula}" stroke-width="{w_papel_trazo:.2f}" stroke-dasharray="3,3" id="margen-util"/>')
+    lines.append('  </g>')
+
+    # Capa: cuadricula (arcos o rectas de cada paso)
+    lines.append('  <g inkscape:groupmode="layer" inkscape:label="cuadricula" id="layer-cuadricula">')
+    w_cuad = 0.2 * estilo.factor_trazo
+
+    for idx_paso, y_paso in enumerate(ab.pasos_radiales):
+        r_paso = y_paso
+        if r_paso <= 1e-4:
+            continue
+        pts_paso_svg = []
+        for st in range(pasos_arco + 1):
+            ang = ang_min + (ang_max - ang_min) * (st / pasos_arco)
+            pts_paso_svg.append(to_svg(r_paso * math.sin(ang), r_paso * math.cos(ang)))
+        d_arco = "M " + " L ".join(f"{x:.2f},{y:.2f}" for x, y in pts_paso_svg)
+        lines.append(f'    <path d="{d_arco}" fill="none" stroke="{estilo.cuadricula}" stroke-width="{w_cuad:.2f}" id="cuad-paso-{idx_paso}"/>')
+
+        # Número de paso sobre el eje central
+        px_num, py_num = to_svg(0.0, r_paso)
+        fs_paso = max(1.8 * estilo.factor_texto, w_page * 0.012)
+        lines.append(f'    <text x="{px_num + 1.5:.2f}" y="{py_num:.2f}" font-size="{fs_paso:.2f}" fill="{estilo.texto}" '
+                     f'font-family="sans-serif" dominant-baseline="middle">{idx_paso}</text>')
+    lines.append('  </g>')
+
+    # Capa: diseno (recortada por el contorno del abanico)
+    lines.append('  <g inkscape:groupmode="layer" inkscape:label="diseno" id="layer-diseno" clip-path="url(#clip-abanico)">')
+    if diseno and diseno.capas:
+        carp_rec = Path(carpeta_recursos) if carpeta_recursos else None
+        capas_a_dibujar = construir_grupo(diseno, esquema, modo_lienzo=dibujar)
+        for c in capas_a_dibujar:
+            es_ref = c.id.endswith("_reflejo")
+            opac_mult = 0.5 if (dibujar == "mitad" and es_ref) else 1.0
+            elem_svg = _renderizar_capa_en_abanico(c, to_svg, factor, carp_rec, opacidad_mult=opac_mult)
+            if elem_svg:
+                lines.append(f'    {elem_svg}')
+    lines.append('  </g>')
+
+    # Capa: ejes
+    lines.append('  <g inkscape:groupmode="layer" inkscape:label="ejes" id="layer-ejes">')
+    w_eje = 0.3 * estilo.factor_trazo
+    for i, (p0, p1) in enumerate(ab.ejes):
+        p0_svg = to_svg(p0[0], p0[1])
+        p1_svg = to_svg(p1[0], p1[1])
+        lines.append(f'    <line x1="{p0_svg[0]:.2f}" y1="{p0_svg[1]:.2f}" x2="{p1_svg[0]:.2f}" y2="{p1_svg[1]:.2f}" '
+                     f'stroke="{estilo.eje}" stroke-width="{w_eje:.2f}" stroke-dasharray="4,2" id="eje-gajo-{i}"/>')
+
+    # Si estamos en modo mitad, resaltar el eje de simetría / espejo
+    if dibujar == "mitad":
+        p_esp_0 = to_svg(0.0, s0)
+        p_esp_1 = to_svg(0.0, s1)
+        w_esp = 0.6 * estilo.factor_trazo
+        lines.append(f'    <line x1="{p_esp_0[0]:.2f}" y1="{p_esp_0[1]:.2f}" x2="{p_esp_1[0]:.2f}" y2="{p_esp_1[1]:.2f}" '
+                     f'stroke="{estilo.eje}" stroke-width="{w_esp:.2f}" stroke-dasharray="6,3" id="eje-espejo-simetria"/>')
+    lines.append('  </g>')
+
+    # Capa: aristas_comunes
+    lines.append('  <g inkscape:groupmode="layer" inkscape:label="aristas_comunes" id="layer-aristas-comunes">')
+    w_arista = 0.3 * estilo.factor_trazo
+    for i, (p0, p1) in enumerate(ab.aristas_comunes):
+        p0_svg = to_svg(p0[0], p0[1])
+        p1_svg = to_svg(p1[0], p1[1])
+        lines.append(f'    <line x1="{p0_svg[0]:.2f}" y1="{p0_svg[1]:.2f}" x2="{p1_svg[0]:.2f}" y2="{p1_svg[1]:.2f}" '
+                     f'stroke="{estilo.contorno}" stroke-width="{w_arista:.2f}" stroke-dasharray="2,2" id="arista-comun-{i}"/>')
+    lines.append('  </g>')
+
+    # Capa: contorno exterior completo
+    lines.append('  <g inkscape:groupmode="layer" inkscape:label="contorno" id="layer-contorno">')
+    w_contorno = 0.7 * estilo.factor_trazo
     lines.append(f'    <path d="{d_contorno}" fill="none" stroke="{estilo.contorno}" stroke-width="{w_contorno:.2f}" id="path-contorno-abanico"/>')
     lines.append('  </g>')
+
 
     # Capa: costura (SOLO en bordes laterales extremos)
     lines.append('  <g inkscape:groupmode="layer" inkscape:label="costura" id="layer-costura">')
@@ -308,3 +346,53 @@ def svg_abanico(
 
     lines.append('</svg>')
     return "\n".join(lines)
+
+
+def _renderizar_capa_en_abanico(
+    capa: CapaDiseno,
+    to_svg,
+    factor: float,
+    carpeta_recursos: Optional[Path],
+    opacidad_mult: float = 1.0,
+) -> str:
+    """Renderiza un elemento SVG <image> o <rect> para una capa en el abanico."""
+    if not capa.visible:
+        return ""
+
+    cx_cm = capa.x + capa.ancho / 2.0
+    cy_cm = capa.y + capa.alto / 2.0
+
+    cx_svg, cy_svg = to_svg(cx_cm, cy_cm)
+    w_svg = capa.ancho * factor
+    h_svg = capa.alto * factor
+    x_svg = cx_svg - w_svg / 2.0
+    y_svg = cy_svg - h_svg / 2.0
+
+    transforms = []
+    if abs(capa.rotacion) > 1e-4:
+        transforms.append(f"rotate({-capa.rotacion:.2f} {cx_svg:.2f} {cy_svg:.2f})")
+    if capa.reflejo_h:
+        transforms.append(f"translate({cx_svg:.2f} {cy_svg:.2f}) scale(-1 1) translate({-cx_svg:.2f} {-cy_svg:.2f})")
+    if capa.reflejo_v:
+        transforms.append(f"translate({cx_svg:.2f} {cy_svg:.2f}) scale(1 -1) translate({-cx_svg:.2f} {-cy_svg:.2f})")
+
+    trans_str = f' transform="{" ".join(transforms)}"' if transforms else ""
+    opac = max(0.0, min(1.0, capa.opacidad * opacidad_mult))
+
+    href = ""
+    if carpeta_recursos:
+        arch = carpeta_recursos / capa.archivo
+        if arch.exists() and arch.is_file():
+            b64_str = base64.b64encode(arch.read_bytes()).decode("ascii")
+            if capa.tipo == "svg":
+                href = f"data:image/svg+xml;base64,{b64_str}"
+            else:
+                mime = "image/png" if arch.suffix.lower() == ".png" else "image/jpeg"
+                href = f"data:{mime};base64,{b64_str}"
+
+    if href:
+        return f'<image href="{href}" x="{x_svg:.2f}" y="{y_svg:.2f}" width="{w_svg:.2f}" height="{h_svg:.2f}" opacity="{opac:.2f}"{trans_str} id="capa-{capa.id}"/>'
+    else:
+        return (f'<rect x="{x_svg:.2f}" y="{y_svg:.2f}" width="{w_svg:.2f}" height="{h_svg:.2f}" '
+                f'fill="none" stroke="#888888" stroke-width="0.3" stroke-dasharray="2,2"{trans_str} id="capa-{capa.id}"/>')
+
