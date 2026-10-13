@@ -1,10 +1,13 @@
 import json
-from dataclasses import dataclass, asdict
-from typing import Optional, Dict, Any, Union
+import shutil
+from pathlib import Path
+from dataclasses import dataclass, field, asdict
+from typing import Optional, Dict, List, Any, Union
 from logic.models import BalloonInput, Condiciones
 from logic.diseno.esquema import EsquemaDiseno
 from logic.diseno.pintura import EsquemaPintura, VariantePico
 from logic.diseno.diseno_pico import EsquemaDisenoPico
+from logic.diseno.lienzo import Diseno
 
 @dataclass
 class Proyecto:
@@ -19,6 +22,8 @@ class Proyecto:
     pintura: Optional[EsquemaPintura] = None
     pliegos_por_paquete: int = 100
     esquema_pico: Optional[EsquemaDisenoPico] = None
+    disenos: Dict[str, Diseno] = field(default_factory=dict)
+    recursos_faltantes: List[str] = field(default_factory=list)
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Proyecto":
@@ -88,6 +93,18 @@ class Proyecto:
                 motivos_por_cara=ep_data.get("motivos_por_cara", [0, 1, 2, 3])
             )
 
+        disenos = {}
+        if data.get("disenos"):
+            raw_disenos = data["disenos"]
+            if isinstance(raw_disenos, dict):
+                for k, v in raw_disenos.items():
+                    disenos[k] = Diseno.from_dict(v)
+            elif isinstance(raw_disenos, list):
+                for d in raw_disenos:
+                    obj = Diseno.from_dict(d)
+                    clave = f"{obj.seccion}_{obj.variante}" if obj.seccion == "pico" else obj.seccion
+                    disenos[clave] = obj
+
         return cls(
             version=data["version"],
             nombre=data["nombre"],
@@ -100,6 +117,7 @@ class Proyecto:
             pintura=pintura,
             pliegos_por_paquete=data.get("pliegos_por_paquete", 100),
             esquema_pico=esq_pico,
+            disenos=disenos,
         )
 
 def _migrar_proyecto(data: Dict[str, Any]) -> Dict[str, Any]:
@@ -111,7 +129,22 @@ def _migrar_proyecto(data: Dict[str, Any]) -> Dict[str, Any]:
     
     return data
 
-def guardar_proyecto(proyecto: Proyecto, ruta: str) -> None:
+def obtener_carpeta_recursos(ruta_proyecto: Union[str, Path]) -> Path:
+    p = Path(ruta_proyecto)
+    return p.parent / f"{p.stem}_recursos"
+
+def copiar_recursos_proyecto(ruta_origen: Union[str, Path], ruta_destino: Union[str, Path]) -> None:
+    carp_origen = obtener_carpeta_recursos(ruta_origen)
+    carp_destino = obtener_carpeta_recursos(ruta_destino)
+    if carp_origen.exists() and carp_origen.is_dir():
+        carp_destino.mkdir(parents=True, exist_ok=True)
+        for item in carp_origen.iterdir():
+            if item.is_file():
+                shutil.copy2(item, carp_destino / item.name)
+
+def guardar_proyecto(proyecto: Proyecto, ruta: str, ruta_anterior: Optional[str] = None) -> None:
+    if ruta_anterior and Path(ruta_anterior).resolve() != Path(ruta).resolve():
+        copiar_recursos_proyecto(ruta_anterior, ruta)
     with open(ruta, "w", encoding="utf-8") as f:
         json.dump(asdict(proyecto), f, indent=4, ensure_ascii=False)
 
@@ -122,4 +155,14 @@ def cargar_proyecto(ruta: str) -> Proyecto:
     except json.JSONDecodeError as e:
         raise ValueError("El archivo no es un JSON válido.") from e
     
-    return Proyecto.from_dict(data)
+    proyecto = Proyecto.from_dict(data)
+    carp_recursos = obtener_carpeta_recursos(ruta)
+    faltantes = []
+    for diseno in proyecto.disenos.values():
+        for capa in diseno.capas:
+            archivo_recurso = carp_recursos / capa.archivo
+            if not archivo_recurso.exists():
+                faltantes.append(capa.archivo)
+    proyecto.recursos_faltantes = faltantes
+    return proyecto
+
