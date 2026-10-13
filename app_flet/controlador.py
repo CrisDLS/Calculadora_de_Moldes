@@ -27,6 +27,10 @@ from logic.diseno.paleta import ColorPapel, cargar_catalogo, color_por_id
 from logic.diseno.compra import ItemCompra, lista_de_compra
 from logic.exportacion.escena3d import escena_a_dict
 from logic.exportacion.visor3d import ServidorVisor, exportar_visor_autocontenido
+from logic.diseno.lienzo import Diseno, CapaDiseno, importar_recurso
+from logic.exportacion.svg_diseno import svg_gajo, exportar_diseno
+from logic.geometria.abanico import pieza_a_geometria_plana
+from pathlib import Path
 
 @dataclass
 class TarjetaResumen:
@@ -65,6 +69,16 @@ class ViewModelTrompo:
     items_compra: List[ItemCompra] = field(default_factory=list)
     pintura: Optional[EsquemaPintura] = None
     url_visor_3d: str = ""
+    # Diseño sobre el abanico (F6a)
+    svg_diseno: str = ""
+    diseno_activo: Optional[Diseno] = None
+    capas_diseno: List[CapaDiseno] = field(default_factory=list)
+    capa_seleccionada_id: Optional[str] = None
+    diseno_seccion: str = "superior"
+    diseno_variante: str = "A"
+    diseno_lienzo_modo: str = "completo"
+    mantener_proporcion: bool = True
+    recursos_faltantes: List[str] = field(default_factory=list)
 
 class ControladorTrompo:
     def __init__(self, estilo_svg: EstiloSvg = PANTALLA_OSCURO):
@@ -83,6 +97,16 @@ class ControladorTrompo:
         self.svg_inferior: str = ""
         self.svg_perfil: str = ""
         self.svg_hoja: str = ""
+        self.svg_diseno: str = ""
+
+        # Estado de diseño sobre el abanico (F6a)
+        self.disenos: Dict[str, Diseno] = {}
+        self.diseno_seccion: str = "superior"
+        self.diseno_variante: str = "A"
+        self.diseno_lienzo_modo: str = "completo"
+        self.capa_seleccionada_id: Optional[str] = None
+        self.mantener_proporcion: bool = True
+        self.recursos_faltantes: List[str] = []
 
         # Estado de los campos de entrada
         self.altura = "950"
@@ -346,6 +370,7 @@ class ControladorTrompo:
             # Generar tablas y SVGs
             self.tablas = formatear_tablas(self.resultado, self.entrada_actual)
             self._generar_svgs()
+            self._actualizar_svg_diseno()
             self._actualizar_servidor_3d()
             self.sin_guardar = True
         except ValueError as e:
@@ -379,6 +404,11 @@ class ControladorTrompo:
         self.hoja_lienzo = "abanico"
         self.hoja_dibujar = "completo"
         self.esquema_pico = EsquemaDisenoPico()
+
+        self.disenos = {}
+        self.capa_seleccionada_id = None
+        self.svg_diseno = ""
+        self.recursos_faltantes = []
 
         self.nombre_proyecto = "Sin título"
         self.ruta_proyecto = None
@@ -423,6 +453,7 @@ class ControladorTrompo:
             pintura=self.pintura,
             pliegos_por_paquete=self.pliegos_por_paquete,
             esquema_pico=self.esquema_pico,
+            disenos=self.disenos,
         )
 
     def desde_proyecto(self, proy: Proyecto, ruta: Optional[str] = None):
@@ -468,6 +499,9 @@ class ControladorTrompo:
             self.esquema_pico = proy.esquema_pico
         else:
             self.esquema_pico = EsquemaDisenoPico()
+
+        self.disenos = proy.disenos.copy() if getattr(proy, "disenos", None) else {}
+        self.recursos_faltantes = list(getattr(proy, "recursos_faltantes", []))
 
         self.nombre_proyecto = proy.nombre
         self.ruta_proyecto = ruta
@@ -544,6 +578,8 @@ class ControladorTrompo:
                 pass
 
         url_3d = self.servidor_3d.url if self.servidor_3d else ""
+        dis_activo = self.obtener_diseno_activo() if not self.desactualizado else None
+        capas_dis = list(dis_activo.capas) if dis_activo else []
 
         return ViewModelTrompo(
             tarjetas=tarjetas,
@@ -568,4 +604,186 @@ class ControladorTrompo:
             items_compra=items_compra if not self.desactualizado else [],
             pintura=self.pintura,
             url_visor_3d=url_3d,
+            svg_diseno=self.svg_diseno if not self.desactualizado else "",
+            diseno_activo=dis_activo,
+            capas_diseno=capas_dis,
+            capa_seleccionada_id=self.capa_seleccionada_id,
+            diseno_seccion=self.diseno_seccion,
+            diseno_variante=self.diseno_variante,
+            diseno_lienzo_modo=self.diseno_lienzo_modo,
+            mantener_proporcion=self.mantener_proporcion,
+            recursos_faltantes=list(self.recursos_faltantes),
         )
+
+    # --- Métodos de Diseño sobre el abanico (F6a) ---
+    def clave_diseno_activo(self) -> str:
+        return f"pico_{self.diseno_variante}" if self.diseno_seccion == "pico" else self.diseno_seccion
+
+    def obtener_diseno_activo(self) -> Diseno:
+        clave = self.clave_diseno_activo()
+        if clave not in self.disenos:
+            self.disenos[clave] = Diseno(seccion=self.diseno_seccion, variante=self.diseno_variante, capas=[])
+        return self.disenos[clave]
+
+    def obtener_carpeta_recursos_activa(self) -> Path:
+        if self.ruta_proyecto:
+            p = Path(self.ruta_proyecto)
+            d = p.parent / f"{p.stem}_recursos"
+        else:
+            d = Path("guardados") / "recursos_temp"
+        d.mkdir(parents=True, exist_ok=True)
+        return d
+
+    def anadir_capa(self, ruta_archivo: str) -> CapaDiseno:
+        carp = self.obtener_carpeta_recursos_activa()
+        capa = importar_recurso(ruta_archivo, carp)
+        diseno = self.obtener_diseno_activo()
+        diseno.capas.append(capa)
+        self.capa_seleccionada_id = capa.id
+        self.sin_guardar = True
+        self._actualizar_svg_diseno()
+        return capa
+
+    def eliminar_capa(self, id_capa: str) -> None:
+        diseno = self.obtener_diseno_activo()
+        diseno.capas = [c for c in diseno.capas if c.id != id_capa]
+        if self.capa_seleccionada_id == id_capa:
+            self.capa_seleccionada_id = diseno.capas[0].id if diseno.capas else None
+        self.sin_guardar = True
+        self._actualizar_svg_diseno()
+
+    def mover_capa(self, id_capa: str, direccion: int) -> None:
+        diseno = self.obtener_diseno_activo()
+        for i, c in enumerate(diseno.capas):
+            if c.id == id_capa:
+                nuevo_idx = i + direccion
+                if 0 <= nuevo_idx < len(diseno.capas):
+                    diseno.capas[i], diseno.capas[nuevo_idx] = diseno.capas[nuevo_idx], diseno.capas[i]
+                    self.sin_guardar = True
+                    self._actualizar_svg_diseno()
+                break
+
+    def obtener_capa_seleccionada(self) -> Optional[CapaDiseno]:
+        if not self.capa_seleccionada_id:
+            diseno = self.obtener_diseno_activo()
+            return diseno.capas[0] if diseno.capas else None
+        for c in self.obtener_diseno_activo().capas:
+            if c.id == self.capa_seleccionada_id:
+                return c
+        return None
+
+    def modificar_capa_seleccionada(self, **kwargs) -> None:
+        capa = self.obtener_capa_seleccionada()
+        if not capa or capa.bloqueada:
+            return
+        for k, v in kwargs.items():
+            if hasattr(capa, k):
+                setattr(capa, k, v)
+        self.sin_guardar = True
+        self._actualizar_svg_diseno()
+
+    def centrar_capa_seleccionada(self) -> None:
+        capa = self.obtener_capa_seleccionada()
+        if not capa or capa.bloqueada or not self.resultado or not self.entrada_actual:
+            return
+        capa.x = -capa.ancho / 2.0
+        pz = pieza_a_geometria_plana(self.resultado, self.entrada_actual, self.diseno_seccion)
+        capa.y = pz.distancia_vertice + (pz.largo - capa.alto) / 2.0
+        self.sin_guardar = True
+        self._actualizar_svg_diseno()
+
+    def ajustar_capa_ancho(self) -> None:
+        capa = self.obtener_capa_seleccionada()
+        if not capa or capa.bloqueada or not self.resultado or not self.entrada_actual:
+            return
+        pz = pieza_a_geometria_plana(self.resultado, self.entrada_actual, self.diseno_seccion)
+        capa.ancho = pz.ancho_mayor
+        capa.x = -capa.ancho / 2.0
+        if self.mantener_proporcion and capa.ancho_natural > 0:
+            capa.alto = capa.ancho * (capa.alto_natural / capa.ancho_natural)
+        self.sin_guardar = True
+        self._actualizar_svg_diseno()
+
+    def ajustar_capa_alto(self) -> None:
+        capa = self.obtener_capa_seleccionada()
+        if not capa or capa.bloqueada or not self.resultado or not self.entrada_actual:
+            return
+        pz = pieza_a_geometria_plana(self.resultado, self.entrada_actual, self.diseno_seccion)
+        capa.alto = pz.largo
+        if self.mantener_proporcion and capa.alto_natural > 0:
+            capa.ancho = capa.alto * (capa.ancho_natural / capa.alto_natural)
+            capa.x = -capa.ancho / 2.0
+        self.sin_guardar = True
+        self._actualizar_svg_diseno()
+
+    def cambiar_diseno_seccion(self, seccion: str, variante: str = "A") -> None:
+        self.diseno_seccion = seccion
+        self.diseno_variante = variante
+        dis = self.obtener_diseno_activo()
+        self.capa_seleccionada_id = dis.capas[0].id if dis.capas else None
+        self._actualizar_svg_diseno()
+
+    def cambiar_diseno_lienzo_modo(self, modo: str) -> None:
+        self.diseno_lienzo_modo = modo
+        self._actualizar_svg_diseno()
+
+    def _actualizar_svg_diseno(self) -> None:
+        if not self.resultado or not self.entrada_actual:
+            self.svg_diseno = ""
+            return
+        try:
+            esq = self._construir_esquema()
+            dis = self.obtener_diseno_activo()
+            carp = self.obtener_carpeta_recursos_activa()
+            self.svg_diseno = svg_abanico(
+                resultado=self.resultado,
+                entrada=self.entrada_actual,
+                seccion=self.diseno_seccion,
+                esquema=esq,
+                estilo=self.estilo_svg,
+                hoja=self.hoja_tipo,
+                dibujar=self.diseno_lienzo_modo,
+                diseno=dis,
+                carpeta_recursos=carp,
+            )
+        except Exception as e:
+            warnings.warn(f"Error generando SVG de diseño: {e}")
+            self.svg_diseno = ""
+
+    def exportar_gajos_diseno(self, carpeta_destino: str) -> List[Path]:
+        if not self.resultado or not self.entrada_actual:
+            return []
+        esq = self._construir_esquema()
+        dis = self.obtener_diseno_activo()
+        carp_rec = self.obtener_carpeta_recursos_activa()
+        return exportar_diseno(
+            carpeta=carpeta_destino,
+            resultado=self.resultado,
+            entrada=self.entrada_actual,
+            esquema=esq,
+            diseno=dis,
+            carpeta_recursos=carp_rec,
+            seccion=self.diseno_seccion,
+            formato_hoja=self.hoja_tipo,
+        )
+
+    def exportar_hoja_diseno(self, ruta_destino: str) -> None:
+        if not self.resultado or not self.entrada_actual:
+            return
+        esq = self._construir_esquema()
+        dis = self.obtener_diseno_activo()
+        carp_rec = self.obtener_carpeta_recursos_activa()
+        svg_txt = svg_abanico(
+            resultado=self.resultado,
+            entrada=self.entrada_actual,
+            seccion=self.diseno_seccion,
+            esquema=esq,
+            estilo=IMPRESION,
+            hoja=self.hoja_tipo,
+            dibujar=self.diseno_lienzo_modo,
+            diseno=dis,
+            carpeta_recursos=carp_rec,
+        )
+        with open(ruta_destino, "w", encoding="utf-8") as f:
+            f.write(svg_txt)
+

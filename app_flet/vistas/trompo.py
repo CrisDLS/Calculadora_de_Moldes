@@ -1026,10 +1026,217 @@ class VistaTrompo(ft.Container):
             ),
         )
 
-        # Tabs generales (5 pestañas)
+        # --- 5. PESTAÑA DISEÑO (F6a) ---
+        self.selector_seccion_diseno = ft.SegmentedButton(
+            selected=["superior"],
+            allow_multiple_selection=False,
+            segments=[
+                ft.Segment(value="superior", label=ft.Text("Cono superior")),
+                ft.Segment(value="pico", label=ft.Text("Pico")),
+                ft.Segment(value="inferior", label=ft.Text("Cono inferior")),
+            ],
+            on_change=self.on_cambio_seccion_diseno,
+        )
+        self.selector_variante_pico_diseno = ft.SegmentedButton(
+            selected=["A"],
+            allow_multiple_selection=False,
+            segments=[
+                ft.Segment(value="A", label=ft.Text("Variante A")),
+                ft.Segment(value="B", label=ft.Text("Variante B")),
+            ],
+            visible=False,
+            on_change=self.on_cambio_variante_diseno,
+        )
+        self.selector_lienzo_diseno = ft.SegmentedButton(
+            selected=["completo"],
+            allow_multiple_selection=False,
+            segments=[
+                ft.Segment(value="completo", label=ft.Text("Lienzo completo")),
+                ft.Segment(value="mitad", label=ft.Text("Mitad (espejo)")),
+            ],
+            on_change=self.on_cambio_lienzo_diseno,
+        )
+
+        # Visor interactivo del diseño
+        self.zona_ancho_diseno: float = 600.0
+        self.zona_alto_diseno: float = 500.0
+        self.vista_svg_diseno: Optional[VistaSvg] = None
+        self.vista_base_svg_diseno: Optional[VistaSvg] = None
+        self._svg_diseno_raw: str = ""
+
+        self.img_svg_diseno = ft.Image(src="", fit=ft.BoxFit.CONTAIN, width=self.zona_ancho_diseno, height=self.zona_alto_diseno)
+        self.detector_gestos_diseno = ft.GestureDetector(
+            content=self.img_svg_diseno,
+            expand=True,
+            on_scroll=self._on_gesture_diseno_scroll,
+            on_pan_update=self._on_gesture_diseno_pan_update,
+            on_double_tap=self._on_gesture_diseno_double_tap,
+        )
+        self.container_viewer_diseno = ft.Container(
+            content=self.detector_gestos_diseno,
+            bgcolor=ft.Colors.WHITE,
+            border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
+            border_radius=4,
+            shadow=ft.BoxShadow(spread_radius=1, blur_radius=8, color="#00000022"),
+            expand=True,
+            padding=self._padding_container,
+            clip_behavior=ft.ClipBehavior.HARD_EDGE,
+            alignment=ft.Alignment(0, 0),
+            on_size_change=self._on_container_diseno_size_change,
+        )
+        self.btn_zoom_out_diseno = ft.IconButton(
+            icon=ft.Icons.REMOVE,
+            tooltip="Alejar",
+            icon_size=18,
+            on_click=self._on_btn_zoom_out_diseno,
+        )
+        self.lbl_zoom_diseno_porcentaje = ft.Text(
+            "100 %",
+            size=12,
+            color=ft.Colors.ON_SURFACE_VARIANT,
+            weight=ft.FontWeight.W_500,
+        )
+        self.btn_zoom_in_diseno = ft.IconButton(
+            icon=ft.Icons.ADD,
+            tooltip="Acercar",
+            icon_size=18,
+            on_click=self._on_btn_zoom_in_diseno,
+        )
+        self.btn_ajustar_diseno = ft.TextButton(
+            "Ajustar",
+            icon=ft.Icons.FIT_SCREEN,
+            on_click=self._on_btn_ajustar_diseno,
+        )
+        self.barra_zoom_diseno = ft.Row(
+            controls=[
+                self.btn_zoom_out_diseno,
+                self.lbl_zoom_diseno_porcentaje,
+                self.btn_zoom_in_diseno,
+                self.btn_ajustar_diseno,
+            ],
+            alignment=ft.MainAxisAlignment.CENTER,
+            spacing=4,
+        )
+
+        # Panel lateral de capas
+        self.btn_anadir_capa = ft.FilledButton(
+            "Añadir capa…",
+            icon=ft.Icons.ADD_PHOTO_ALTERNATE_OUTLINED,
+            on_click=self.on_anadir_capa_click,
+        )
+        self.col_lista_capas = ft.Column(spacing=4)
+
+        # Inspector de capa seleccionada
+        self.txt_nombre_capa = ft.TextField(label="Nombre", dense=True, on_change=self.on_nombre_capa_change)
+        self.txt_pos_x = ft.TextField(label="Posición X (cm)", dense=True, width=120, on_change=self.on_pos_x_change)
+        self.txt_pos_y = ft.TextField(label="Posición Y (cm)", dense=True, width=120, on_change=self.on_pos_y_change)
+        self.txt_ancho_capa = ft.TextField(label="Ancho (cm)", dense=True, width=120, on_change=self.on_ancho_capa_change)
+        self.txt_alto_capa = ft.TextField(label="Alto (cm)", dense=True, width=120, on_change=self.on_alto_capa_change)
+        self.chk_proporcion = ft.Checkbox(label="Mantener proporción", value=True, on_change=self.on_proporcion_change)
+        self.slider_rotacion = ft.Slider(min=-180, max=180, divisions=72, label="{value}°", on_change=self.on_rotacion_change)
+        self.lbl_rotacion_val = ft.Text("0°", size=12)
+        self.btn_reflejo_h = ft.IconButton(icon=ft.Icons.FLIP, tooltip="Reflejo horizontal", on_click=self.on_reflejo_h_click)
+        self.btn_reflejo_v = ft.IconButton(icon=ft.Icons.FLIP_CAMERA_ANDROID, tooltip="Reflejo vertical", on_click=self.on_reflejo_v_click)
+        self.slider_opacidad = ft.Slider(min=0.0, max=1.0, divisions=20, label="{value}", on_change=self.on_opacidad_change)
+        self.lbl_opacidad_val = ft.Text("100%", size=12)
+        self.btn_centrar_capa = ft.TextButton("Centrar", icon=ft.Icons.CENTER_FOCUS_STRONG, on_click=self.on_centrar_capa_click)
+        self.btn_ajustar_ancho = ft.TextButton("Ajustar ancho", icon=ft.Icons.SWAP_HORIZ, on_click=self.on_ajustar_ancho_click)
+        self.btn_ajustar_alto = ft.TextButton("Ajustar alto", icon=ft.Icons.SWAP_VERT, on_click=self.on_ajustar_alto_click)
+
+        self.panel_inspector_capa = ft.Column(
+            visible=False,
+            spacing=8,
+            controls=[
+                ft.Text("Propiedades de la capa", weight=ft.FontWeight.BOLD, size=14),
+                self.txt_nombre_capa,
+                ft.Row([self.txt_pos_x, self.txt_pos_y], spacing=8),
+                ft.Row([self.txt_ancho_capa, self.txt_alto_capa], spacing=8),
+                self.chk_proporcion,
+                ft.Text("Rotación:", size=12, color=ft.Colors.ON_SURFACE_VARIANT),
+                ft.Row([self.slider_rotacion, self.lbl_rotacion_val], spacing=4),
+                ft.Row([self.btn_reflejo_h, self.btn_reflejo_v], spacing=8),
+                ft.Text("Opacidad:", size=12, color=ft.Colors.ON_SURFACE_VARIANT),
+                ft.Row([self.slider_opacidad, self.lbl_opacidad_val], spacing=4),
+                ft.Row([self.btn_centrar_capa, self.btn_ajustar_ancho, self.btn_ajustar_alto], wrap=True, spacing=4),
+            ],
+        )
+
+        self.btn_exportar_gajos = ft.FilledButton("Exportar gajos decorados…", icon=ft.Icons.FOLDER_OPEN, on_click=self.on_exportar_gajos_click)
+        self.btn_exportar_hoja_diseno = ft.FilledButton("Exportar hoja decorada…", icon=ft.Icons.IMAGE, on_click=self.on_exportar_hoja_diseno_click)
+
+        self.panel_lateral_diseno = ft.Container(
+            width=340,
+            padding=10,
+            bgcolor=ft.Colors.SURFACE_CONTAINER_LOW,
+            border_radius=8,
+            content=ft.ListView(
+                spacing=10,
+                controls=[
+                    ft.Text("Sección y Lienzo", size=14, weight=ft.FontWeight.BOLD),
+                    self.selector_seccion_diseno,
+                    self.selector_variante_pico_diseno,
+                    self.selector_lienzo_diseno,
+                    ft.Divider(color=ft.Colors.OUTLINE),
+                    ft.Row(
+                        controls=[
+                            ft.Text("Capas de diseño", size=14, weight=ft.FontWeight.BOLD),
+                            self.btn_anadir_capa,
+                        ],
+                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                    ),
+                    self.col_lista_capas,
+                    ft.Divider(color=ft.Colors.OUTLINE),
+                    self.panel_inspector_capa,
+                    ft.Divider(color=ft.Colors.OUTLINE),
+                    ft.Text("Exportación", size=14, weight=ft.FontWeight.BOLD),
+                    self.btn_exportar_gajos,
+                    self.btn_exportar_hoja_diseno,
+                ],
+            ),
+        )
+
+        self.lbl_vacio_diseno = ft.Container(
+            content=ft.Text("Calcula para editar el diseño", size=16, color=ft.Colors.ON_SURFACE_VARIANT),
+            alignment=ft.Alignment(0, 0),
+            expand=True,
+            visible=True,
+        )
+
+        self.panel_contenido_diseno = ft.Row(
+            expand=True,
+            visible=False,
+            controls=[
+                self.panel_lateral_diseno,
+                ft.VerticalDivider(width=1, color=ft.Colors.OUTLINE),
+                ft.Column(
+                    expand=True,
+                    controls=[
+                        self.container_viewer_diseno,
+                        self.barra_zoom_diseno,
+                        ft.Row([self.lbl_instruccion_zoom], alignment=ft.MainAxisAlignment.CENTER),
+                    ],
+                    spacing=4,
+                ),
+            ],
+            spacing=10,
+        )
+
+        tab_diseno = ft.Container(
+            padding=15,
+            expand=True,
+            content=ft.Column(
+                expand=True,
+                controls=[
+                    self.lbl_vacio_diseno,
+                    self.panel_contenido_diseno,
+                ],
+            ),
+        )
+
+        # Tabs generales (6 pestañas)
         self.tabs = ft.Tabs(
             selected_index=0,
-            length=5,
+            length=6,
             expand=True,
             content=ft.Column(
                 expand=True,
@@ -1040,16 +1247,18 @@ class VistaTrompo(ft.Container):
                             ft.Tab(label="Tablas de moldes", icon=ft.Icons.TABLE_CHART_OUTLINED),
                             ft.Tab(label="Moldes 2D", icon=ft.Icons.IMAGE_OUTLINED),
                             ft.Tab(label="Hoja de trazo", icon=ft.Icons.DESCRIPTION_OUTLINED),
+                            ft.Tab(label="Diseño", icon=ft.Icons.BRUSH_OUTLINED),
                             ft.Tab(label="Vista 3D", icon=ft.Icons.VIEW_IN_AR_OUTLINED),
                         ]
                     ),
                     ft.TabBarView(
                         expand=True,
-                        controls=[tab_resumen, tab_tablas, tab_2d, tab_hoja, tab_3d],
+                        controls=[tab_resumen, tab_tablas, tab_2d, tab_hoja, tab_diseno, tab_3d],
                     ),
                 ],
             ),
         )
+
 
         self.panel_derecho = ft.Container(
             expand=True,
@@ -1589,7 +1798,18 @@ class VistaTrompo(ft.Container):
             self.lbl_vacio_3d.visible = True
             self.panel_contenido_3d.visible = False
 
-        # 9. Proyecto (F3)
+        # 9. Pestaña Diseño (F6a)
+        if vm.svg_diseno and not vm.desactualizado:
+            self.lbl_vacio_diseno.visible = False
+            self.panel_contenido_diseno.visible = True
+            self._renderizar_diseno(reset_vista=reset_zoom)
+        else:
+            self.lbl_vacio_diseno.visible = True
+            self.panel_contenido_diseno.visible = False
+
+        self._actualizar_panel_capas_y_inspector(vm)
+
+        # 10. Proyecto (F3)
         self.lbl_nombre_proyecto.value = vm.nombre_proyecto
         self.lbl_estado_proyecto.value = "Sin guardar" if vm.sin_guardar else ""
         self._actualizar_titulo_ventana(diferir_update=diferir_update)
@@ -2372,3 +2592,414 @@ class VistaTrompo(ft.Container):
         self.vista_base_svg_hoja = ajustar(w_nat, h_nat, aspecto_zona=aspecto_zona, margen=0.04)
         self.vista_svg_hoja = self.vista_base_svg_hoja
         self._actualizar_imagen_hoja_zoom(force=True)
+
+    # =========================================================================
+    # --- MÉTODOS DE LA PESTAÑA DISEÑO (F6a) ---
+    # =========================================================================
+    def _porcentaje_zoom_diseno(self) -> float:
+        if not self.vista_base_svg_diseno or not self.vista_svg_diseno or self.vista_svg_diseno.ancho <= 0:
+            return 100.0
+        return (self.vista_base_svg_diseno.ancho / self.vista_svg_diseno.ancho) * 100.0
+
+    def _limites_zoom_diseno(self) -> Tuple[float, float]:
+        if not self.vista_base_svg_diseno:
+            return (1.0, 1000.0)
+        ancho_min = self.vista_base_svg_diseno.ancho / 40.0
+        ancho_max = self.vista_base_svg_diseno.ancho * 1.5
+        return (ancho_min, ancho_max)
+
+    def _on_container_diseno_size_change(self, e):
+        w_raw = getattr(e, "width", 0.0) or 0.0
+        h_raw = getattr(e, "height", 0.0) or 0.0
+        if w_raw <= 0 or h_raw <= 0:
+            return
+
+        descuento_w = 2.0 * (self._padding_container + self._border_width)
+        descuento_h = 2.0 * (self._padding_container + self._border_width)
+        w_util = max(50.0, w_raw - descuento_w)
+        h_util = max(50.0, h_raw - descuento_h)
+
+        if abs(w_util - self.zona_ancho_diseno) < 0.5 and abs(h_util - self.zona_alto_diseno) < 0.5:
+            return
+
+        self.zona_ancho_diseno = w_util
+        self.zona_alto_diseno = h_util
+        self.img_svg_diseno.width = self.zona_ancho_diseno
+        self.img_svg_diseno.height = self.zona_alto_diseno
+
+        aspecto_zona = self.zona_ancho_diseno / self.zona_alto_diseno
+        if self._svg_diseno_raw:
+            w_nat, h_nat = extraer_dimensiones_svg(self._svg_diseno_raw)
+            self.vista_base_svg_diseno = ajustar(w_nat, h_nat, aspecto_zona=aspecto_zona, margen=0.04)
+            if self.vista_svg_diseno:
+                self.vista_svg_diseno = adaptar_aspecto(self.vista_svg_diseno, aspecto_zona)
+            else:
+                self.vista_svg_diseno = self.vista_base_svg_diseno
+            self._actualizar_imagen_diseno_zoom(force=True)
+
+    def _renderizar_diseno(self, reset_vista: bool = False):
+        if not self.controlador.svg_diseno:
+            self.img_svg_diseno.src = ""
+            return
+        self._svg_diseno_raw = self.controlador.svg_diseno
+        aspecto_zona = self.zona_ancho_diseno / self.zona_alto_diseno if self.zona_alto_diseno > 0 else 1.0
+        w_nat, h_nat = extraer_dimensiones_svg(self._svg_diseno_raw)
+
+        if reset_vista or not self.vista_svg_diseno or not self.vista_base_svg_diseno:
+            self.vista_base_svg_diseno = ajustar(w_nat, h_nat, aspecto_zona=aspecto_zona, margen=0.04)
+            self.vista_svg_diseno = self.vista_base_svg_diseno
+
+        self._actualizar_imagen_diseno()
+
+    def _actualizar_imagen_diseno(self):
+        if not self._svg_diseno_raw or not self.vista_svg_diseno:
+            return
+        svg_con_viewbox = aplicar_viewbox(self._svg_diseno_raw, self.vista_svg_diseno)
+        self.img_svg_diseno.src = svg_con_viewbox.encode("utf-8")
+        self.lbl_zoom_diseno_porcentaje.value = f"{self._porcentaje_zoom_diseno():.0f} %"
+
+    def _actualizar_imagen_diseno_zoom(self, force: bool = False):
+        if not self._svg_diseno_raw or not self.vista_svg_diseno:
+            return
+        svg_con_viewbox = aplicar_viewbox(self._svg_diseno_raw, self.vista_svg_diseno)
+        self.img_svg_diseno.src = svg_con_viewbox.encode("utf-8")
+        self.lbl_zoom_diseno_porcentaje.value = f"{self._porcentaje_zoom_diseno():.0f} %"
+        try:
+            self.img_svg_diseno.update()
+            self.lbl_zoom_diseno_porcentaje.update()
+        except Exception:
+            pass
+
+    def _on_gesture_diseno_scroll(self, e: ft.ScrollEvent):
+        if not self.vista_svg_diseno:
+            return
+        delta_y = getattr(e, "scroll_delta", None)
+        factor = 1.15
+        if delta_y and hasattr(delta_y, "y"):
+            if delta_y.y > 0:
+                factor = 1.0 / 1.15
+            elif delta_y.y < 0:
+                factor = 1.15
+
+        fx = 0.5
+        fy = 0.5
+        local_pos = getattr(e, "local_position", None)
+        if local_pos and hasattr(local_pos, "x") and hasattr(local_pos, "y"):
+            if self.zona_ancho_diseno > 0 and self.zona_alto_diseno > 0:
+                fx = max(0.01, min(0.99, local_pos.x / self.zona_ancho_diseno))
+                fy = max(0.01, min(0.99, local_pos.y / self.zona_alto_diseno))
+
+        self.vista_svg_diseno = zoom(
+            self.vista_svg_diseno,
+            factor=factor,
+            fx=fx,
+            fy=fy,
+            limites=self._limites_zoom_diseno()
+        )
+        self._actualizar_imagen_diseno_zoom()
+
+    def _on_gesture_diseno_pan_update(self, e: ft.DragUpdateEvent):
+        if not self.vista_svg_diseno or not self.vista_base_svg_diseno:
+            return
+        delta = getattr(e, "local_delta", None) or getattr(e, "global_delta", None)
+        if delta and hasattr(delta, "x") and hasattr(delta, "y"):
+            w_control = max(50.0, self.zona_ancho_diseno)
+            h_control = max(50.0, self.zona_alto_diseno)
+            dx = delta.x * (self.vista_svg_diseno.ancho / w_control)
+            dy = delta.y * (self.vista_svg_diseno.alto / h_control)
+            limites_cont = (self.vista_base_svg_diseno.ancho, self.vista_base_svg_diseno.alto)
+            self.vista_svg_diseno = desplazar(self.vista_svg_diseno, dx=dx, dy=dy, limites_contenido=limites_cont)
+            self._actualizar_imagen_diseno_zoom()
+
+    def _on_gesture_diseno_double_tap(self, e):
+        self._ajustar_vista_diseno()
+
+    def _on_btn_zoom_in_diseno(self, e):
+        if not self.vista_svg_diseno:
+            return
+        self.vista_svg_diseno = zoom(self.vista_svg_diseno, factor=1.25, fx=0.5, fy=0.5, limites=self._limites_zoom_diseno())
+        self._actualizar_imagen_diseno_zoom(force=True)
+
+    def _on_btn_zoom_out_diseno(self, e):
+        if not self.vista_svg_diseno:
+            return
+        self.vista_svg_diseno = zoom(self.vista_svg_diseno, factor=1.0 / 1.25, fx=0.5, fy=0.5, limites=self._limites_zoom_diseno())
+        self._actualizar_imagen_diseno_zoom(force=True)
+
+    def _on_btn_ajustar_diseno(self, e):
+        self._ajustar_vista_diseno()
+
+    def _ajustar_vista_diseno(self):
+        if not self._svg_diseno_raw:
+            return
+        w_nat, h_nat = extraer_dimensiones_svg(self._svg_diseno_raw)
+        aspecto_zona = self.zona_ancho_diseno / self.zona_alto_diseno if self.zona_alto_diseno > 0 else 1.0
+        self.vista_base_svg_diseno = ajustar(w_nat, h_nat, aspecto_zona=aspecto_zona, margen=0.04)
+        self.vista_svg_diseno = self.vista_base_svg_diseno
+        self._actualizar_imagen_diseno_zoom(force=True)
+
+    def on_cambio_seccion_diseno(self, e):
+        sel = self.selector_seccion_diseno.selected[0] if self.selector_seccion_diseno.selected else "superior"
+        self.selector_variante_pico_diseno.visible = (sel == "pico")
+        var = self.selector_variante_pico_diseno.selected[0] if self.selector_variante_pico_diseno.selected else "A"
+        self.controlador.cambiar_diseno_seccion(sel, var)
+        self._sync_controlador_a_vista(self.controlador.get_view_model(), reset_zoom=True)
+
+    def on_cambio_variante_diseno(self, e):
+        sel = self.selector_seccion_diseno.selected[0] if self.selector_seccion_diseno.selected else "pico"
+        var = self.selector_variante_pico_diseno.selected[0] if self.selector_variante_pico_diseno.selected else "A"
+        self.controlador.cambiar_diseno_seccion(sel, var)
+        self._sync_controlador_a_vista(self.controlador.get_view_model(), reset_zoom=True)
+
+    def on_cambio_lienzo_diseno(self, e):
+        modo = self.selector_lienzo_diseno.selected[0] if self.selector_lienzo_diseno.selected else "completo"
+        self.controlador.cambiar_diseno_lienzo_modo(modo)
+        self._sync_controlador_a_vista(self.controlador.get_view_model(), reset_zoom=True)
+
+    async def on_anadir_capa_click(self, e):
+        archivos = await self.file_picker.pick_files(
+            dialog_title="Seleccionar imagen o SVG para diseño",
+            file_type=ft.FilePickerFileType.CUSTOM,
+            allowed_extensions=["png", "jpg", "jpeg", "webp", "svg"],
+            allow_multiple=False,
+        )
+        if archivos and len(archivos) > 0 and archivos[0].path:
+            ruta = archivos[0].path
+            try:
+                self.controlador.anadir_capa(ruta)
+                self._sync_controlador_a_vista(self.controlador.get_view_model())
+                self._mostrar_snackbar(f"Capa añadida: {os.path.basename(ruta)}")
+            except Exception as ex:
+                self._mostrar_snackbar(f"Error al añadir capa: {ex}")
+
+    def _actualizar_panel_capas_y_inspector(self, vm: ViewModelTrompo):
+        self.col_lista_capas.controls.clear()
+        capa_activa = self.controlador.obtener_capa_seleccionada()
+
+        for c in vm.capas_diseno:
+            es_sel = (c.id == vm.capa_seleccionada_id)
+            c_id = c.id
+
+            def make_select(cid):
+                return lambda e: self._seleccionar_capa(cid)
+
+            def make_move(cid, delta):
+                return lambda e: self._mover_capa(cid, delta)
+
+            def make_toggle_vis(cid, vis):
+                return lambda e: self._toggle_visibilidad_capa(cid, vis)
+
+            def make_toggle_lock(cid, lock):
+                return lambda e: self._toggle_bloqueo_capa(cid, lock)
+
+            def make_delete(cid):
+                return lambda e: self._eliminar_capa(cid)
+
+            btn_vis = ft.IconButton(
+                icon=ft.Icons.VISIBILITY if c.visible else ft.Icons.VISIBILITY_OFF,
+                icon_size=16,
+                tooltip="Visibilidad",
+                on_click=make_toggle_vis(c_id, not c.visible),
+            )
+            btn_lock = ft.IconButton(
+                icon=ft.Icons.LOCK if c.bloqueada else ft.Icons.LOCK_OPEN,
+                icon_size=16,
+                tooltip="Bloquear",
+                on_click=make_toggle_lock(c_id, not c.bloqueada),
+            )
+            btn_up = ft.IconButton(
+                icon=ft.Icons.ARROW_UPWARD,
+                icon_size=16,
+                tooltip="Subir orden",
+                on_click=make_move(c_id, -1),
+            )
+            btn_down = ft.IconButton(
+                icon=ft.Icons.ARROW_DOWNWARD,
+                icon_size=16,
+                tooltip="Bajar orden",
+                on_click=make_move(c_id, 1),
+            )
+            btn_del = ft.IconButton(
+                icon=ft.Icons.DELETE_OUTLINE,
+                icon_size=16,
+                icon_color=ft.Colors.ERROR,
+                tooltip="Eliminar",
+                on_click=make_delete(c_id),
+            )
+
+            tipo_icono = ft.Icons.DRAW if c.tipo == "svg" else ft.Icons.IMAGE
+            fila_capa = ft.Container(
+                padding=6,
+                border_radius=6,
+                bgcolor=ft.Colors.PRIMARY_CONTAINER if es_sel else ft.Colors.SURFACE_CONTAINER,
+                border=ft.Border.all(1, ft.Colors.PRIMARY if es_sel else ft.Colors.OUTLINE_VARIANT),
+                on_click=make_select(c_id),
+                content=ft.Row(
+                    controls=[
+                        ft.Icon(tipo_icono, size=18),
+                        ft.Text(c.nombre, size=13, weight=ft.FontWeight.BOLD if es_sel else ft.FontWeight.NORMAL, expand=True),
+                        btn_vis,
+                        btn_lock,
+                        btn_up,
+                        btn_down,
+                        btn_del,
+                    ],
+                    spacing=2,
+                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                ),
+            )
+            self.col_lista_capas.controls.append(fila_capa)
+
+        # Actualizar inspector
+        if capa_activa:
+            self.panel_inspector_capa.visible = True
+            self.txt_nombre_capa.value = capa_activa.nombre
+            self.txt_pos_x.value = f"{capa_activa.x:.2f}"
+            self.txt_pos_y.value = f"{capa_activa.y:.2f}"
+            self.txt_ancho_capa.value = f"{capa_activa.ancho:.2f}"
+            self.txt_alto_capa.value = f"{capa_activa.alto:.2f}"
+            self.chk_proporcion.value = self.controlador.mantener_proporcion
+            self.slider_rotacion.value = float(capa_activa.rotacion)
+            self.lbl_rotacion_val.value = f"{capa_activa.rotacion:.0f}°"
+            self.slider_opacidad.value = float(capa_activa.opacidad)
+            self.lbl_opacidad_val.value = f"{int(capa_activa.opacidad * 100)}%"
+        else:
+            self.panel_inspector_capa.visible = False
+
+    def _seleccionar_capa(self, cid: str):
+        self.controlador.capa_seleccionada_id = cid
+        self._sync_controlador_a_vista(self.controlador.get_view_model())
+
+    def _mover_capa(self, cid: str, delta: int):
+        self.controlador.mover_capa(cid, delta)
+        self._sync_controlador_a_vista(self.controlador.get_view_model())
+
+    def _toggle_visibilidad_capa(self, cid: str, vis: bool):
+        self.controlador.capa_seleccionada_id = cid
+        self.controlador.modificar_capa_seleccionada(visible=vis)
+        self._sync_controlador_a_vista(self.controlador.get_view_model())
+
+    def _toggle_bloqueo_capa(self, cid: str, lock: bool):
+        for c in self.controlador.obtener_diseno_activo().capas:
+            if c.id == cid:
+                c.bloqueada = lock
+                self.controlador.sin_guardar = True
+                break
+        self._sync_controlador_a_vista(self.controlador.get_view_model())
+
+    def _eliminar_capa(self, cid: str):
+        self.controlador.eliminar_capa(cid)
+        self._sync_controlador_a_vista(self.controlador.get_view_model())
+        self._mostrar_snackbar("Capa eliminada")
+
+    def on_nombre_capa_change(self, e):
+        self.controlador.modificar_capa_seleccionada(nombre=self.txt_nombre_capa.value)
+        self._sync_controlador_a_vista(self.controlador.get_view_model())
+
+    def on_pos_x_change(self, e):
+        try:
+            val = float(self.txt_pos_x.value or 0.0)
+            self.controlador.modificar_capa_seleccionada(x=val)
+            self._sync_controlador_a_vista(self.controlador.get_view_model())
+        except ValueError:
+            pass
+
+    def on_pos_y_change(self, e):
+        try:
+            val = float(self.txt_pos_y.value or 0.0)
+            self.controlador.modificar_capa_seleccionada(y=val)
+            self._sync_controlador_a_vista(self.controlador.get_view_model())
+        except ValueError:
+            pass
+
+    def on_ancho_capa_change(self, e):
+        try:
+            val = max(0.1, float(self.txt_ancho_capa.value or 1.0))
+            capa = self.controlador.obtener_capa_seleccionada()
+            if capa:
+                if self.controlador.mantener_proporcion and capa.ancho_natural > 0:
+                    alto_prop = val * (capa.alto_natural / capa.ancho_natural)
+                    self.controlador.modificar_capa_seleccionada(ancho=val, alto=alto_prop)
+                else:
+                    self.controlador.modificar_capa_seleccionada(ancho=val)
+                self._sync_controlador_a_vista(self.controlador.get_view_model())
+        except ValueError:
+            pass
+
+    def on_alto_capa_change(self, e):
+        try:
+            val = max(0.1, float(self.txt_alto_capa.value or 1.0))
+            capa = self.controlador.obtener_capa_seleccionada()
+            if capa:
+                if self.controlador.mantener_proporcion and capa.alto_natural > 0:
+                    ancho_prop = val * (capa.ancho_natural / capa.alto_natural)
+                    self.controlador.modificar_capa_seleccionada(ancho=ancho_prop, alto=val)
+                else:
+                    self.controlador.modificar_capa_seleccionada(alto=val)
+                self._sync_controlador_a_vista(self.controlador.get_view_model())
+        except ValueError:
+            pass
+
+    def on_proporcion_change(self, e):
+        self.controlador.mantener_proporcion = bool(self.chk_proporcion.value)
+
+    def on_rotacion_change(self, e):
+        val = float(self.slider_rotacion.value or 0.0)
+        self.lbl_rotacion_val.value = f"{val:.0f}°"
+        self.controlador.modificar_capa_seleccionada(rotacion=val)
+        self._sync_controlador_a_vista(self.controlador.get_view_model())
+
+    def on_reflejo_h_click(self, e):
+        capa = self.controlador.obtener_capa_seleccionada()
+        if capa:
+            self.controlador.modificar_capa_seleccionada(reflejo_h=not capa.reflejo_h)
+            self._sync_controlador_a_vista(self.controlador.get_view_model())
+
+    def on_reflejo_v_click(self, e):
+        capa = self.controlador.obtener_capa_seleccionada()
+        if capa:
+            self.controlador.modificar_capa_seleccionada(reflejo_v=not capa.reflejo_v)
+            self._sync_controlador_a_vista(self.controlador.get_view_model())
+
+    def on_opacidad_change(self, e):
+        val = float(self.slider_opacidad.value or 1.0)
+        self.lbl_opacidad_val.value = f"{int(val * 100)}%"
+        self.controlador.modificar_capa_seleccionada(opacidad=val)
+        self._sync_controlador_a_vista(self.controlador.get_view_model())
+
+    def on_centrar_capa_click(self, e):
+        self.controlador.centrar_capa_seleccionada()
+        self._sync_controlador_a_vista(self.controlador.get_view_model())
+
+    def on_ajustar_ancho_click(self, e):
+        self.controlador.ajustar_capa_ancho()
+        self._sync_controlador_a_vista(self.controlador.get_view_model())
+
+    def on_ajustar_alto_click(self, e):
+        self.controlador.ajustar_capa_alto()
+        self._sync_controlador_a_vista(self.controlador.get_view_model())
+
+    async def on_exportar_gajos_click(self, e):
+        carpeta = await self.file_picker.get_directory_path(dialog_title="Seleccionar carpeta para exportar gajos")
+        if carpeta:
+            try:
+                archs = self.controlador.exportar_gajos_diseno(carpeta)
+                self._mostrar_snackbar(f"{len(archs)} gajos exportados en {os.path.basename(carpeta)}")
+            except Exception as ex:
+                self._mostrar_snackbar(f"Error al exportar gajos: {ex}")
+
+    async def on_exportar_hoja_diseno_click(self, e):
+        nom_def = f"hoja_abanico_{self.controlador.diseno_seccion}.svg"
+        ruta = await self.file_picker.save_file(
+            dialog_title="Guardar hoja de trazo decorada",
+            file_name=nom_def,
+            file_type=ft.FilePickerFileType.CUSTOM,
+            allowed_extensions=["svg"],
+        )
+        if ruta:
+            try:
+                self.controlador.exportar_hoja_diseno(ruta)
+                self._mostrar_snackbar(f"Hoja decorada guardada: {os.path.basename(ruta)}")
+            except Exception as ex:
+                self._mostrar_snackbar(f"Error al exportar hoja decorada: {ex}")
+
