@@ -6,7 +6,8 @@ Aplicación de escritorio para el diseño, cálculo geométrico y despiece de mo
 - **Cálculo geométrico exacto**: Obtención de las tres piezas de cada gajo (cono superior, cono inferior y picos) a partir de la altura total de papel, número de gajos, hileras de picos y costura.
 - **Modo simple y avanzado**: Estimación de viabilidad, empuje neto (gas ideal), holgura de mecha, aro de alambre y pliegos de papel requeridos.
 - **Moldes 2D vectoriales**: Visualización en pantalla y exportación de SVG a escala real con cotas y márgenes de costura.
-- **Hojas de trazo y abanicos**: Distribución automática y a escala para impresión en hojas Carta o A4, y trazo en abanico.
+- **Hojas de trazo y abanicos**: Distribución automática y a escala para impresión en hojas Carta o A4, y trazo en abanico continuo o por mitad simétrica.
+- **Diseño gráfico sobre el abanico**: Capas vectoriales (SVG) e imágenes (PNG/JPG) con escalado, rotación, opacidad, reflejos rígidos simétricos, recorte exacto de gajos y exportación de piezas decoradas.
 - **Visualizador 3D interactivo**: Previsualización 3D en tiempo real con Three.js (luces solares, controles orbitales, modo día/noche y costuras).
 - **Esquemas de pintura y lista de compra**: Asignación de patrones de color para papel china, catálogo personalizable y cálculo de pliegos y paquetes de papel necesarios.
 

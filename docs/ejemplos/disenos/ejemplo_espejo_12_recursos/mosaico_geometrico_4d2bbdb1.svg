@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <linearGradient id="grad-mosaico" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E63946" />
+      <stop offset="50%" stop-color="#F1FAEE" />
+      <stop offset="100%" stop-color="#1D3557" />
+    </linearGradient>
+  </defs>
+  <rect width="200" height="200" fill="none" />
+  <!-- Greca y rombos tradicionales -->
+  <polygon points="100,10 190,100 100,190 10,100" fill="#E63946" stroke="#457B9D" stroke-width="4" />
+  <polygon points="100,35 165,100 100,165 35,100" fill="#F1FAEE" stroke="#1D3557" stroke-width="3" />
+  <polygon points="100,60 140,100 100,140 60,100" fill="#A8DADC" stroke="#1D3557" stroke-width="2" />
+  <!-- Cruz y estrellas centrales -->
+  <circle cx="100" cy="100" r="18" fill="#E63946" />
+  <circle cx="100" cy="100" r="8" fill="#F1FAEE" />
+  <path d="M 10,10 L 40,40 M 190,10 L 160,40 M 10,190 L 40,160 M 190,190 L 160,160" stroke="#1D3557" stroke-width="4" stroke-linecap="round" />
+</svg>

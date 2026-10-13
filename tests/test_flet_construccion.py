@@ -9,10 +9,9 @@ from app_flet.controlador import ControladorTrompo
 def test_construccion_flet_estado_inicial():
     v = VistaTrompo()
     assert v is not None
-    assert v.txt_altura is not None
     assert v.txt_gajos is not None
     assert v.tabs is not None
-    assert v.tabs.length == 5
+    assert v.tabs.length == 6
 
     # Estado inicial: tablas y moldes muestran mensajes amables de vacío
     assert v.lbl_vacio_tablas.visible is True

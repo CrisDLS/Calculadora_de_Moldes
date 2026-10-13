@@ -22,13 +22,13 @@ class MockFilePicker:
         return self.carpeta_retorno
 
 
-def test_vista_trompo_5_pestanas_e_inicializacion():
+def test_vista_trompo_6_pestanas_e_inicializacion():
     picker = MockFilePicker()
     vista = VistaTrompo(servicio_file_picker=picker)
-    assert vista.tabs.length == 5
-    assert len(vista.tabs.content.controls[0].tabs) == 5
+    assert vista.tabs.length == 6
+    assert len(vista.tabs.content.controls[0].tabs) == 6
     tab_names = [t.label for t in vista.tabs.content.controls[0].tabs]
-    assert tab_names == ["Resumen", "Tablas de moldes", "Moldes 2D", "Hoja de trazo", "Vista 3D"]
+    assert tab_names == ["Resumen", "Tablas de moldes", "Moldes 2D", "Hoja de trazo", "Diseño", "Vista 3D"]
 
 
 def test_vista_trompo_hoja_tras_calcular():
