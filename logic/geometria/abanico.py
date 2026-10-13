@@ -180,3 +180,13 @@ def abanico(
         alto_total=max_y - min_y,
         pasos_radiales=pasos_radiales,
     )
+
+# Re-exportaciones para diseño y transformaciones
+from logic.diseno.transformaciones import (
+    Transformacion2D,
+    reflejo_del_abanico,
+    transformacion_a_gajo,
+    recorte_gajo,
+    gajos_equivalentes,
+    construir_grupo,
+)
