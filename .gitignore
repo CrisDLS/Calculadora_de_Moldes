@@ -3,3 +3,5 @@ __pycache__/
 .venv/
 .pytest_cache/
 guardados/recursos_temp/
+docs/ejemplos/disenos/_prueba_usuario.*
+logs/

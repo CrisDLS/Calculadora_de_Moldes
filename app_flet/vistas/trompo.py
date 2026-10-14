@@ -24,6 +24,7 @@ from logic.diseno.paleta import ColorPapel, cargar_catalogo, color_por_id, expor
 from logic.diseno.pintura import EsquemaPintura, VariantePico, color_de_cara
 from logic.geometria.malla_trompo import Cara
 from logic.exportacion.visor3d import exportar_visor_autocontenido
+from logic.registro import logger
 
 class VistaTrompo(ft.Container):
     def __init__(self, servicio_clipboard=None, servicio_file_picker=None):
@@ -1137,6 +1138,22 @@ class VistaTrompo(ft.Container):
             spacing=4,
         )
 
+        # Telemetría de arrastre y recomposición de diseño
+        self.telemetria_arrastre_eventos: int = 0
+        self.telemetria_arrastre_inicio_ts: float = 0.0
+        self.telemetria_eventos_por_segundo: float = 0.0
+        self.telemetria_ms_ultima_recomposicion: float = 0.0
+        self.telemetria_recomposiciones_pendientes: int = 0
+        self.telemetria_recomposiciones_descartadas: int = 0
+        self.arrastrando_capa: bool = False
+        self.lbl_debug_diseno = ft.Text(
+            "",
+            size=10,
+            color=ft.Colors.ON_SURFACE_VARIANT,
+            text_align=ft.TextAlign.CENTER,
+            visible=self.debug_mode,
+        )
+
         # Barra superior de herramientas del visor de diseño
         self.chk_ver_cuadricula = ft.Checkbox(
             label="Cuadrícula",
@@ -1306,6 +1323,7 @@ class VistaTrompo(ft.Container):
                         self.container_viewer_diseno,
                         self.barra_zoom_diseno,
                         ft.Row([self.lbl_instruccion_zoom], alignment=ft.MainAxisAlignment.CENTER),
+                        ft.Row([self.lbl_debug_diseno], alignment=ft.MainAxisAlignment.CENTER) if self.debug_mode else ft.Container(),
                     ],
                     spacing=4,
                 ),
@@ -3235,4 +3253,28 @@ class VistaTrompo(ft.Container):
                 self._mostrar_snackbar(f"Hoja decorada guardada: {os.path.basename(ruta)}")
             except Exception as ex:
                 self._mostrar_snackbar(f"Error al exportar hoja decorada: {ex}")
+
+    def obtener_estado_telemetria(self) -> dict:
+        return {
+            "arrastrando": getattr(self, "arrastrando_capa", False),
+            "modo": getattr(self, "modo_interaccion_diseno", "navegar"),
+            "eventos_arrastre": getattr(self, "telemetria_arrastre_eventos", 0),
+            "pendientes": getattr(self, "telemetria_recomposiciones_pendientes", 0),
+            "descartadas": getattr(self, "telemetria_recomposiciones_descartadas", 0),
+        }
+
+    def _actualizar_debug_diseno(self):
+        if not self.debug_mode:
+            return
+        self.lbl_debug_diseno.value = (
+            f"arrastre: {self.telemetria_eventos_por_segundo:.1f} ev/s · "
+            f"última recomp: {self.telemetria_ms_ultima_recomposicion:.1f} ms · "
+            f"pendientes: {self.telemetria_recomposiciones_pendientes} · "
+            f"descartadas: {self.telemetria_recomposiciones_descartadas}"
+        )
+        try:
+            self.lbl_debug_diseno.update()
+        except Exception:
+            pass
+
 

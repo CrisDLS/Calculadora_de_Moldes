@@ -49,3 +49,6 @@ pytest
 > **Nota de calibración física**: Los supuestos físicos del cálculo (temperatura interior de 70 °C, temperatura ambiente de 28 °C, gramaje de papel de 20 g/m² + pegamento, pestaña de boca y holgura mínima de mecha) son estimaciones teóricas que deben calibrarse mediante pruebas prácticas y prototipos controlados.
 
 > **Aviso de seguridad**: Las estimaciones no sustituyen las pruebas; vuela solo en áreas abiertas y conforme a la normativa local.
+
+## Diagnóstico y registros
+Los registros de depuración y rendimiento se guardan automáticamente en `logs/globos.log` (rotativo, 1 MB × 3 archivos, UTF-8). Si experimentas algún problema de rendimiento o congelamiento, adjunta este archivo al reportar la incidencia.
