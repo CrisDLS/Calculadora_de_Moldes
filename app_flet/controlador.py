@@ -1,8 +1,8 @@
 # app_flet/controlador.py
 import os
 import warnings
-from dataclasses import dataclass, field
-from typing import Any, List, Optional, Tuple, Union
+from dataclasses import dataclass, field, asdict
+from typing import Any, Dict, List, Optional, Tuple, Union
 from logic.calculators.trompo_estrella import TrompoEstrellaCalculator
 from logic.models import BalloonInput, BalloonCalculationResult, Condiciones
 from logic.exportacion.estilos import EstiloSvg, PANTALLA_OSCURO, IMPRESION
@@ -42,6 +42,8 @@ class AvisoFlet:
     texto: str
     clase: str  # "ok", "aviso", "error", "info"
 
+from logic.diseno.config_seccion import ConfigSeccion
+
 @dataclass
 class ViewModelTrompo:
     tarjetas: List[TarjetaResumen]
@@ -79,6 +81,11 @@ class ViewModelTrompo:
     diseno_lienzo_modo: str = "completo"
     mantener_proporcion: bool = True
     recursos_faltantes: List[str] = field(default_factory=list)
+    # Configuración independiente por sección (Parte 1)
+    config_secciones: Dict[str, ConfigSeccion] = field(default_factory=dict)
+    puede_usar_mitad: bool = True
+    motivo_no_mitad: str = ""
+
 
 class ControladorTrompo:
     def __init__(self, estilo_svg: EstiloSvg = PANTALLA_OSCURO):
@@ -134,6 +141,31 @@ class ControladorTrompo:
         self.hoja_lienzo: str = "abanico"   # "abanico" | "separadas"
         self.hoja_dibujar: str = "completo" # "completo" | "mitad"
         self.esquema_pico: EsquemaDisenoPico = EsquemaDisenoPico()
+
+        # Configuración independiente por sección (Parte 1)
+        self.config_secciones: Dict[str, ConfigSeccion] = {
+            "superior": ConfigSeccion(
+                seccion="superior",
+                esquema=EsquemaDiseno(modo="repeticion", tam_grupo=5),
+                dibujar="completo",
+                lienzo="abanico",
+                escala="auto",
+            ),
+            "inferior": ConfigSeccion(
+                seccion="inferior",
+                esquema=EsquemaDiseno(modo="repeticion", tam_grupo=5),
+                dibujar="completo",
+                lienzo="abanico",
+                escala="auto",
+            ),
+            "pico": ConfigSeccion(
+                seccion="pico",
+                esquema_pico=EsquemaDisenoPico(),
+                dibujar="completo",
+                lienzo="abanico",
+                escala="auto",
+            ),
+        }
 
         self.aviso_hoja: Optional[str] = None
 
@@ -237,6 +269,24 @@ class ControladorTrompo:
             self.esquema_tam_grupo = tam_grupo
         if ciclo_texto is not None:
             self.esquema_ciclo_texto = ciclo_texto
+
+        sec = self.hoja_pieza if self.hoja_pieza != "pico" else "superior"
+        cfg = self.obtener_config_seccion(sec)
+        if self.esquema_modo == "personalizado":
+            try:
+                ciclo = parsear_ciclo(self.esquema_ciclo_texto)
+                cfg.esquema = EsquemaDiseno("personalizado", len(ciclo), ciclo=ciclo)
+            except Exception:
+                cfg.esquema = EsquemaDiseno("personalizado", 1, ciclo=None)
+        else:
+            try:
+                cfg.esquema = EsquemaDiseno(self.esquema_modo, int(self.esquema_tam_grupo))
+            except Exception:
+                cfg.esquema = None
+        puede, _ = cfg.puede_usar_mitad()
+        if not puede and cfg.dibujar == "mitad":
+            cfg.dibujar = "completo"
+            self.hoja_dibujar = "completo"
         self.marcar_cambio_diseno()
 
     def actualizar_opciones_hoja(
@@ -249,20 +299,47 @@ class ControladorTrompo:
     ):
         if pieza is not None:
             self.hoja_pieza = pieza
+            cfg = self.obtener_config_seccion(pieza)
+            if cfg.esquema:
+                self.esquema_modo = cfg.esquema.modo
+                self.esquema_tam_grupo = cfg.esquema.tam_grupo
+                if cfg.esquema.ciclo:
+                    self.esquema_ciclo_texto = ", ".join(f"{m}{'E' if e else ''}" for m, e in cfg.esquema.ciclo)
+            self.hoja_lienzo = cfg.lienzo
+            self.hoja_dibujar = cfg.dibujar
+            self.hoja_escala = str(cfg.escala)
         if tipo is not None:
             self.hoja_tipo = tipo
+
+        sec = self.hoja_pieza
+        cfg = self.obtener_config_seccion(sec)
         if escala is not None:
             self.hoja_escala = escala
+            cfg.escala = escala
         if lienzo is not None:
             self.hoja_lienzo = lienzo
+            cfg.lienzo = lienzo
         if dibujar is not None:
-            self.hoja_dibujar = dibujar
+            if sec == "pico":
+                cfg.dibujar = "completo"
+                self.hoja_dibujar = "completo"
+            else:
+                puede, _ = cfg.puede_usar_mitad()
+                if dibujar == "mitad" and not puede:
+                    cfg.dibujar = "completo"
+                    self.hoja_dibujar = "completo"
+                else:
+                    cfg.dibujar = dibujar
+                    self.hoja_dibujar = dibujar
         self.marcar_cambio_diseno()
 
     def actualizar_esquema_pico(self, modo_repeticion: Optional[str] = None):
         if modo_repeticion is not None:
             self.esquema_pico.modo_repeticion = modo_repeticion
             self.esquema_pico.usar_variante_b = (modo_repeticion != "todas_a")
+            if "pico" in self.config_secciones and self.config_secciones["pico"].esquema_pico:
+                self.config_secciones["pico"].esquema_pico.modo_repeticion = modo_repeticion
+                self.config_secciones["pico"].esquema_pico.usar_variante_b = (modo_repeticion != "todas_a")
         self.marcar_cambio_diseno()
 
     def _vaciar_datos_calculados(self):
@@ -285,7 +362,11 @@ class ControladorTrompo:
             self.svg_perfil = svg_perfil(perf, estilo=self.estilo_svg, escala=10.0)
             self._generar_svg_hoja()
 
-    def _construir_esquema(self) -> EsquemaDiseno:
+    def _construir_esquema(self, seccion: Optional[str] = None) -> EsquemaDiseno:
+        if seccion is not None and seccion != self.hoja_pieza:
+            cfg = self.config_secciones.get(seccion)
+            if cfg and cfg.esquema:
+                return cfg.esquema
         if self.esquema_modo == "personalizado":
             ciclo = parsear_ciclo(self.esquema_ciclo_texto)
             return EsquemaDiseno("personalizado", len(ciclo), ciclo=ciclo)
@@ -299,27 +380,30 @@ class ControladorTrompo:
             return
 
         try:
-            esq = self._construir_esquema()
-            escala_val = "auto" if str(self.hoja_escala).lower() == "auto" else float(self.hoja_escala)
+            sec = self.hoja_pieza
+            cfg = self.obtener_config_seccion(sec)
+            esq = cfg.esquema if (cfg and cfg.esquema) else self._construir_esquema(sec)
+            escala_val = "auto" if str(cfg.escala).lower() == "auto" else float(cfg.escala)
+            dibujar_val = cfg.dibujar
 
             with warnings.catch_warnings(record=True) as w_list:
                 warnings.simplefilter("always")
-                if self.hoja_lienzo == "abanico":
+                if cfg.lienzo == "abanico":
                     self.svg_hoja = svg_abanico(
                         resultado=self.resultado,
                         entrada=self.entrada_actual,
-                        seccion=self.hoja_pieza,
+                        seccion=sec,
                         esquema=esq,
                         escala=escala_val,
                         hoja=self.hoja_tipo,
                         estilo=IMPRESION,
-                        dibujar=self.hoja_dibujar,
+                        dibujar=dibujar_val,
                     )
                 else:
                     self.svg_hoja = svg_hoja(
                         resultado=self.resultado,
                         entrada=self.entrada_actual,
-                        seccion=self.hoja_pieza,
+                        seccion=sec,
                         esquema=esq,
                         escala=escala_val,
                         hoja=self.hoja_tipo,
@@ -378,7 +462,7 @@ class ControladorTrompo:
 
         return self.get_view_model()
 
-    # --- Métodos de Proyecto (F3) ---
+    # --- Métodos de Proyecto (F3 y Parte 1) ---
     def nuevo(self):
         self.limpiar()
         self.altura = "950"
@@ -405,6 +489,30 @@ class ControladorTrompo:
         self.hoja_dibujar = "completo"
         self.esquema_pico = EsquemaDisenoPico()
 
+        self.config_secciones = {
+            "superior": ConfigSeccion(
+                seccion="superior",
+                esquema=EsquemaDiseno(modo="repeticion", tam_grupo=5),
+                dibujar="completo",
+                lienzo="abanico",
+                escala="auto",
+            ),
+            "inferior": ConfigSeccion(
+                seccion="inferior",
+                esquema=EsquemaDiseno(modo="repeticion", tam_grupo=5),
+                dibujar="completo",
+                lienzo="abanico",
+                escala="auto",
+            ),
+            "pico": ConfigSeccion(
+                seccion="pico",
+                esquema_pico=EsquemaDisenoPico(),
+                dibujar="completo",
+                lienzo="abanico",
+                escala="auto",
+            ),
+        }
+
         self.disenos = {}
         self.capa_seleccionada_id = None
         self.svg_diseno = ""
@@ -413,6 +521,99 @@ class ControladorTrompo:
         self.nombre_proyecto = "Sin título"
         self.ruta_proyecto = None
         self.sin_guardar = False
+
+    def obtener_config_seccion(self, seccion: Optional[str] = None) -> ConfigSeccion:
+        sec = seccion or self.diseno_seccion
+        if sec not in self.config_secciones:
+            self.config_secciones[sec] = ConfigSeccion(seccion=sec)
+        return self.config_secciones[sec]
+
+    def cambiar_seccion_hoja(self, seccion: str) -> None:
+        self.hoja_pieza = seccion
+        cfg = self.obtener_config_seccion(seccion)
+        if cfg.esquema:
+            self.esquema_modo = cfg.esquema.modo
+            self.esquema_tam_grupo = cfg.esquema.tam_grupo
+            if cfg.esquema.ciclo:
+                self.esquema_ciclo_texto = ", ".join(f"{m}{'E' if e else ''}" for m, e in cfg.esquema.ciclo)
+        self.hoja_lienzo = cfg.lienzo
+        self.hoja_dibujar = cfg.dibujar
+        self.hoja_escala = str(cfg.escala)
+        self._generar_svg_hoja()
+
+    def cambiar_esquema_seccion(self, seccion: str, modo: str, tam_grupo: int, ciclo_texto: str = "") -> None:
+        cfg = self.obtener_config_seccion(seccion)
+        if cfg.seccion == "pico":
+            return
+        if modo == "personalizado":
+            ciclo = parsear_ciclo(ciclo_texto)
+            cfg.esquema = EsquemaDiseno("personalizado", len(ciclo), ciclo=ciclo)
+        else:
+            cfg.esquema = EsquemaDiseno(modo, int(tam_grupo))
+        puede, _ = cfg.puede_usar_mitad()
+        if not puede and cfg.dibujar == "mitad":
+            cfg.dibujar = "completo"
+        if self.hoja_pieza == seccion:
+            self.esquema_modo = modo
+            self.esquema_tam_grupo = tam_grupo
+            if ciclo_texto:
+                self.esquema_ciclo_texto = ciclo_texto
+            self.hoja_dibujar = cfg.dibujar
+        if self.diseno_seccion == seccion:
+            self.diseno_lienzo_modo = cfg.dibujar
+        self.sin_guardar = True
+        self._generar_svg_hoja()
+        self._actualizar_svg_diseno()
+
+    def cambiar_dibujar_seccion(self, seccion: str, dibujar: str) -> None:
+        cfg = self.obtener_config_seccion(seccion)
+        if cfg.seccion == "pico":
+            cfg.dibujar = "completo"
+        else:
+            puede, _ = cfg.puede_usar_mitad()
+            if dibujar == "mitad" and not puede:
+                cfg.dibujar = "completo"
+            else:
+                cfg.dibujar = dibujar
+        if self.hoja_pieza == seccion:
+            self.hoja_dibujar = cfg.dibujar
+        if self.diseno_seccion == seccion:
+            self.diseno_lienzo_modo = cfg.dibujar
+        self.sin_guardar = True
+        self._generar_svg_hoja()
+        self._actualizar_svg_diseno()
+
+    def cambiar_lienzo_seccion(self, seccion: str, lienzo: str) -> None:
+        cfg = self.obtener_config_seccion(seccion)
+        cfg.lienzo = lienzo
+        if self.hoja_pieza == seccion:
+            self.hoja_lienzo = lienzo
+        self.sin_guardar = True
+        self._generar_svg_hoja()
+
+    def cambiar_escala_seccion(self, seccion: str, escala: Union[str, int, float]) -> None:
+        cfg = self.obtener_config_seccion(seccion)
+        cfg.escala = escala
+        if self.hoja_pieza == seccion:
+            self.hoja_escala = str(escala)
+        self.sin_guardar = True
+        self._generar_svg_hoja()
+
+    def copiar_configuracion_seccion(self, origen: str, destino: str) -> None:
+        if origen not in self.config_secciones or destino not in self.config_secciones:
+            return
+        self.config_secciones[destino].copiar_desde(self.config_secciones[origen])
+        if self.hoja_pieza == destino:
+            self.cambiar_seccion_hoja(destino)
+        if self.diseno_seccion == destino:
+            self.diseno_lienzo_modo = self.config_secciones[destino].dibujar
+        self.sin_guardar = True
+        self._generar_svg_hoja()
+        self._actualizar_svg_diseno()
+
+    def sincronizar_conos(self, origen: str = "superior") -> None:
+        destino = "inferior" if origen == "superior" else "superior"
+        self.copiar_configuracion_seccion(origen, destino)
 
     def a_proyecto(self) -> Proyecto:
         datos = {
@@ -436,24 +637,26 @@ class ControladorTrompo:
         except Exception:
             ent = BalloonInput(float(self.altura or 950), int(self.gajos or 30), int(self.hileras or 2), float(self.costura or 1))
 
-        try:
-            esq = self._construir_esquema()
-        except Exception:
-            esq = None
+        esq_sup = self.obtener_config_seccion("superior").esquema
+
+        configs_a_guardar = {}
+        for k, v in self.config_secciones.items():
+            configs_a_guardar[k] = ConfigSeccion.from_dict(v.a_dict())
 
         return Proyecto(
-            version=1,
+            version=2,
             nombre=self.nombre_proyecto,
             entrada=ent,
             condiciones=Condiciones(pliego_cm=(float(self.pliego_ancho), float(self.pliego_alto))),
-            esquema=esq,
+            esquema=esq_sup,
             notas="",
             hoja=self.hoja_tipo,
             escala=self.hoja_escala,
             pintura=self.pintura,
             pliegos_por_paquete=self.pliegos_por_paquete,
-            esquema_pico=self.esquema_pico,
+            esquema_pico=self.config_secciones["pico"].esquema_pico,
             disenos=self.disenos,
+            config_secciones=configs_a_guardar,
         )
 
     def desde_proyecto(self, proy: Proyecto, ruta: Optional[str] = None):
@@ -474,7 +677,24 @@ class ControladorTrompo:
         self.altura_llama = str(ent.altura_llama) if ent.altura_llama is not None else ""
         self.holgura = str(ent.holgura_min) if ent.holgura_min is not None else ""
 
-        if proy.esquema:
+        # Restaurar config_secciones
+        if getattr(proy, "config_secciones", None):
+            self.config_secciones = {}
+            for k, v in proy.config_secciones.items():
+                if isinstance(v, ConfigSeccion):
+                    self.config_secciones[k] = ConfigSeccion.from_dict(v.a_dict())
+                elif isinstance(v, dict):
+                    self.config_secciones[k] = ConfigSeccion.from_dict(v)
+
+            cfg_sup = self.config_secciones.get("superior")
+            if cfg_sup and cfg_sup.esquema:
+                self.esquema_modo = cfg_sup.esquema.modo
+                self.esquema_tam_grupo = cfg_sup.esquema.tam_grupo
+                if cfg_sup.esquema.ciclo:
+                    self.esquema_ciclo_texto = ", ".join(f"{m}{'E' if e else ''}" for m, e in cfg_sup.esquema.ciclo)
+                self.hoja_dibujar = cfg_sup.dibujar
+                self.hoja_lienzo = cfg_sup.lienzo
+        elif proy.esquema:
             self.esquema_modo = proy.esquema.modo
             self.esquema_tam_grupo = proy.esquema.tam_grupo
             if proy.esquema.ciclo:
@@ -581,6 +801,9 @@ class ControladorTrompo:
         dis_activo = self.obtener_diseno_activo() if not self.desactualizado else None
         capas_dis = list(dis_activo.capas) if dis_activo else []
 
+        cfg_diseno = self.obtener_config_seccion(self.diseno_seccion)
+        puede_mitad, motivo_no = cfg_diseno.puede_usar_mitad()
+
         return ViewModelTrompo(
             tarjetas=tarjetas,
             avisos=avisos,
@@ -610,9 +833,12 @@ class ControladorTrompo:
             capa_seleccionada_id=self.capa_seleccionada_id,
             diseno_seccion=self.diseno_seccion,
             diseno_variante=self.diseno_variante,
-            diseno_lienzo_modo=self.diseno_lienzo_modo,
+            diseno_lienzo_modo=cfg_diseno.dibujar,
             mantener_proporcion=self.mantener_proporcion,
             recursos_faltantes=list(self.recursos_faltantes),
+            config_secciones={k: ConfigSeccion.from_dict(v.a_dict()) for k, v in self.config_secciones.items()},
+            puede_usar_mitad=puede_mitad,
+            motivo_no_mitad=motivo_no,
         )
 
     # --- Métodos de Diseño sobre el abanico (F6a) ---
@@ -719,12 +945,21 @@ class ControladorTrompo:
     def cambiar_diseno_seccion(self, seccion: str, variante: str = "A") -> None:
         self.diseno_seccion = seccion
         self.diseno_variante = variante
+        cfg = self.obtener_config_seccion(seccion)
+        self.diseno_lienzo_modo = cfg.dibujar
         dis = self.obtener_diseno_activo()
         self.capa_seleccionada_id = dis.capas[0].id if dis.capas else None
         self._actualizar_svg_diseno()
 
     def cambiar_diseno_lienzo_modo(self, modo: str) -> None:
-        self.diseno_lienzo_modo = modo
+        cfg = self.obtener_config_seccion(self.diseno_seccion)
+        if cfg.seccion == "pico":
+            cfg.dibujar = "completo"
+        else:
+            puede, _ = cfg.puede_usar_mitad()
+            cfg.dibujar = modo if (puede or modo == "completo") else "completo"
+        self.diseno_lienzo_modo = cfg.dibujar
+        self.sin_guardar = True
         self._actualizar_svg_diseno()
 
     def _actualizar_svg_diseno(self) -> None:
@@ -732,20 +967,25 @@ class ControladorTrompo:
             self.svg_diseno = ""
             return
         try:
-            esq = self._construir_esquema()
+            sec = self.diseno_seccion
+            cfg = self.obtener_config_seccion(sec)
+            esq = cfg.esquema if (cfg and cfg.esquema) else self._construir_esquema(sec)
             dis = self.obtener_diseno_activo()
             carp = self.obtener_carpeta_recursos_activa()
             self.svg_diseno = svg_abanico(
                 resultado=self.resultado,
                 entrada=self.entrada_actual,
-                seccion=self.diseno_seccion,
+                seccion=sec,
                 esquema=esq,
                 estilo=self.estilo_svg,
                 hoja=self.hoja_tipo,
-                dibujar=self.diseno_lienzo_modo,
+                dibujar=cfg.dibujar,
                 diseno=dis,
                 carpeta_recursos=carp,
             )
+        except Exception as e:
+            warnings.warn(f"Error generando SVG de diseño: {e}")
+            self.svg_diseno = ""
         except Exception as e:
             warnings.warn(f"Error generando SVG de diseño: {e}")
             self.svg_diseno = ""

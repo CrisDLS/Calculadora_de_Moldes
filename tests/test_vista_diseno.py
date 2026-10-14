@@ -109,7 +109,12 @@ def test_controlador_diseno_secciones_y_modos(controlador_calculado):
     assert c.diseno_seccion == "inferior"
     assert c.clave_diseno_activo() == "inferior"
 
-    # Cambiar modo lienzo
+    # Con esquema por defecto (repetición), 'mitad' no se permite y queda en 'completo'
+    c.cambiar_diseno_lienzo_modo("mitad")
+    assert c.diseno_lienzo_modo == "completo"
+
+    # Con esquema simétrico (central_espejo), 'mitad' es permitido
+    c.cambiar_esquema_seccion("inferior", "central_espejo", 5)
     c.cambiar_diseno_lienzo_modo("mitad")
     assert c.diseno_lienzo_modo == "mitad"
     vm = c.get_view_model()

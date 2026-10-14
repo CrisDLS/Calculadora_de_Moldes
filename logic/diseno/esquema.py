@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List, Tuple, Optional, Dict
+from typing import List, Tuple, Optional, Dict, Union, Any
 
 @dataclass
 class AsignacionGajo:
@@ -96,3 +96,57 @@ class EsquemaDiseno:
                 
         # Transformar a tuplas (total, en_espejo, sin_espejo)
         return {m: (v["total"], v["en_espejo"], v["sin_espejo"]) for m, v in resumen.items()}
+
+
+def tiene_simetria_espejo(esquema: Optional[Union[EsquemaDiseno, Dict[str, Any]]]) -> Tuple[bool, str]:
+    """Determina si un esquema de diseño posee simetría de espejo válida para el modo mitad.
+    
+    Devuelve (True, '') si es simétrico, o (False, motivo) si no lo es.
+    """
+    if esquema is None:
+        return False, "No se ha definido un esquema de diseño."
+    
+    if isinstance(esquema, dict):
+        ciclo = esquema.get("ciclo")
+        if ciclo:
+            ciclo = [(c[0], c[1]) for c in ciclo]
+        esquema = EsquemaDiseno(
+            modo=esquema.get("modo", "repeticion"),
+            tam_grupo=esquema.get("tam_grupo", 1),
+            ciclo=ciclo,
+        )
+    
+    if esquema.modo == "repeticion":
+        return False, "El modo 'repetición' no tiene simetría de espejo (los motivos se repiten secuencialmente)."
+    elif esquema.modo in ("central_espejo", "espejo_total"):
+        return True, ""
+    elif esquema.modo == "personalizado":
+        try:
+            ciclo = esquema._generar_ciclo()
+        except Exception as e:
+            return False, f"Ciclo personalizado inválido: {e}"
+        if not ciclo:
+            return False, "El ciclo personalizado está vacío."
+        
+        # 1. Simetría total con espejo cambiado en todos los elementos
+        inv_espejo_total = [(m, not e) for (m, e) in reversed(ciclo)]
+        if inv_espejo_total == ciclo:
+            return True, ""
+        
+        # 2. Simetría impar donde el elemento central es neutro en espejo
+        if len(ciclo) % 2 == 1:
+            mitad = len(ciclo) // 2
+            inv_con_centro_neutro = []
+            rev = list(reversed(ciclo))
+            for idx, (m, e) in enumerate(rev):
+                if idx == mitad:
+                    inv_con_centro_neutro.append((m, e))
+                else:
+                    inv_con_centro_neutro.append((m, not e))
+            if inv_con_centro_neutro == ciclo:
+                return True, ""
+
+        return False, "El ciclo personalizado no es simétrico respecto al centro (el ciclo invertido con espejo cambiado difiere del original)."
+    
+    return False, f"Modo de esquema desconocido: {esquema.modo}"
+

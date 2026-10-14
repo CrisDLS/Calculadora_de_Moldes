@@ -436,14 +436,29 @@ class VistaTrompo(ft.Container):
             ],
             on_change=self.on_cambio_lienzo,
         )
+        self.segmento_completo_hoja = ft.Segment(value="completo", label=ft.Text("Completo"))
+        self.segmento_mitad_hoja = ft.Segment(value="mitad", label=ft.Text("Mitad (espejo)"))
         self.selector_modo_dibujo = ft.SegmentedButton(
             selected=["completo"],
             allow_multiple_selection=False,
             segments=[
-                ft.Segment(value="completo", label=ft.Text("Completo")),
-                ft.Segment(value="mitad", label=ft.Text("Mitad (espejo)")),
+                self.segmento_completo_hoja,
+                self.segmento_mitad_hoja,
             ],
             on_change=self.on_cambio_modo_dibujo,
+        )
+        self.btn_sincronizar_conos = ft.OutlinedButton(
+            "Usar la misma en ambos conos",
+            icon=ft.Icons.SYNC,
+            on_click=self.on_sincronizar_conos,
+        )
+        self.btn_copiar_config_hoja = ft.PopupMenuButton(
+            tooltip="Copiar configuración de otra sección",
+            icon=ft.Icons.COPY_ALL,
+            items=[
+                ft.PopupMenuItem(content=ft.Text("Copiar de Cono superior"), on_click=lambda e: self.on_copiar_config("superior")),
+                ft.PopupMenuItem(content=ft.Text("Copiar de Cono inferior"), on_click=lambda e: self.on_copiar_config("inferior")),
+            ],
         )
 
         self.dd_repeticion_pico_hoja = ft.Dropdown(
@@ -655,6 +670,8 @@ class VistaTrompo(ft.Container):
                             self.selector_pieza_hoja,
                             self.selector_lienzo,
                             self.selector_modo_dibujo,
+                            self.btn_sincronizar_conos,
+                            self.btn_copiar_config_hoja,
                         ],
                         alignment=ft.MainAxisAlignment.CENTER,
                         wrap=True,
@@ -1047,12 +1064,14 @@ class VistaTrompo(ft.Container):
             visible=False,
             on_change=self.on_cambio_variante_diseno,
         )
+        self.segmento_completo_diseno = ft.Segment(value="completo", label=ft.Text("Lienzo completo"))
+        self.segmento_mitad_diseno = ft.Segment(value="mitad", label=ft.Text("Mitad (espejo)"))
         self.selector_lienzo_diseno = ft.SegmentedButton(
             selected=["completo"],
             allow_multiple_selection=False,
             segments=[
-                ft.Segment(value="completo", label=ft.Text("Lienzo completo")),
-                ft.Segment(value="mitad", label=ft.Text("Mitad (espejo)")),
+                self.segmento_completo_diseno,
+                self.segmento_mitad_diseno,
             ],
             on_change=self.on_cambio_lienzo_diseno,
         )
@@ -1731,6 +1750,20 @@ class VistaTrompo(ft.Container):
         # 7. Hoja de trazo (F3 y F5)
         sel_hoja = self.selector_pieza_hoja.selected[0] if self.selector_pieza_hoja.selected else "superior"
         self.panel_diseno_pico_hoja.visible = (sel_hoja == "pico")
+        self.btn_sincronizar_conos.visible = (sel_hoja != "pico")
+        cfg_hoja = vm.config_secciones.get(sel_hoja)
+        if cfg_hoja:
+            puede_h, mot_h = cfg_hoja.puede_usar_mitad()
+            self.segmento_mitad_hoja.disabled = not puede_h
+            self.segmento_mitad_hoja.tooltip = mot_h if not puede_h else "Trazo sobre papel doblado en simetría"
+            self.selector_modo_dibujo.selected = [cfg_hoja.dibujar]
+            self.selector_lienzo.selected = [cfg_hoja.lienzo]
+
+        # Actualizar estado de mitad en diseño
+        self.segmento_mitad_diseno.disabled = not vm.puede_usar_mitad
+        self.segmento_mitad_diseno.tooltip = vm.motivo_no_mitad if not vm.puede_usar_mitad else "Diseño sobre mitad con reflejo simétrico"
+        self.selector_lienzo_diseno.selected = [vm.diseno_lienzo_modo]
+
         if vm.resumen_pico_linea:
             self.lbl_resumen_pico.value = vm.resumen_pico_linea
 
@@ -1928,8 +1961,52 @@ class VistaTrompo(ft.Container):
         sel = self.selector_pieza_hoja.selected[0] if self.selector_pieza_hoja.selected else "superior"
         self.controlador.actualizar_opciones_hoja(pieza=sel)
         self.panel_diseno_pico_hoja.visible = (sel == "pico")
+        cfg = self.controlador.obtener_config_seccion(sel)
+        if cfg.esquema:
+            self.dd_modo_esquema.value = cfg.esquema.modo
+            self.txt_tam_grupo.value = str(cfg.esquema.tam_grupo)
+            if cfg.esquema.ciclo:
+                self.txt_ciclo_personalizado.value = ", ".join(f"{m}{'E' if esp else ''}" for m, esp in cfg.esquema.ciclo)
+            else:
+                self.txt_ciclo_personalizado.value = ""
+            self.txt_ciclo_personalizado.visible = (cfg.esquema.modo == "personalizado")
+            self.txt_tam_grupo.visible = (cfg.esquema.modo != "personalizado")
+        self.dd_escala.value = str(cfg.escala)
+        self.selector_lienzo.selected = [cfg.lienzo]
+        self.selector_modo_dibujo.selected = [cfg.dibujar]
         vm = self.controlador.get_view_model()
         self._sync_controlador_a_vista(vm, reset_zoom=True)
+
+    def on_sincronizar_conos(self, e):
+        origen = self.controlador.hoja_pieza
+        if origen not in ("superior", "inferior"):
+            origen = "superior"
+        self.controlador.sincronizar_conos(origen)
+        cfg = self.controlador.obtener_config_seccion(self.controlador.hoja_pieza)
+        if cfg.esquema:
+            self.dd_modo_esquema.value = cfg.esquema.modo
+            self.txt_tam_grupo.value = str(cfg.esquema.tam_grupo)
+            if cfg.esquema.ciclo:
+                self.txt_ciclo_personalizado.value = ", ".join(f"{m}{'E' if esp else ''}" for m, esp in cfg.esquema.ciclo)
+        vm = self.controlador.get_view_model()
+        self._sync_controlador_a_vista(vm, reset_zoom=True)
+        self._mostrar_snackbar("Configuración sincronizada en ambos conos")
+
+    def on_copiar_config(self, origen: str):
+        destino = self.controlador.hoja_pieza
+        self.controlador.copiar_configuracion_seccion(origen, destino)
+        cfg = self.controlador.obtener_config_seccion(destino)
+        if cfg.esquema:
+            self.dd_modo_esquema.value = cfg.esquema.modo
+            self.txt_tam_grupo.value = str(cfg.esquema.tam_grupo)
+            if cfg.esquema.ciclo:
+                self.txt_ciclo_personalizado.value = ", ".join(f"{m}{'E' if esp else ''}" for m, esp in cfg.esquema.ciclo)
+        self.dd_escala.value = str(cfg.escala)
+        self.selector_lienzo.selected = [cfg.lienzo]
+        self.selector_modo_dibujo.selected = [cfg.dibujar]
+        vm = self.controlador.get_view_model()
+        self._sync_controlador_a_vista(vm, reset_zoom=True)
+        self._mostrar_snackbar(f"Configuración copiada desde {origen}")
 
     def on_cambio_lienzo(self, e):
         sel = self.selector_lienzo.selected[0] if self.selector_lienzo.selected else "abanico"

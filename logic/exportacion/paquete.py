@@ -122,23 +122,33 @@ from logic.exportacion.escena3d import escena_a_dict
 from logic.exportacion.visor3d import exportar_visor_autocontenido, _directorio_assets
 import json
 
+from logic.diseno.config_seccion import ConfigSeccion
+
 def generar_paquete(
     resultado: BalloonCalculationResult,
     entrada: BalloonInput,
-    esquema: EsquemaDiseno,
+    esquema: Optional[EsquemaDiseno] = None,
     hoja: str = "carta",
     escala: Union[str, float, int] = "auto",
     pintura: Optional[EsquemaPintura] = None,
     incluir_3d: bool = False,
     lienzo: str = "separadas",
     dibujar: str = "completo",
-    incluir_abanico: bool = False
+    incluir_abanico: bool = False,
+    config_secciones: Optional[Dict[str, ConfigSeccion]] = None,
 ) -> Dict[str, str]:
     """Genera un diccionario de nombre_archivo -> contenido_SVG/HTML con las hojas de trazo, perfil y conjunto.
     
     Opcionalmente incluye el visor 3D si incluir_3d=True.
-    Todas las hojas usan la misma escala y el estilo IMPRESION.
+    Si se proporciona config_secciones, cada sección utiliza su propio esquema, lienzo y modo de dibujo.
+    Todas las hojas usan el estilo IMPRESION.
     """
+    if esquema is None:
+        if config_secciones and config_secciones.get("superior") and config_secciones["superior"].esquema:
+            esquema = config_secciones["superior"].esquema
+        else:
+            esquema = EsquemaDiseno("repeticion", 5)
+
     if escala == "auto":
         escala_comun = _calcular_escala_comun_hojas(resultado, entrada, esquema, hoja)
     else:
@@ -146,29 +156,80 @@ def generar_paquete(
 
     archivos: Dict[str, str] = {}
 
-    # 1. Hojas de trazo separadas (si se solicita separadas o ambas)
-    if lienzo in ("separadas", "ambas") or not (lienzo == "abanico" or incluir_abanico):
-        archivos["hoja_cono_superior.svg"] = svg_hoja(
-            resultado, entrada, "superior", esquema, hoja=hoja, escala=escala_comun, estilo=IMPRESION
-        )
-        archivos["hoja_pico.svg"] = svg_hoja(
-            resultado, entrada, "pico", esquema, hoja=hoja, escala=escala_comun, estilo=IMPRESION
-        )
-        archivos["hoja_cono_inferior.svg"] = svg_hoja(
-            resultado, entrada, "inferior", esquema, hoja=hoja, escala=escala_comun, estilo=IMPRESION
-        )
+    if config_secciones:
+        # Configuración independiente por sección (Parte 1)
+        cfg_sup = config_secciones.get("superior")
+        cfg_pico = config_secciones.get("pico")
+        cfg_inf = config_secciones.get("inferior")
 
-    # 2. Hojas de trazo en abanico (si se solicita abanico o ambas o incluir_abanico=True)
-    if lienzo in ("abanico", "ambas") or incluir_abanico:
-        archivos["hoja_abanico_superior.svg"] = svg_abanico(
-            resultado, entrada, "superior", esquema, hoja=hoja, escala=escala, estilo=IMPRESION, dibujar=dibujar
-        )
-        archivos["hoja_abanico_pico.svg"] = svg_abanico(
-            resultado, entrada, "pico", esquema, hoja=hoja, escala=escala, estilo=IMPRESION, dibujar=dibujar
-        )
-        archivos["hoja_abanico_inferior.svg"] = svg_abanico(
-            resultado, entrada, "inferior", esquema, hoja=hoja, escala=escala, estilo=IMPRESION, dibujar=dibujar
-        )
+        esq_sup = cfg_sup.esquema if (cfg_sup and cfg_sup.esquema) else esquema
+        esq_pico = cfg_pico.esquema if (cfg_pico and cfg_pico.esquema) else esquema
+        esq_inf = cfg_inf.esquema if (cfg_inf and cfg_inf.esquema) else esquema
+
+        lienzo_sup = cfg_sup.lienzo if cfg_sup else lienzo
+        lienzo_pico = cfg_pico.lienzo if cfg_pico else lienzo
+        lienzo_inf = cfg_inf.lienzo if cfg_inf else lienzo
+
+        dibujar_sup = cfg_sup.dibujar if cfg_sup else dibujar
+        dibujar_pico = "completo"
+        dibujar_inf = cfg_inf.dibujar if cfg_inf else dibujar
+
+        esc_sup = cfg_sup.escala if (cfg_sup and cfg_sup.escala != "auto") else escala_comun
+        esc_pico = cfg_pico.escala if (cfg_pico and cfg_pico.escala != "auto") else escala_comun
+        esc_inf = cfg_inf.escala if (cfg_inf and cfg_inf.escala != "auto") else escala_comun
+
+        # Cono superior
+        if lienzo_sup in ("separadas", "ambas"):
+            archivos["hoja_cono_superior.svg"] = svg_hoja(
+                resultado, entrada, "superior", esq_sup, hoja=hoja, escala=esc_sup, estilo=IMPRESION
+            )
+        if lienzo_sup in ("abanico", "ambas") or incluir_abanico:
+            archivos["hoja_abanico_superior.svg"] = svg_abanico(
+                resultado, entrada, "superior", esq_sup, hoja=hoja, escala=esc_sup, estilo=IMPRESION, dibujar=dibujar_sup
+            )
+
+        # Pico
+        if lienzo_pico in ("separadas", "ambas"):
+            archivos["hoja_pico.svg"] = svg_hoja(
+                resultado, entrada, "pico", esq_pico, hoja=hoja, escala=esc_pico, estilo=IMPRESION
+            )
+        if lienzo_pico in ("abanico", "ambas") or incluir_abanico:
+            archivos["hoja_abanico_pico.svg"] = svg_abanico(
+                resultado, entrada, "pico", esq_pico, hoja=hoja, escala=esc_pico, estilo=IMPRESION, dibujar=dibujar_pico
+            )
+
+        # Cono inferior
+        if lienzo_inf in ("separadas", "ambas"):
+            archivos["hoja_cono_inferior.svg"] = svg_hoja(
+                resultado, entrada, "inferior", esq_inf, hoja=hoja, escala=esc_inf, estilo=IMPRESION
+            )
+        if lienzo_inf in ("abanico", "ambas") or incluir_abanico:
+            archivos["hoja_abanico_inferior.svg"] = svg_abanico(
+                resultado, entrada, "inferior", esq_inf, hoja=hoja, escala=esc_inf, estilo=IMPRESION, dibujar=dibujar_inf
+            )
+    else:
+        # Modo clásico compatible
+        if lienzo in ("separadas", "ambas") or not (lienzo == "abanico" or incluir_abanico):
+            archivos["hoja_cono_superior.svg"] = svg_hoja(
+                resultado, entrada, "superior", esquema, hoja=hoja, escala=escala_comun, estilo=IMPRESION
+            )
+            archivos["hoja_pico.svg"] = svg_hoja(
+                resultado, entrada, "pico", esquema, hoja=hoja, escala=escala_comun, estilo=IMPRESION
+            )
+            archivos["hoja_cono_inferior.svg"] = svg_hoja(
+                resultado, entrada, "inferior", esquema, hoja=hoja, escala=escala_comun, estilo=IMPRESION
+            )
+
+        if lienzo in ("abanico", "ambas") or incluir_abanico:
+            archivos["hoja_abanico_superior.svg"] = svg_abanico(
+                resultado, entrada, "superior", esquema, hoja=hoja, escala=escala, estilo=IMPRESION, dibujar=dibujar
+            )
+            archivos["hoja_abanico_pico.svg"] = svg_abanico(
+                resultado, entrada, "pico", esquema, hoja=hoja, escala=escala, estilo=IMPRESION, dibujar=dibujar
+            )
+            archivos["hoja_abanico_inferior.svg"] = svg_abanico(
+                resultado, entrada, "inferior", esquema, hoja=hoja, escala=escala, estilo=IMPRESION, dibujar=dibujar
+            )
 
     # 3. Perfil armado (estilo IMPRESION a escala 10 o la de las hojas)
     perf = perfil_armado(entrada, resultado, mostrar_picos_al_borde=True)

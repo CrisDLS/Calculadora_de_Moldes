@@ -9,25 +9,67 @@ from logic.diseno.pintura import EsquemaPintura, VariantePico
 from logic.diseno.diseno_pico import EsquemaDisenoPico
 from logic.diseno.lienzo import Diseno
 
+from logic.diseno.config_seccion import ConfigSeccion
+
 @dataclass
 class Proyecto:
     version: int
     nombre: str
     entrada: BalloonInput
     condiciones: Condiciones
-    esquema: Optional[EsquemaDiseno]
-    notas: str
+    esquema: Optional[EsquemaDiseno] = None
+    notas: str = ""
     hoja: str = "carta"
     escala: Union[str, int, float] = "auto"
     pintura: Optional[EsquemaPintura] = None
     pliegos_por_paquete: int = 100
     esquema_pico: Optional[EsquemaDisenoPico] = None
     disenos: Dict[str, Diseno] = field(default_factory=dict)
+    config_secciones: Dict[str, ConfigSeccion] = field(default_factory=dict)
     recursos_faltantes: List[str] = field(default_factory=list)
+
+    def __post_init__(self):
+        # Asegurar que siempre existan las 3 configuraciones de sección
+        if not self.config_secciones:
+            self.config_secciones = {
+                "superior": ConfigSeccion(
+                    seccion="superior",
+                    esquema=self.esquema or EsquemaDiseno(modo="repeticion", tam_grupo=5),
+                    dibujar="completo",
+                    lienzo="abanico",
+                    escala=self.escala,
+                ),
+                "inferior": ConfigSeccion(
+                    seccion="inferior",
+                    esquema=self.esquema or EsquemaDiseno(modo="repeticion", tam_grupo=5),
+                    dibujar="completo",
+                    lienzo="abanico",
+                    escala=self.escala,
+                ),
+                "pico": ConfigSeccion(
+                    seccion="pico",
+                    esquema_pico=self.esquema_pico or EsquemaDisenoPico(),
+                    dibujar="completo",
+                    lienzo="abanico",
+                    escala=self.escala,
+                ),
+            }
+        else:
+            if "superior" not in self.config_secciones:
+                self.config_secciones["superior"] = ConfigSeccion(seccion="superior", esquema=self.esquema)
+            if "inferior" not in self.config_secciones:
+                self.config_secciones["inferior"] = ConfigSeccion(seccion="inferior", esquema=self.esquema)
+            if "pico" not in self.config_secciones:
+                self.config_secciones["pico"] = ConfigSeccion(seccion="pico", esquema_pico=self.esquema_pico)
+
+        # Sincronizar campos legados si existen
+        if self.esquema is not None and self.config_secciones.get("superior") and self.config_secciones["superior"].esquema:
+            self.esquema = self.config_secciones["superior"].esquema
+        if self.esquema_pico is not None and self.config_secciones.get("pico") and self.config_secciones["pico"].esquema_pico:
+            self.esquema_pico = self.config_secciones["pico"].esquema_pico
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Proyecto":
-        # Migración vacía para el futuro
         data = _migrar_proyecto(data)
         
         # Validar campos requeridos
@@ -105,6 +147,12 @@ class Proyecto:
                     clave = f"{obj.seccion}_{obj.variante}" if obj.seccion == "pico" else obj.seccion
                     disenos[clave] = obj
 
+        # Parsear config_secciones (v2)
+        configs = {}
+        if data.get("config_secciones"):
+            for sec_k, sec_v in data["config_secciones"].items():
+                configs[sec_k] = ConfigSeccion.from_dict(sec_v)
+
         return cls(
             version=data["version"],
             nombre=data["nombre"],
@@ -118,13 +166,53 @@ class Proyecto:
             pliegos_por_paquete=data.get("pliegos_por_paquete", 100),
             esquema_pico=esq_pico,
             disenos=disenos,
+            config_secciones=configs,
         )
 
 def _migrar_proyecto(data: Dict[str, Any]) -> Dict[str, Any]:
     v = data.get("version")
     if v is None:
         raise ValueError("JSON corrupto o sin versión.")
-    if v > 1:
+    
+    if v == 1:
+        # Migración v1 -> v2: Esquemas y lienzos independientes por sección
+        esq_global = data.get("esquema")
+        esq_pico = data.get("esquema_pico")
+        hoja_dibujar = data.get("hoja_dibujar", "completo")
+        hoja_lienzo = data.get("hoja_lienzo", "abanico")
+        escala = data.get("escala", "auto")
+
+        cfg_sup = {
+            "seccion": "superior",
+            "esquema": esq_global,
+            "dibujar": hoja_dibujar,
+            "lienzo": hoja_lienzo,
+            "escala": escala,
+        }
+        cfg_inf = {
+            "seccion": "inferior",
+            "esquema": esq_global,
+            "dibujar": hoja_dibujar,
+            "lienzo": hoja_lienzo,
+            "escala": escala,
+        }
+        cfg_pico = {
+            "seccion": "pico",
+            "esquema_pico": esq_pico,
+            "dibujar": "completo",
+            "lienzo": hoja_lienzo,
+            "escala": escala,
+        }
+
+        data["config_secciones"] = {
+            "superior": cfg_sup,
+            "inferior": cfg_inf,
+            "pico": cfg_pico,
+        }
+        data["version"] = 2
+        return data
+
+    if v > 2:
         raise ValueError(f"Versión de proyecto desconocida: {v}")
     
     return data
