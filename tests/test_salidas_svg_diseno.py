@@ -49,7 +49,8 @@ def test_svg_abanico_con_diseno_raster_y_svg(tmp_path, calc_y_resultado):
     assert 'id="clip-abanico"' in svg_output
     assert 'inkscape:label="diseno"' in svg_output
     assert 'data:image/png;base64,' in svg_output
-    assert 'data:image/svg+xml;base64,' in svg_output
+    assert 'fill="navy"' in svg_output
+    assert f'id="capa-{capa_svg.id}"' in svg_output
 
 def test_svg_gajo_central_espejo(tmp_path, calc_y_resultado):
     _, entrada, res = calc_y_resultado

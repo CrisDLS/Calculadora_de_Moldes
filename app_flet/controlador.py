@@ -977,6 +977,7 @@ class ControladorTrompo:
         dw: float = 0.0,
         dh: float = 0.0,
         drot: float = 0.0,
+        actualizar_svg: bool = True,
     ) -> None:
         capa = self.obtener_capa_seleccionada()
         if not capa or capa.bloqueada:
@@ -998,6 +999,11 @@ class ControladorTrompo:
                 nueva_rot -= 360
             capa.rotacion = round(nueva_rot, 1)
         self.sin_guardar = True
+        if actualizar_svg:
+            self._actualizar_svg_diseno()
+
+    def actualizar_svg_diseno(self) -> None:
+        """Fuerza la regeneración del SVG de diseño."""
         self._actualizar_svg_diseno()
 
     def cambiar_diseno_ver_cuadricula(self, val: bool) -> None:

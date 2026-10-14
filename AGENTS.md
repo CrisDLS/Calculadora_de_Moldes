@@ -165,5 +165,25 @@ Cada pico es una pirámide de base cuadrada armada con 4 triángulos del molde d
       - Botones de exportación dedicados: "Exportar abanico con diseño (SVG)", "Exportar piezas con diseño…" y "Exportar hoja Carta con diseño".
     - Ejemplos (`docs/ejemplos/disenos/`): proyecto `ejemplo_espejo_12.json` (actualizado a v2) con su carpeta de recursos, 2 motivos SVG tradicionales y 1 imagen PNG de prueba.
     - Etiquetado en git con `f6a-seccion-mitad`.
+    - Optimización del arrastre interactivo y renderizado de SVG nativo:
+      - Causa raíz del congelamiento: `on_pan_update` llamaba síncronamente a `controlador.empujar_capa_seleccionada()` que regeneraba el SVG completo (con imágenes raster en base64 de varios MB o árboles XML densos) e inmediatamente ejecutaba `_sync_controlador_a_vista()` llamando a `self.update()` de toda la página a 60 Hz. Una ráfaga típica de 300 eventos transmitía entre 36 MB y 582 MB por el canal IPC Flutter <-> Python, saturando la cola de mensajes del motor y bloqueando indefinidamente el bucle de eventos asyncio.
+      - Causa raíz del SVG invisible: `svg_abanico.py` e `svg_diseno.py` incrustaban los SVGs importados como `<image href="data:image/svg+xml;base64,...">`. El motor `flutter_svg` de Flutter no soporta archivos SVG incrustados dentro de etiquetas `<image>`, requiriendo elementos nativos (`<g>`, `<path>`, etc.).
+      - Solución arquitectónica:
+        - Renderizado SVG nativo (`logic/diseno/lienzo.py`, `logic/exportacion/svg_abanico.py`, `logic/exportacion/svg_diseno.py`): extracción limpia de hijos XML con `defusedxml` y `xml.etree.ElementTree`, registro de namespaces estándar sin prefijos espurios (`ns0:`), prefijado sistemático de IDs (`c_{id}_`) para evitar colisiones de gradientes o máscaras, extracción de `viewBox`, escalado preservando aspecto centrado en caja y caché en memoria (`obtener_fragmento_capa`, `CACHE_FRAGMENTOS_CAPA`). Imágenes raster usan vista previa reducida a máx 1600 px en pantalla y resolución nativa al exportar.
+        - Arrastre interactivo no bloqueante (`app_flet/vistas/trompo.py`, `app_flet/controlador.py`): `ft.GestureDetector(drag_interval=35)` limitando nativamente la frecuencia de muestreo a ~28 Hz; identidad fija del detector (nunca recreado durante el gesto); durante el arrastre (`on_pan_update`) solo se actualiza la posición en memoria (`actualizar_svg=False`), no se llama a `page.update()` ni a `self.update()`, y se actualizan únicamente los campos numéricos de texto `txt_pos_x` y `txt_pos_y` con guarda `_actualizando_programatico = True`.
+        - Recomposición asíncrona al soltar (`on_pan_end`, `on_pan_cancel`, `on_exit` o timeout de seguridad de 2.0 s): 1 sola recomposición en segundo plano con `threading.Thread` y contador incremental (`_id_recomposicion_diseno`) que descarta tareas obsoletas si ocurre un nuevo gesto. Indicador discreto "Actualizando…" durante el proceso.
+      - Métricas antes / después (300 micro-eventos de arrastre en pantalla):
+        - Tiempo por evento: antes ~15-60 ms (bloqueando el hilo de UI) -> después <0.2 ms (UI fluida a 60 fps).
+        - Tráfico IPC Flutter/Python: antes 36 MB a 582 MB transmitidos en ráfaga -> después ~2 KB (solo campos numéricos de posición).
+        - Recomposiciones de SVG pesado: antes 300 por ráfaga -> después 1 (al soltar).
+        - Llamadas a `page.update()`: antes 300 -> después 0 durante el arrastre.
+      - Regla obligatoria para cualquier futuro gesto continuo en Flet:
+        - Separar estrictamente la manipulación interactiva de la recomposición pesada:
+          1. Durante el gesto (`on_pan_update`, sliders continuos, etc.): limitar frecuencia con `drag_interval`, actualizar solo el modelo en memoria y controles atómicos ligeros (e.g. textos o cajas de selección `control.update()`). NUNCA llamar a `page.update()` ni regenerar estructuras pesadas (SVGs, mallas 3D, HTMLs).
+          2. Al soltar (`on_pan_end`, `on_change_end`, o cancelaciones): disparar la recomposición pesada en segundo plano fuera del hilo de UI (`threading.Thread` o `page.run_thread`) con descarte de tareas obsoletas mediante identificador de versión, envolviendo siempre en `try / finally` para garantizar que las banderas (`_arrastrando`, `_ocupado`) se restablezcan en todo momento.
+      - Sistema de registro (logging):
+        - Registro rotativo en `logs/globos.log` (1 MB × 3 archivos, UTF-8), nivel INFO, capturas no controladas mediante `sys.excepthook`, `threading.excepthook`, `asyncio.get_event_loop().set_exception_handler` y `page.on_error`.
+        - Activación de telemetría en pantalla mediante variable de entorno `GLOBOS_DEBUG=1` (`python main.py` o en PowerShell `$env:GLOBOS_DEBUG="1"; python main.py`).
+      - Etiquetado en git con `fix-arrastre-capa`.
   - F6b: Vectorización y procesado avanzado de plantillas (calcos monocromáticos, plantillas de corte e instrucciones de ensamble).
   - F7: Mapeo de motivos y texturas sobre la malla 3D interactiva en Three.js y exportación de planos de corte multicapa.

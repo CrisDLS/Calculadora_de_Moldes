@@ -2,6 +2,7 @@
 import os
 import time
 import asyncio
+import threading
 import webbrowser
 from typing import Optional, Tuple
 import flet as ft
@@ -1088,8 +1089,13 @@ class VistaTrompo(ft.Container):
         self.detector_gestos_diseno = ft.GestureDetector(
             content=self.img_svg_diseno,
             expand=True,
+            drag_interval=35,
             on_scroll=self._on_gesture_diseno_scroll,
+            on_pan_start=self._on_gesture_diseno_pan_start,
             on_pan_update=self._on_gesture_diseno_pan_update,
+            on_pan_end=self._on_gesture_diseno_pan_end,
+            on_pan_cancel=self._on_gesture_diseno_pan_cancel,
+            on_exit=self._on_gesture_diseno_exit,
             on_double_tap=self._on_gesture_diseno_double_tap,
         )
         self.container_viewer_diseno = ft.Container(
@@ -1127,12 +1133,20 @@ class VistaTrompo(ft.Container):
             icon=ft.Icons.FIT_SCREEN,
             on_click=self._on_btn_ajustar_diseno,
         )
+        self.lbl_estado_diseno = ft.Text(
+            "",
+            size=11,
+            color=ft.Colors.PRIMARY,
+            weight=ft.FontWeight.W_500,
+            italic=True,
+        )
         self.barra_zoom_diseno = ft.Row(
             controls=[
                 self.btn_zoom_out_diseno,
                 self.lbl_zoom_diseno_porcentaje,
                 self.btn_zoom_in_diseno,
                 self.btn_ajustar_diseno,
+                self.lbl_estado_diseno,
             ],
             alignment=ft.MainAxisAlignment.CENTER,
             spacing=4,
@@ -1146,6 +1160,10 @@ class VistaTrompo(ft.Container):
         self.telemetria_recomposiciones_pendientes: int = 0
         self.telemetria_recomposiciones_descartadas: int = 0
         self.arrastrando_capa: bool = False
+        self._id_recomposicion_diseno: int = 0
+        self._recomponiendo_diseno: bool = False
+        self._timer_seguridad_arrastre: Optional[threading.Timer] = None
+        self._actualizando_programatico: bool = False
         self.lbl_debug_diseno = ft.Text(
             "",
             size=10,
@@ -1348,6 +1366,7 @@ class VistaTrompo(ft.Container):
             selected_index=0,
             length=6,
             expand=True,
+            on_change=self._on_tabs_change,
             content=ft.Column(
                 expand=True,
                 controls=[
@@ -1542,6 +1561,8 @@ class VistaTrompo(ft.Container):
         self.controlador.holgura = self.txt_holgura.value
 
     def on_calcular(self, e):
+        if getattr(self, "arrastrando_capa", False):
+            self._finalizar_arrastre_capa()
         self._leer_vista_a_controlador()
         vm = self.controlador.calcular()
         self._sync_controlador_a_vista(vm, reset_zoom=True)
@@ -2872,6 +2893,19 @@ class VistaTrompo(ft.Container):
         )
         self._actualizar_imagen_diseno_zoom()
 
+    def _on_gesture_diseno_pan_start(self, e):
+        if self.modo_interaccion_diseno == "mover":
+            capa = self.controlador.obtener_capa_seleccionada()
+            if capa and not capa.bloqueada:
+                self.arrastrando_capa = True
+                self.telemetria_arrastre_eventos = 0
+                self.telemetria_arrastre_inicio_ts = time.time()
+                self._reiniciar_timer_seguridad_arrastre()
+                try:
+                    logger.info(f"Inicio de arrastre de capa '{capa.nombre}' (id={capa.id})")
+                except Exception:
+                    pass
+
     def _on_gesture_diseno_pan_update(self, e: ft.DragUpdateEvent):
         if not self.vista_svg_diseno or not self.vista_base_svg_diseno:
             return
@@ -2885,6 +2919,13 @@ class VistaTrompo(ft.Container):
             and capa_sel
             and not capa_sel.bloqueada
         ):
+            self.arrastrando_capa = True
+            self.telemetria_arrastre_eventos += 1
+            dt = time.time() - getattr(self, "telemetria_arrastre_inicio_ts", time.time())
+            if dt > 0.05:
+                self.telemetria_eventos_por_segundo = self.telemetria_arrastre_eventos / dt
+            self._reiniciar_timer_seguridad_arrastre()
+
             w_control = max(50.0, self.zona_ancho_diseno)
             h_control = max(50.0, self.zona_alto_diseno)
             dx_mm = delta.x * (self.vista_svg_diseno.ancho / w_control)
@@ -2896,8 +2937,26 @@ class VistaTrompo(ft.Container):
                 factor_escala = 1.0
             dx_cm = dx_mm / factor_escala
             dy_cm = dy_mm / factor_escala
-            self.controlador.empujar_capa_seleccionada(dx=dx_cm, dy=dy_cm)
-            self._sync_controlador_a_vista(self.controlador.get_view_model())
+
+            # 1. Modificar posición en memoria sin regenerar el SVG pesado
+            self.controlador.empujar_capa_seleccionada(dx=dx_cm, dy=dy_cm, actualizar_svg=False)
+
+            # 2. Actualizar solo los campos numéricos X/Y en el inspector
+            capa_act = self.controlador.obtener_capa_seleccionada()
+            if capa_act:
+                self._actualizando_programatico = True
+                try:
+                    self.txt_pos_x.value = f"{capa_act.x:.2f}"
+                    self.txt_pos_y.value = f"{capa_act.y:.2f}"
+                    self.txt_pos_x.update()
+                    self.txt_pos_y.update()
+                except Exception:
+                    pass
+                finally:
+                    self._actualizando_programatico = False
+
+            if self.debug_mode:
+                self._actualizar_debug_diseno()
         else:
             w_control = max(50.0, self.zona_ancho_diseno)
             h_control = max(50.0, self.zona_alto_diseno)
@@ -2906,6 +2965,106 @@ class VistaTrompo(ft.Container):
             limites_cont = (self.vista_base_svg_diseno.ancho, self.vista_base_svg_diseno.alto)
             self.vista_svg_diseno = desplazar(self.vista_svg_diseno, dx=dx, dy=dy, limites_contenido=limites_cont)
             self._actualizar_imagen_diseno_zoom()
+
+    def _on_gesture_diseno_pan_end(self, e):
+        self._finalizar_arrastre_capa()
+
+    def _on_gesture_diseno_pan_cancel(self, e):
+        self._finalizar_arrastre_capa()
+
+    def _on_gesture_diseno_exit(self, e):
+        if getattr(self, "arrastrando_capa", False):
+            self._finalizar_arrastre_capa()
+
+    def _reiniciar_timer_seguridad_arrastre(self):
+        if self._timer_seguridad_arrastre:
+            try:
+                self._timer_seguridad_arrastre.cancel()
+            except Exception:
+                pass
+        self._timer_seguridad_arrastre = threading.Timer(2.0, self._timeout_arrastre_capa)
+        self._timer_seguridad_arrastre.daemon = True
+        self._timer_seguridad_arrastre.start()
+
+    def _timeout_arrastre_capa(self):
+        if getattr(self, "arrastrando_capa", False):
+            try:
+                logger.warning("Arrastre de capa finalizado por timeout de seguridad (2.0s)")
+            except Exception:
+                pass
+            self._finalizar_arrastre_capa()
+
+    def _finalizar_arrastre_capa(self):
+        if self._timer_seguridad_arrastre:
+            try:
+                self._timer_seguridad_arrastre.cancel()
+            except Exception:
+                pass
+            self._timer_seguridad_arrastre = None
+
+        if not getattr(self, "arrastrando_capa", False):
+            return
+
+        self.arrastrando_capa = False
+        self._id_recomposicion_diseno += 1
+        current_id = self._id_recomposicion_diseno
+        self.telemetria_recomposiciones_pendientes += 1
+
+        try:
+            self.lbl_estado_diseno.value = "Actualizando…"
+            self.lbl_estado_diseno.update()
+        except Exception:
+            pass
+
+        def worker():
+            t0 = time.time()
+            try:
+                self.controlador.actualizar_svg_diseno()
+            except Exception as err:
+                try:
+                    logger.error(f"Error al recomponer SVG de diseño: {err}", exc_info=True)
+                except Exception:
+                    pass
+            finally:
+                ms = (time.time() - t0) * 1000.0
+                self.telemetria_ms_ultima_recomposicion = ms
+                self._aplicar_recomposicion_diseno(current_id)
+
+        t = threading.Thread(target=worker, daemon=True)
+        t.start()
+
+    def _aplicar_recomposicion_diseno(self, req_id: int):
+        self.telemetria_recomposiciones_pendientes = max(0, self.telemetria_recomposiciones_pendientes - 1)
+        if req_id != self._id_recomposicion_diseno:
+            self.telemetria_recomposiciones_descartadas += 1
+            return
+
+        def sync_ui():
+            try:
+                self.lbl_estado_diseno.value = ""
+                self.lbl_estado_diseno.update()
+            except Exception:
+                pass
+            try:
+                self._sync_controlador_a_vista(self.controlador.get_view_model())
+            except Exception as ex:
+                try:
+                    logger.error(f"Error al sincronizar vista tras recomposición: {ex}")
+                except Exception:
+                    pass
+
+        page = self.obtener_pagina
+        if page:
+            try:
+                page.run_thread(sync_ui)
+            except Exception:
+                sync_ui()
+        else:
+            sync_ui()
+
+    def _on_tabs_change(self, e):
+        if getattr(self, "arrastrando_capa", False):
+            self._finalizar_arrastre_capa()
 
     def _on_gesture_diseno_double_tap(self, e):
         self._ajustar_vista_diseno()
@@ -3093,6 +3252,8 @@ class VistaTrompo(ft.Container):
         self._sync_controlador_a_vista(self.controlador.get_view_model())
 
     def on_pos_x_change(self, e):
+        if getattr(self, "_actualizando_programatico", False):
+            return
         try:
             val = float(self.txt_pos_x.value or 0.0)
             self.controlador.modificar_capa_seleccionada(x=val)
@@ -3101,6 +3262,8 @@ class VistaTrompo(ft.Container):
             pass
 
     def on_pos_y_change(self, e):
+        if getattr(self, "_actualizando_programatico", False):
+            return
         try:
             val = float(self.txt_pos_y.value or 0.0)
             self.controlador.modificar_capa_seleccionada(y=val)

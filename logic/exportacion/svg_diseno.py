@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import List, Tuple, Optional, Union, Dict, Any
 from logic.models import BalloonInput, BalloonCalculationResult
 from logic.diseno.esquema import EsquemaDiseno
-from logic.diseno.lienzo import Diseno, CapaDiseno
+from logic.diseno.lienzo import Diseno, CapaDiseno, obtener_fragmento_capa
 from logic.diseno.transformaciones import (
     transformacion_a_gajo,
     gajos_equivalentes,
@@ -26,6 +26,7 @@ def svg_gajo(
     escala: Union[str, float, int] = 1,
     hoja: str = "carta",
     dibujar: str = "completo",
+    vista_previa: bool = False,
 ) -> str:
     """Genera el SVG de un gajo individual decorado con su recorte de diseño."""
     if seccion == "superior":
@@ -171,19 +172,24 @@ def svg_gajo(
 
             trans_str = f' transform="{" ".join(transforms)}"' if transforms else ""
 
-            href = ""
-            if carp_rec:
-                arch = carp_rec / capa.archivo
-                if arch.exists() and arch.is_file():
-                    b64_str = base64.b64encode(arch.read_bytes()).decode("ascii")
-                    if capa.tipo == "svg":
-                        href = f"data:image/svg+xml;base64,{b64_str}"
-                    else:
-                        mime = "image/png" if arch.suffix.lower() == ".png" else "image/jpeg"
-                        href = f"data:{mime};base64,{b64_str}"
+            contenido_frag, vb = obtener_fragmento_capa(capa, carp_rec, vista_previa=vista_previa)
 
-            if href:
-                lines.append(f'    <image href="{href}" x="{x_svg_top_left:.2f}" y="{y_svg_top_left:.2f}" width="{w_svg:.2f}" height="{h_svg:.2f}" opacity="{capa.opacidad:.2f}"{trans_str} id="gajo-capa-{capa.id}"/>')
+            if capa.tipo == "svg" and contenido_frag:
+                vx, vy, vw, vh = vb
+                if vw > 0 and vh > 0:
+                    s = min(w_svg / vw, h_svg / vh)
+                    dx = (w_svg - vw * s) / 2.0 - vx * s
+                    dy = (h_svg - vh * s) / 2.0 - vy * s
+                    t_local = f"translate({x_svg_top_left:.2f} {y_svg_top_left:.2f}) translate({dx:.2f} {dy:.2f}) scale({s:.4f})"
+                    lines.append(
+                        f'    <g id="gajo-capa-{capa.id}" opacity="{capa.opacidad:.2f}"{trans_str}>\n'
+                        f'      <g transform="{t_local}">\n'
+                        f'{contenido_frag}\n'
+                        f'      </g>\n'
+                        f'    </g>'
+                    )
+            elif capa.tipo != "svg" and contenido_frag:
+                lines.append(f'    <image href="{contenido_frag}" x="{x_svg_top_left:.2f}" y="{y_svg_top_left:.2f}" width="{w_svg:.2f}" height="{h_svg:.2f}" opacity="{capa.opacidad:.2f}"{trans_str} id="gajo-capa-{capa.id}"/>')
             else:
                 lines.append(f'    <rect x="{x_svg_top_left:.2f}" y="{y_svg_top_left:.2f}" width="{w_svg:.2f}" height="{h_svg:.2f}" fill="none" stroke="#888888" stroke-width="0.3"{trans_str} id="gajo-capa-{capa.id}"/>')
 
@@ -244,6 +250,7 @@ def exportar_diseno(
         hoja=formato_hoja,
         carpeta_recursos=carpeta_recursos,
         dibujar=dibujar,
+        vista_previa=False,
     )
     with open(ruta_abanico, "w", encoding="utf-8") as f:
         f.write(svg_ab)
@@ -267,6 +274,7 @@ def exportar_diseno(
             carpeta_recursos=carpeta_recursos,
             hoja=formato_hoja,
             dibujar=dibujar,
+            vista_previa=False,
         )
         with open(ruta_gajo, "w", encoding="utf-8") as f:
             f.write(svg_g)

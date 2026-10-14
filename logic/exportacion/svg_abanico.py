@@ -7,7 +7,7 @@ from logic.models import BalloonInput, BalloonCalculationResult
 from logic.diseno.esquema import EsquemaDiseno
 from logic.exportacion.estilos import EstiloSvg, IMPRESION
 from logic.geometria.abanico import pieza_a_geometria_plana, abanico, contorno_abanico, PiezaPlana, Abanico
-from logic.diseno.lienzo import Diseno, CapaDiseno
+from logic.diseno.lienzo import Diseno, CapaDiseno, obtener_fragmento_capa
 from logic.diseno.transformaciones import construir_grupo
 
 def svg_abanico(
@@ -28,6 +28,7 @@ def svg_abanico(
     ver_rotulos: bool = True,
     ver_costuras: bool = True,
     overlay_capa_activa: Optional[CapaDiseno] = None,
+    vista_previa: bool = True,
 ) -> str:
     """Genera un SVG con la hoja de trazo en abanico para impresión o Inkscape.
     
@@ -240,7 +241,7 @@ def svg_abanico(
             # Capas en mitad derecha activa (clipPath al contorno de mitad)
             lines.append('    <g id="diseno-mitad-activa" clip-path="url(#clip-abanico)">')
             for c in diseno.capas:
-                elem_svg = _renderizar_capa_en_abanico(c, to_svg, factor, carp_rec, opacidad_mult=1.0)
+                elem_svg = _renderizar_capa_en_abanico(c, to_svg, factor, carp_rec, opacidad_mult=1.0, vista_previa=vista_previa)
                 if elem_svg:
                     lines.append(f'      {elem_svg}')
             lines.append('    </g>')
@@ -251,14 +252,14 @@ def svg_abanico(
                 lines.append('    <g id="diseno-mitad-reflejo" opacity="0.38">')
                 for c in todas_capas:
                     if c.id.endswith("_reflejo"):
-                        elem_svg = _renderizar_capa_en_abanico(c, to_svg, factor, carp_rec, opacidad_mult=1.0)
+                        elem_svg = _renderizar_capa_en_abanico(c, to_svg, factor, carp_rec, opacidad_mult=1.0, vista_previa=vista_previa)
                         if elem_svg:
                             lines.append(f'      {elem_svg}')
                 lines.append('    </g>')
         else:
             lines.append('    <g id="diseno-completo" clip-path="url(#clip-abanico)">')
             for c in diseno.capas:
-                elem_svg = _renderizar_capa_en_abanico(c, to_svg, factor, carp_rec, opacidad_mult=1.0)
+                elem_svg = _renderizar_capa_en_abanico(c, to_svg, factor, carp_rec, opacidad_mult=1.0, vista_previa=vista_previa)
                 if elem_svg:
                     lines.append(f'      {elem_svg}')
             lines.append('    </g>')
@@ -468,8 +469,9 @@ def _renderizar_capa_en_abanico(
     factor: float,
     carpeta_recursos: Optional[Path],
     opacidad_mult: float = 1.0,
+    vista_previa: bool = True,
 ) -> str:
-    """Renderiza un elemento SVG <image> o <rect> para una capa en el abanico."""
+    """Renderiza un elemento SVG nativo o imagen raster para una capa en el abanico."""
     if not capa.visible:
         return ""
 
@@ -493,20 +495,25 @@ def _renderizar_capa_en_abanico(
     trans_str = f' transform="{" ".join(transforms)}"' if transforms else ""
     opac = max(0.0, min(1.0, capa.opacidad * opacidad_mult))
 
-    href = ""
-    if carpeta_recursos:
-        arch = carpeta_recursos / capa.archivo
-        if arch.exists() and arch.is_file():
-            b64_str = base64.b64encode(arch.read_bytes()).decode("ascii")
-            if capa.tipo == "svg":
-                href = f"data:image/svg+xml;base64,{b64_str}"
-            else:
-                mime = "image/png" if arch.suffix.lower() == ".png" else "image/jpeg"
-                href = f"data:{mime};base64,{b64_str}"
+    contenido_frag, vb = obtener_fragmento_capa(capa, carpeta_recursos, vista_previa=vista_previa)
 
-    if href:
-        return f'<image href="{href}" x="{x_svg:.2f}" y="{y_svg:.2f}" width="{w_svg:.2f}" height="{h_svg:.2f}" opacity="{opac:.2f}"{trans_str} id="capa-{capa.id}"/>'
-    else:
-        return (f'<rect x="{x_svg:.2f}" y="{y_svg:.2f}" width="{w_svg:.2f}" height="{h_svg:.2f}" '
-                f'fill="none" stroke="#888888" stroke-width="0.3" stroke-dasharray="2,2"{trans_str} id="capa-{capa.id}"/>')
+    if capa.tipo == "svg" and contenido_frag:
+        vx, vy, vw, vh = vb
+        if vw > 0 and vh > 0:
+            s = min(w_svg / vw, h_svg / vh)
+            dx = (w_svg - vw * s) / 2.0 - vx * s
+            dy = (h_svg - vh * s) / 2.0 - vy * s
+            t_local = f"translate({x_svg:.2f} {y_svg:.2f}) translate({dx:.2f} {dy:.2f}) scale({s:.4f})"
+            return (
+                f'<g id="capa-{capa.id}" opacity="{opac:.2f}"{trans_str}>\n'
+                f'  <g transform="{t_local}">\n'
+                f'{contenido_frag}\n'
+                f'  </g>\n'
+                f'</g>'
+            )
+    elif capa.tipo != "svg" and contenido_frag:
+        return f'<image href="{contenido_frag}" x="{x_svg:.2f}" y="{y_svg:.2f}" width="{w_svg:.2f}" height="{h_svg:.2f}" opacity="{opac:.2f}"{trans_str} id="capa-{capa.id}"/>'
+
+    return (f'<rect x="{x_svg:.2f}" y="{y_svg:.2f}" width="{w_svg:.2f}" height="{h_svg:.2f}" '
+            f'fill="none" stroke="#888888" stroke-width="0.3" stroke-dasharray="2,2"{trans_str} id="capa-{capa.id}"/>')
 
