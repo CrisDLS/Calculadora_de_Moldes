@@ -25,6 +25,7 @@ def svg_gajo(
     estilo: EstiloSvg = IMPRESION,
     escala: Union[str, float, int] = 1,
     hoja: str = "carta",
+    dibujar: str = "completo",
 ) -> str:
     """Genera el SVG de un gajo individual decorado con su recorte de diseño."""
     if seccion == "superior":
@@ -120,7 +121,10 @@ def svg_gajo(
         ab = abanico(pieza_plana, n=tam_g, centrado=True)
         t_gajo = transformacion_a_gajo(ab, idx_en_grupo % ab.n)
 
-        for capa in diseno.capas:
+        # Si el diseño fue hecho en mitad, expandir las capas reflejadas para cubrir el grupo
+        capas_a_procesar = construir_grupo(diseno, esquema, modo_lienzo="mitad") if dibujar == "mitad" else list(diseno.capas)
+
+        for capa in capas_a_procesar:
             if not capa.visible:
                 continue
 
@@ -221,6 +225,7 @@ def exportar_diseno(
     carpeta_recursos: Optional[Union[str, Path]] = None,
     seccion: str = "superior",
     formato_hoja: str = "carta",
+    dibujar: str = "completo",
 ) -> List[Path]:
     """Genera en la carpeta destino los SVGs de los gajos decorados y la hoja de trazo."""
     out_dir = Path(carpeta)
@@ -238,6 +243,7 @@ def exportar_diseno(
         diseno=diseno,
         hoja=formato_hoja,
         carpeta_recursos=carpeta_recursos,
+        dibujar=dibujar,
     )
     with open(ruta_abanico, "w", encoding="utf-8") as f:
         f.write(svg_ab)
@@ -260,6 +266,7 @@ def exportar_diseno(
             indice=i,
             carpeta_recursos=carpeta_recursos,
             hoja=formato_hoja,
+            dibujar=dibujar,
         )
         with open(ruta_gajo, "w", encoding="utf-8") as f:
             f.write(svg_g)

@@ -181,6 +181,121 @@ def abanico(
         pasos_radiales=pasos_radiales,
     )
 
+
+def area_poligono(puntos: List[Tuple[float, float]]) -> float:
+    """Calcula el área de un polígono cerrado 2D usando la fórmula del área de Gauss (Shoelace)."""
+    n = len(puntos)
+    if n < 3:
+        return 0.0
+    area = 0.0
+    for i in range(n):
+        x1, y1 = puntos[i]
+        x2, y2 = puntos[(i + 1) % n]
+        area += x1 * y2 - x2 * y1
+    return abs(area) / 2.0
+
+
+def contorno_abanico(
+    pieza: PiezaPlana,
+    n: int,
+    dibujar: str = "completo",
+    pasos_arco: int = 32,
+) -> List[Tuple[float, float]]:
+    """Devuelve los puntos del contorno exterior cerrado del abanico en cm.
+    
+    En 'completo', abarca simétricamente de -n*psi/2 a +n*psi/2 con ápice en (0, 0).
+    En 'mitad', abarca estrictamente la mitad derecha (x >= 0, de 0 a +n*psi/2)
+    con un borde izquierdo recto sobre el eje de simetría vertical x=0.
+    """
+    if n <= 0:
+        raise ValueError(f"El número de gajos n debe ser mayor a 0, recibido: {n}")
+    if dibujar not in ["completo", "mitad"]:
+        raise ValueError(f"Modo no reconocido: {dibujar}. Use 'completo' o 'mitad'.")
+
+    psi = pieza.angulo_abertura_rad
+    s0 = pieza.distancia_vertice
+    s1 = pieza.radio_arco
+    ang_max = n * psi / 2.0
+    es_pico = (pieza.seccion == "pico")
+
+    pts: List[Tuple[float, float]] = []
+
+    if dibujar == "completo":
+        ang_min = -ang_max
+        if s0 > 1e-6:
+            # 1. Lateral izquierdo (s0 a s1 en ang_min)
+            pts.append((s0 * math.sin(ang_min), s0 * math.cos(ang_min)))
+            pts.append((s1 * math.sin(ang_min), s1 * math.cos(ang_min)))
+            # 2. Arco exterior ancho (s1 de ang_min a ang_max)
+            for st in range(1, 2 * pasos_arco + 1):
+                ang = ang_min + (2 * ang_max) * (st / (2 * pasos_arco))
+                pts.append((s1 * math.sin(ang), s1 * math.cos(ang)))
+            # 3. Lateral derecho (s1 a s0 en ang_max)
+            pts.append((s0 * math.sin(ang_max), s0 * math.cos(ang_max)))
+            # 4. Borde interior estrecho (s0 de ang_max a ang_min)
+            for st in range(1, 2 * pasos_arco + 1):
+                ang = ang_max - (2 * ang_max) * (st / (2 * pasos_arco))
+                pts.append((s0 * math.sin(ang), s0 * math.cos(ang)))
+        else:
+            # Cono superior o pico: ápice en (0, 0)
+            pts.append((0.0, 0.0))
+            pts.append((s1 * math.sin(ang_min), s1 * math.cos(ang_min)))
+            if es_pico:
+                # Bases rectas por cara
+                for k in range(1, n + 1):
+                    ang_k = ang_min + k * psi
+                    pts.append((s1 * math.sin(ang_k), s1 * math.cos(ang_k)))
+            else:
+                for st in range(1, 2 * pasos_arco + 1):
+                    ang = ang_min + (2 * ang_max) * (st / (2 * pasos_arco))
+                    pts.append((s1 * math.sin(ang), s1 * math.cos(ang)))
+            pts.append((0.0, 0.0))
+
+    else:  # dibujar == "mitad"
+        # Borde izquierdo recto sobre x=0 continuo
+        if s0 > 1e-6:
+            # De (0, s0) a (0, s1)
+            pts.append((0.0, s0))
+            pts.append((0.0, s1))
+            # Arco exterior de 0 a +ang_max
+            for st in range(1, pasos_arco + 1):
+                ang = ang_max * (st / pasos_arco)
+                pts.append((max(0.0, s1 * math.sin(ang)), s1 * math.cos(ang)))
+            # Lateral derecho a s0
+            pts.append((max(0.0, s0 * math.sin(ang_max)), s0 * math.cos(ang_max)))
+            # Arco interior de +ang_max a 0
+            for st in range(1, pasos_arco + 1):
+                ang = ang_max * (1.0 - st / pasos_arco)
+                pts.append((max(0.0, s0 * math.sin(ang)), s0 * math.cos(ang)))
+        else:
+            # Cono superior o pico:
+            if es_pico:
+                if n % 2 == 0:
+                    y_top = s1
+                    pts.append((0.0, 0.0))
+                    pts.append((0.0, y_top))
+                    # Caras derechas
+                    for k in range(n // 2 + 1, n + 1):
+                        ang_k = -ang_max + k * psi
+                        pts.append((max(0.0, s1 * math.sin(ang_k)), s1 * math.cos(ang_k)))
+                else:
+                    y_top = s1 * math.cos(psi / 2.0)
+                    pts.append((0.0, 0.0))
+                    pts.append((0.0, y_top))
+                    for k in range((n + 1) // 2, n + 1):
+                        ang_k = -ang_max + k * psi
+                        pts.append((max(0.0, s1 * math.sin(ang_k)), s1 * math.cos(ang_k)))
+            else:
+                pts.append((0.0, 0.0))
+                pts.append((0.0, s1))
+                for st in range(1, pasos_arco + 1):
+                    ang = ang_max * (st / pasos_arco)
+                    pts.append((max(0.0, s1 * math.sin(ang)), s1 * math.cos(ang)))
+            pts.append((0.0, 0.0))
+
+    return pts
+
+
 # Re-exportaciones para diseño y transformaciones
 from logic.diseno.transformaciones import (
     Transformacion2D,
