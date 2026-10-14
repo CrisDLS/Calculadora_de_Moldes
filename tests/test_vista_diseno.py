@@ -72,7 +72,7 @@ def test_controlador_diseno_gestion_capas(controlador_calculado, recurso_svg, re
 
     # 5. Centrar y ajustar
     c.centrar_capa_seleccionada()
-    assert sel.x == -sel.ancho / 2.0
+    assert sel.x == pytest.approx(-sel.ancho / 2.0, abs=1e-3)
 
     c.ajustar_capa_ancho()
     assert sel.ancho > 0

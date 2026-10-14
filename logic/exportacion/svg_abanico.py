@@ -24,6 +24,10 @@ def svg_abanico(
     unir_grupos: bool = False,
     carpeta_recursos: Optional[Union[str, Path]] = None,
     mostrar_reflejo: bool = False,
+    ver_cuadricula: bool = True,
+    ver_rotulos: bool = True,
+    ver_costuras: bool = True,
+    overlay_capa_activa: Optional[CapaDiseno] = None,
 ) -> str:
     """Genera un SVG con la hoja de trazo en abanico para impresión o Inkscape.
     
@@ -187,45 +191,46 @@ def svg_abanico(
     lines.append('  </g>')
 
     # Capa: cuadricula (arcos o rectas de cada paso)
-    lines.append('  <g inkscape:groupmode="layer" inkscape:label="cuadricula" id="layer-cuadricula">')
-    w_cuad = 0.2 * estilo.factor_trazo
+    if ver_cuadricula:
+        lines.append('  <g inkscape:groupmode="layer" inkscape:label="cuadricula" id="layer-cuadricula">')
+        w_cuad = 0.2 * estilo.factor_trazo
 
-    for idx_paso, y_paso in enumerate(ab.pasos_radiales):
-        r_paso = y_paso
-        if r_paso <= 1e-4:
-            continue
+        for idx_paso, y_paso in enumerate(ab.pasos_radiales):
+            r_paso = y_paso
+            if r_paso <= 1e-4:
+                continue
 
-        if dibujar == "mitad":
-            # Arco derecho (zona activa)
-            pts_paso_svg = []
-            for st in range(pasos_arco + 1):
-                ang = ang_max * (st / pasos_arco)
-                pts_paso_svg.append(to_svg(max(0.0, r_paso * math.sin(ang)), r_paso * math.cos(ang)))
-            d_arco = "M " + " L ".join(f"{x:.2f},{y:.2f}" for x, y in pts_paso_svg)
-            lines.append(f'    <path d="{d_arco}" fill="none" stroke="{estilo.cuadricula}" stroke-width="{w_cuad:.2f}" id="cuad-paso-{idx_paso}"/>')
-
-            # Arco izquierdo (reflejo atenuado)
-            if mostrar_reflejo:
-                pts_paso_ref_svg = []
+            if dibujar == "mitad":
+                # Arco derecho (zona activa)
+                pts_paso_svg = []
                 for st in range(pasos_arco + 1):
-                    ang = -ang_max + ang_max * (st / pasos_arco)
-                    pts_paso_ref_svg.append(to_svg(min(0.0, r_paso * math.sin(ang)), r_paso * math.cos(ang)))
-                d_arco_ref = "M " + " L ".join(f"{x:.2f},{y:.2f}" for x, y in pts_paso_ref_svg)
-                lines.append(f'    <path d="{d_arco_ref}" fill="none" stroke="{estilo.cuadricula}" stroke-width="{w_cuad:.2f}" opacity="0.35" id="cuad-paso-ref-{idx_paso}"/>')
-        else:
-            pts_paso_svg = []
-            for st in range(pasos_arco + 1):
-                ang = ang_min + (ang_max - ang_min) * (st / pasos_arco)
-                pts_paso_svg.append(to_svg(r_paso * math.sin(ang), r_paso * math.cos(ang)))
-            d_arco = "M " + " L ".join(f"{x:.2f},{y:.2f}" for x, y in pts_paso_svg)
-            lines.append(f'    <path d="{d_arco}" fill="none" stroke="{estilo.cuadricula}" stroke-width="{w_cuad:.2f}" id="cuad-paso-{idx_paso}"/>')
+                    ang = ang_max * (st / pasos_arco)
+                    pts_paso_svg.append(to_svg(max(0.0, r_paso * math.sin(ang)), r_paso * math.cos(ang)))
+                d_arco = "M " + " L ".join(f"{x:.2f},{y:.2f}" for x, y in pts_paso_svg)
+                lines.append(f'    <path d="{d_arco}" fill="none" stroke="{estilo.cuadricula}" stroke-width="{w_cuad:.2f}" id="cuad-paso-{idx_paso}"/>')
 
-        # Número de paso sobre el eje central
-        px_num, py_num = to_svg(0.0, r_paso)
-        fs_paso = max(1.8 * estilo.factor_texto, w_page * 0.012)
-        lines.append(f'    <text x="{px_num + 1.5:.2f}" y="{py_num:.2f}" font-size="{fs_paso:.2f}" fill="{estilo.texto}" '
-                     f'font-family="sans-serif" dominant-baseline="middle">{idx_paso}</text>')
-    lines.append('  </g>')
+                # Arco izquierdo (reflejo atenuado)
+                if mostrar_reflejo:
+                    pts_paso_ref_svg = []
+                    for st in range(pasos_arco + 1):
+                        ang = -ang_max + ang_max * (st / pasos_arco)
+                        pts_paso_ref_svg.append(to_svg(min(0.0, r_paso * math.sin(ang)), r_paso * math.cos(ang)))
+                    d_arco_ref = "M " + " L ".join(f"{x:.2f},{y:.2f}" for x, y in pts_paso_ref_svg)
+                    lines.append(f'    <path d="{d_arco_ref}" fill="none" stroke="{estilo.cuadricula}" stroke-width="{w_cuad:.2f}" opacity="0.35" id="cuad-paso-ref-{idx_paso}"/>')
+            else:
+                pts_paso_svg = []
+                for st in range(pasos_arco + 1):
+                    ang = ang_min + (ang_max - ang_min) * (st / pasos_arco)
+                    pts_paso_svg.append(to_svg(r_paso * math.sin(ang), r_paso * math.cos(ang)))
+                d_arco = "M " + " L ".join(f"{x:.2f},{y:.2f}" for x, y in pts_paso_svg)
+                lines.append(f'    <path d="{d_arco}" fill="none" stroke="{estilo.cuadricula}" stroke-width="{w_cuad:.2f}" id="cuad-paso-{idx_paso}"/>')
+
+            # Número de paso sobre el eje central
+            px_num, py_num = to_svg(0.0, r_paso)
+            fs_paso = max(1.8 * estilo.factor_texto, w_page * 0.012)
+            lines.append(f'    <text x="{px_num + 1.5:.2f}" y="{py_num:.2f}" font-size="{fs_paso:.2f}" fill="{estilo.texto}" '
+                         f'font-family="sans-serif" dominant-baseline="middle">{idx_paso}</text>')
+        lines.append('  </g>')
 
     # Capa: diseno
     lines.append('  <g inkscape:groupmode="layer" inkscape:label="diseno" id="layer-diseno">')
@@ -322,24 +327,25 @@ def svg_abanico(
     lines.append('  </g>')
 
     # Capa: costura (SOLO en bordes laterales extremos)
-    lines.append('  <g inkscape:groupmode="layer" inkscape:label="costura" id="layer-costura">')
-    w_cost = 0.4 * estilo.factor_trazo
-    d_psi_costura = (costura_cm / 2.0) / s1 if s1 > 0 else 0.0
-    ang_cost_der = ang_max - d_psi_costura
+    if ver_costuras:
+        lines.append('  <g inkscape:groupmode="layer" inkscape:label="costura" id="layer-costura">')
+        w_cost = 0.4 * estilo.factor_trazo
+        d_psi_costura = (costura_cm / 2.0) / s1 if s1 > 0 else 0.0
+        ang_cost_der = ang_max - d_psi_costura
 
-    p0_c_der = to_svg(s0 * math.sin(ang_cost_der), s0 * math.cos(ang_cost_der))
-    p1_c_der = to_svg(s1 * math.sin(ang_cost_der), s1 * math.cos(ang_cost_der))
+        p0_c_der = to_svg(s0 * math.sin(ang_cost_der), s0 * math.cos(ang_cost_der))
+        p1_c_der = to_svg(s1 * math.sin(ang_cost_der), s1 * math.cos(ang_cost_der))
 
-    if dibujar == "completo":
-        ang_cost_izq = ang_min + d_psi_costura
-        p0_c_izq = to_svg(s0 * math.sin(ang_cost_izq), s0 * math.cos(ang_cost_izq))
-        p1_c_izq = to_svg(s1 * math.sin(ang_cost_izq), s1 * math.cos(ang_cost_izq))
-        lines.append(f'    <line x1="{p0_c_izq[0]:.2f}" y1="{p0_c_izq[1]:.2f}" x2="{p1_c_izq[0]:.2f}" y2="{p1_c_izq[1]:.2f}" '
-                     f'stroke="{estilo.costura}" stroke-width="{w_cost:.2f}" stroke-dasharray="3,3" id="costura-lateral-izq"/>')
+        if dibujar == "completo":
+            ang_cost_izq = ang_min + d_psi_costura
+            p0_c_izq = to_svg(s0 * math.sin(ang_cost_izq), s0 * math.cos(ang_cost_izq))
+            p1_c_izq = to_svg(s1 * math.sin(ang_cost_izq), s1 * math.cos(ang_cost_izq))
+            lines.append(f'    <line x1="{p0_c_izq[0]:.2f}" y1="{p0_c_izq[1]:.2f}" x2="{p1_c_izq[0]:.2f}" y2="{p1_c_izq[1]:.2f}" '
+                         f'stroke="{estilo.costura}" stroke-width="{w_cost:.2f}" stroke-dasharray="3,3" id="costura-lateral-izq"/>')
 
-    lines.append(f'    <line x1="{p0_c_der[0]:.2f}" y1="{p0_c_der[1]:.2f}" x2="{p1_c_der[0]:.2f}" y2="{p1_c_der[1]:.2f}" '
-                 f'stroke="{estilo.costura}" stroke-width="{w_cost:.2f}" stroke-dasharray="3,3" id="costura-lateral-der"/>')
-    lines.append('  </g>')
+        lines.append(f'    <line x1="{p0_c_der[0]:.2f}" y1="{p0_c_der[1]:.2f}" x2="{p1_c_der[0]:.2f}" y2="{p1_c_der[1]:.2f}" '
+                     f'stroke="{estilo.costura}" stroke-width="{w_cost:.2f}" stroke-dasharray="3,3" id="costura-lateral-der"/>')
+        lines.append('  </g>')
 
     # Capa: pestaña (si aplica al cono inferior)
     if pestana_cm > 0 and s0 > 0:
@@ -370,56 +376,87 @@ def svg_abanico(
         lines.append('  </g>')
 
     # Capa: rotulos
-    lines.append('  <g inkscape:groupmode="layer" inkscape:label="rotulos" id="layer-rotulos">')
-    fs_tit = max(3.8 * estilo.factor_texto, w_page * 0.024)
-    fs_sub = max(2.4 * estilo.factor_texto, w_page * 0.015)
+    if ver_rotulos:
+        lines.append('  <g inkscape:groupmode="layer" inkscape:label="rotulos" id="layer-rotulos">')
+        fs_tit = max(3.8 * estilo.factor_texto, w_page * 0.024)
+        fs_sub = max(2.4 * estilo.factor_texto, w_page * 0.015)
 
-    nombres_sec = {
-        "superior": "Cono superior",
-        "pico": "Pico piramidal",
-        "inferior": "Cono inferior"
-    }
-    nombre_sec_str = nombres_sec.get(seccion, seccion.capitalize())
-    modo_str = "Abanico completo" if dibujar == "completo" else "Medio abanico (espejo)"
+        nombres_sec = {
+            "superior": "Cono superior",
+            "pico": "Pico piramidal",
+            "inferior": "Cono inferior"
+        }
+        nombre_sec_str = nombres_sec.get(seccion, seccion.capitalize())
+        modo_str = "Abanico completo" if dibujar == "completo" else "Medio abanico (espejo)"
 
-    # Rótulo superior en el margen
-    y_text = margen_mm + 5.0
-    lines.append(f'    <text x="{margen_mm:.2f}" y="{y_text:.2f}" font-size="{fs_tit:.2f}" font-weight="bold" fill="{estilo.texto}" font-family="sans-serif">{nombre_sec_str} — {modo_str}</text>')
-    y_text += fs_tit * 1.2
-    ang_tot_deg = math.degrees(n * psi) if dibujar == "completo" else math.degrees(n * psi / 2.0)
-    info_line1 = f"Escala 1:{factor_s:.1f} · {hoja.upper()} ({w_page:.0f}×{h_page:.0f} mm) · {n} gajos/caras · Ángulo total: {ang_tot_deg:.1f}°"
-    lines.append(f'    <text x="{margen_mm:.2f}" y="{y_text:.2f}" font-size="{fs_sub:.2f}" fill="{estilo.texto}" font-family="sans-serif">{info_line1}</text>')
-    y_text += fs_sub * 1.2
-    info_line2 = f"Radio base s₁: {s1:.1f} cm · Radio boca s₀: {s0:.1f} cm · Largo pieza: {pieza.largo:.1f} cm"
-    lines.append(f'    <text x="{margen_mm:.2f}" y="{y_text:.2f}" font-size="{fs_sub:.2f}" fill="{estilo.texto}" font-family="sans-serif">{info_line2}</text>')
-
-    if dibujar == "mitad":
+        # Rótulo superior en el margen
+        y_text = margen_mm + 5.0
+        lines.append(f'    <text x="{margen_mm:.2f}" y="{y_text:.2f}" font-size="{fs_tit:.2f}" font-weight="bold" fill="{estilo.texto}" font-family="sans-serif">{nombre_sec_str} — {modo_str}</text>')
+        y_text += fs_tit * 1.2
+        ang_tot_deg = math.degrees(n * psi) if dibujar == "completo" else math.degrees(n * psi / 2.0)
+        info_line1 = f"Escala 1:{factor_s:.1f} · {hoja.upper()} ({w_page:.0f}×{h_page:.0f} mm) · {n} gajos/caras · Ángulo total: {ang_tot_deg:.1f}°"
+        lines.append(f'    <text x="{margen_mm:.2f}" y="{y_text:.2f}" font-size="{fs_sub:.2f}" fill="{estilo.texto}" font-family="sans-serif">{info_line1}</text>')
         y_text += fs_sub * 1.2
-        leyenda_esp = "Eje de espejo sobre la costura central" if (n % 2 == 0) else "Eje de espejo corta por el centro del gajo central (se asume simétrico)"
-        lines.append(f'    <text x="{margen_mm:.2f}" y="{y_text:.2f}" font-size="{fs_sub:.2f}" font-style="italic" fill="{estilo.texto}" font-family="sans-serif">{leyenda_esp}</text>')
-
-    # Números de gajo
-    for i in range(n):
-        theta_i = ang_min + (i + 0.5) * psi
-        r_lbl = s1 * 0.95
-        x_lbl = r_lbl * math.sin(theta_i)
-        y_lbl = r_lbl * math.cos(theta_i)
-        px_gajo, py_gajo = to_svg(x_lbl, y_lbl)
-        fs_gajo = max(2.6 * estilo.factor_texto, w_page * 0.016)
-        lbl_gajo = f"Gajo {i+1}" if seccion != "pico" else f"Cara {i+1}"
+        info_line2 = f"Radio base s₁: {s1:.1f} cm · Radio boca s₀: {s0:.1f} cm · Largo pieza: {pieza.largo:.1f} cm"
+        lines.append(f'    <text x="{margen_mm:.2f}" y="{y_text:.2f}" font-size="{fs_sub:.2f}" fill="{estilo.texto}" font-family="sans-serif">{info_line2}</text>')
 
         if dibujar == "mitad":
-            if x_lbl >= -1e-4:
+            y_text += fs_sub * 1.2
+            leyenda_esp = "Eje de espejo sobre la costura central" if (n % 2 == 0) else "Eje de espejo corta por el centro del gajo central (se asume simétrico)"
+            lines.append(f'    <text x="{margen_mm:.2f}" y="{y_text:.2f}" font-size="{fs_sub:.2f}" font-style="italic" fill="{estilo.texto}" font-family="sans-serif">{leyenda_esp}</text>')
+
+        # Números de gajo
+        for i in range(n):
+            theta_i = ang_min + (i + 0.5) * psi
+            r_lbl = s1 * 0.95
+            x_lbl = r_lbl * math.sin(theta_i)
+            y_lbl = r_lbl * math.cos(theta_i)
+            px_gajo, py_gajo = to_svg(x_lbl, y_lbl)
+            fs_gajo = max(2.6 * estilo.factor_texto, w_page * 0.016)
+            lbl_gajo = f"Gajo {i+1}" if seccion != "pico" else f"Cara {i+1}"
+
+            if dibujar == "mitad":
+                if x_lbl >= -1e-4:
+                    lines.append(f'    <text x="{px_gajo:.2f}" y="{py_gajo:.2f}" font-size="{fs_gajo:.2f}" font-weight="bold" fill="{estilo.texto}" '
+                                 f'text-anchor="middle" dominant-baseline="middle" font-family="sans-serif">{lbl_gajo}</text>')
+                elif mostrar_reflejo:
+                    lines.append(f'    <text x="{px_gajo:.2f}" y="{py_gajo:.2f}" font-size="{fs_gajo:.2f}" font-weight="bold" fill="{estilo.texto}" opacity="0.35" '
+                                 f'text-anchor="middle" dominant-baseline="middle" font-family="sans-serif">{lbl_gajo}\'</text>')
+            else:
                 lines.append(f'    <text x="{px_gajo:.2f}" y="{py_gajo:.2f}" font-size="{fs_gajo:.2f}" font-weight="bold" fill="{estilo.texto}" '
                              f'text-anchor="middle" dominant-baseline="middle" font-family="sans-serif">{lbl_gajo}</text>')
-            elif mostrar_reflejo:
-                lines.append(f'    <text x="{px_gajo:.2f}" y="{py_gajo:.2f}" font-size="{fs_gajo:.2f}" font-weight="bold" fill="{estilo.texto}" opacity="0.35" '
-                             f'text-anchor="middle" dominant-baseline="middle" font-family="sans-serif">{lbl_gajo}\'</text>')
-        else:
-            lines.append(f'    <text x="{px_gajo:.2f}" y="{py_gajo:.2f}" font-size="{fs_gajo:.2f}" font-weight="bold" fill="{estilo.texto}" '
-                         f'text-anchor="middle" dominant-baseline="middle" font-family="sans-serif">{lbl_gajo}</text>')
 
-    lines.append('  </g>')
+        lines.append('  </g>')
+
+    # Capa: overlay de selección interactiva (tiradores y centro)
+    if overlay_capa_activa:
+        c = overlay_capa_activa
+        lines.append('  <g inkscape:groupmode="layer" inkscape:label="overlay_seleccion" id="layer-overlay-seleccion">')
+        cx_cm = c.x + c.ancho / 2.0
+        cy_cm = c.y + c.alto / 2.0
+        cx_s, cy_s = to_svg(cx_cm, cy_cm)
+        w_s = c.ancho * factor
+        h_s = c.alto * factor
+        x_s = cx_s - w_s / 2.0
+        y_s = cy_s - h_s / 2.0
+
+        rot_trans = f' transform="rotate({-c.rotacion:.2f} {cx_s:.2f} {cy_s:.2f})"' if abs(c.rotacion) > 1e-4 else ""
+        lines.append(f'    <g{rot_trans} id="overlay-capa-{c.id}">')
+        lines.append(f'      <rect x="{x_s:.2f}" y="{y_s:.2f}" width="{w_s:.2f}" height="{h_s:.2f}" '
+                     f'fill="none" stroke="#2196F3" stroke-width="0.5" stroke-dasharray="3,2" id="overlay-box"/>')
+        sz_h = 2.5
+        h_sz = sz_h / 2.0
+        for h_id, (hx, hy) in [
+            ("tl", (x_s, y_s)),
+            ("tr", (x_s + w_s, y_s)),
+            ("br", (x_s + w_s, y_s + h_s)),
+            ("bl", (x_s, y_s + h_s)),
+        ]:
+            lines.append(f'      <rect x="{hx - h_sz:.2f}" y="{hy - h_sz:.2f}" width="{sz_h:.2f}" height="{sz_h:.2f}" '
+                         f'fill="#FFFFFF" stroke="#2196F3" stroke-width="0.6" id="tirador-{h_id}"/>')
+        lines.append(f'      <circle cx="{cx_s:.2f}" cy="{cy_s:.2f}" r="2.0" fill="#2196F3" fill-opacity="0.8" stroke="#FFFFFF" stroke-width="0.5" id="tirador-centro"/>')
+        lines.append('    </g>')
+        lines.append('  </g>')
 
     lines.append('</svg>')
     return "\n".join(lines)

@@ -27,7 +27,7 @@ from logic.diseno.paleta import ColorPapel, cargar_catalogo, color_por_id
 from logic.diseno.compra import ItemCompra, lista_de_compra
 from logic.exportacion.escena3d import escena_a_dict
 from logic.exportacion.visor3d import ServidorVisor, exportar_visor_autocontenido
-from logic.diseno.lienzo import Diseno, CapaDiseno, importar_recurso
+from logic.diseno.lienzo import Diseno, CapaDiseno, importar_recurso, ajustar_capa
 from logic.exportacion.svg_diseno import svg_gajo, exportar_diseno
 from logic.geometria.abanico import pieza_a_geometria_plana
 from pathlib import Path
@@ -81,6 +81,10 @@ class ViewModelTrompo:
     diseno_lienzo_modo: str = "completo"
     mantener_proporcion: bool = True
     recursos_faltantes: List[str] = field(default_factory=list)
+    diseno_ver_cuadricula: bool = True
+    diseno_ver_rotulos: bool = False
+    diseno_ver_costuras: bool = True
+    diseno_mostrar_reflejo: bool = True
     # Configuración independiente por sección (Parte 1)
     config_secciones: Dict[str, ConfigSeccion] = field(default_factory=dict)
     puede_usar_mitad: bool = True
@@ -114,6 +118,10 @@ class ControladorTrompo:
         self.capa_seleccionada_id: Optional[str] = None
         self.mantener_proporcion: bool = True
         self.recursos_faltantes: List[str] = []
+        self.diseno_ver_cuadricula: bool = True
+        self.diseno_ver_rotulos: bool = False
+        self.diseno_ver_costuras: bool = True
+        self.diseno_mostrar_reflejo: bool = True
 
         # Estado de los campos de entrada
         self.altura = "950"
@@ -836,6 +844,10 @@ class ControladorTrompo:
             diseno_lienzo_modo=cfg_diseno.dibujar,
             mantener_proporcion=self.mantener_proporcion,
             recursos_faltantes=list(self.recursos_faltantes),
+            diseno_ver_cuadricula=self.diseno_ver_cuadricula,
+            diseno_ver_rotulos=self.diseno_ver_rotulos,
+            diseno_ver_costuras=self.diseno_ver_costuras,
+            diseno_mostrar_reflejo=self.diseno_mostrar_reflejo,
             config_secciones={k: ConfigSeccion.from_dict(v.a_dict()) for k, v in self.config_secciones.items()},
             puede_usar_mitad=puede_mitad,
             motivo_no_mitad=motivo_no,
@@ -860,9 +872,28 @@ class ControladorTrompo:
         d.mkdir(parents=True, exist_ok=True)
         return d
 
+    def ventana_lienzo(self) -> Tuple[float, float, float, float]:
+        """Calcula la caja envolvente del lienzo (min_x, min_y, max_x, max_y) en cm."""
+        if not self.resultado or not self.entrada_actual:
+            return (-50.0, 0.0, 50.0, 100.0)
+        from logic.geometria.abanico import pieza_a_geometria_plana, abanico
+        sec = self.diseno_seccion
+        pz = pieza_a_geometria_plana(self.resultado, self.entrada_actual, sec)
+        cfg = self.obtener_config_seccion(sec)
+        tam_g = 4 if sec == "pico" else (cfg.esquema.tam_grupo if cfg.esquema else 5)
+        ab = abanico(pz, n=tam_g, centrado=True)
+        if cfg.dibujar == "mitad":
+            min_x = 0.0
+            max_x = ab.caja_max_x
+        else:
+            min_x = ab.caja_min_x
+            max_x = ab.caja_max_x
+        return (min_x, ab.caja_min_y, max_x, ab.caja_max_y)
+
     def anadir_capa(self, ruta_archivo: str) -> CapaDiseno:
         carp = self.obtener_carpeta_recursos_activa()
-        capa = importar_recurso(ruta_archivo, carp)
+        ventana = self.ventana_lienzo()
+        capa = importar_recurso(ruta_archivo, carp, ventana=ventana)
         diseno = self.obtener_diseno_activo()
         diseno.capas.append(capa)
         self.capa_seleccionada_id = capa.id
@@ -908,38 +939,81 @@ class ControladorTrompo:
         self.sin_guardar = True
         self._actualizar_svg_diseno()
 
-    def centrar_capa_seleccionada(self) -> None:
+    def ajustar_capa_seleccionada(self, modo: str) -> None:
         capa = self.obtener_capa_seleccionada()
-        if not capa or capa.bloqueada or not self.resultado or not self.entrada_actual:
+        if not capa or capa.bloqueada:
             return
-        capa.x = -capa.ancho / 2.0
-        pz = pieza_a_geometria_plana(self.resultado, self.entrada_actual, self.diseno_seccion)
-        capa.y = pz.distancia_vertice + (pz.largo - capa.alto) / 2.0
+        ventana = self.ventana_lienzo()
+        capa_ajustada = ajustar_capa(capa, ventana, modo)
+        capa.x = capa_ajustada.x
+        capa.y = capa_ajustada.y
+        capa.ancho = capa_ajustada.ancho
+        capa.alto = capa_ajustada.alto
         self.sin_guardar = True
         self._actualizar_svg_diseno()
+
+    def ajustar_capa_cubrir(self) -> None:
+        self.ajustar_capa_seleccionada("cubrir")
+
+    def ajustar_capa_contener(self) -> None:
+        self.ajustar_capa_seleccionada("contener")
+
+    def ajustar_capa_estirar(self) -> None:
+        self.ajustar_capa_seleccionada("estirar")
 
     def ajustar_capa_ancho(self) -> None:
+        self.ajustar_capa_seleccionada("ancho")
+
+    def ajustar_capa_alto(self) -> None:
+        self.ajustar_capa_seleccionada("alto")
+
+    def centrar_capa_seleccionada(self) -> None:
+        self.ajustar_capa_seleccionada("centrar")
+
+    def empujar_capa_seleccionada(
+        self,
+        dx: float = 0.0,
+        dy: float = 0.0,
+        dw: float = 0.0,
+        dh: float = 0.0,
+        drot: float = 0.0,
+    ) -> None:
         capa = self.obtener_capa_seleccionada()
-        if not capa or capa.bloqueada or not self.resultado or not self.entrada_actual:
+        if not capa or capa.bloqueada:
             return
-        pz = pieza_a_geometria_plana(self.resultado, self.entrada_actual, self.diseno_seccion)
-        capa.ancho = pz.ancho_mayor
-        capa.x = -capa.ancho / 2.0
-        if self.mantener_proporcion and capa.ancho_natural > 0:
-            capa.alto = capa.ancho * (capa.alto_natural / capa.ancho_natural)
+        capa.x = round(capa.x + dx, 2)
+        capa.y = round(capa.y + dy, 2)
+        if dw != 0 or dh != 0:
+            if self.mantener_proporcion and capa.ancho_natural > 0 and capa.alto_natural > 0:
+                prop = capa.alto_natural / capa.ancho_natural
+                nuevo_w = max(0.5, capa.ancho + dw)
+                capa.ancho = round(nuevo_w, 2)
+                capa.alto = round(nuevo_w * prop, 2)
+            else:
+                capa.ancho = round(max(0.5, capa.ancho + dw), 2)
+                capa.alto = round(max(0.5, capa.alto + dh), 2)
+        if drot != 0:
+            nueva_rot = (capa.rotacion + drot) % 360
+            if nueva_rot > 180:
+                nueva_rot -= 360
+            capa.rotacion = round(nueva_rot, 1)
         self.sin_guardar = True
         self._actualizar_svg_diseno()
 
-    def ajustar_capa_alto(self) -> None:
-        capa = self.obtener_capa_seleccionada()
-        if not capa or capa.bloqueada or not self.resultado or not self.entrada_actual:
-            return
-        pz = pieza_a_geometria_plana(self.resultado, self.entrada_actual, self.diseno_seccion)
-        capa.alto = pz.largo
-        if self.mantener_proporcion and capa.alto_natural > 0:
-            capa.ancho = capa.alto * (capa.ancho_natural / capa.alto_natural)
-            capa.x = -capa.ancho / 2.0
-        self.sin_guardar = True
+    def cambiar_diseno_ver_cuadricula(self, val: bool) -> None:
+        self.diseno_ver_cuadricula = val
+        self._actualizar_svg_diseno()
+
+    def cambiar_diseno_ver_rotulos(self, val: bool) -> None:
+        self.diseno_ver_rotulos = val
+        self._actualizar_svg_diseno()
+
+    def cambiar_diseno_ver_costuras(self, val: bool) -> None:
+        self.diseno_ver_costuras = val
+        self._actualizar_svg_diseno()
+
+    def cambiar_diseno_mostrar_reflejo(self, val: bool) -> None:
+        self.diseno_mostrar_reflejo = val
         self._actualizar_svg_diseno()
 
     def cambiar_diseno_seccion(self, seccion: str, variante: str = "A") -> None:
@@ -972,6 +1046,8 @@ class ControladorTrompo:
             esq = cfg.esquema if (cfg and cfg.esquema) else self._construir_esquema(sec)
             dis = self.obtener_diseno_activo()
             carp = self.obtener_carpeta_recursos_activa()
+            capa_sel = self.obtener_capa_seleccionada()
+            overlay = capa_sel if (capa_sel and not capa_sel.bloqueada) else None
             self.svg_diseno = svg_abanico(
                 resultado=self.resultado,
                 entrada=self.entrada_actual,
@@ -982,10 +1058,12 @@ class ControladorTrompo:
                 dibujar=cfg.dibujar,
                 diseno=dis,
                 carpeta_recursos=carp,
+                mostrar_reflejo=self.diseno_mostrar_reflejo,
+                ver_cuadricula=self.diseno_ver_cuadricula,
+                ver_rotulos=self.diseno_ver_rotulos,
+                ver_costuras=self.diseno_ver_costuras,
+                overlay_capa_activa=overlay,
             )
-        except Exception as e:
-            warnings.warn(f"Error generando SVG de diseño: {e}")
-            self.svg_diseno = ""
         except Exception as e:
             warnings.warn(f"Error generando SVG de diseño: {e}")
             self.svg_diseno = ""
@@ -993,7 +1071,9 @@ class ControladorTrompo:
     def exportar_gajos_diseno(self, carpeta_destino: str) -> List[Path]:
         if not self.resultado or not self.entrada_actual:
             return []
-        esq = self._construir_esquema()
+        sec = self.diseno_seccion
+        cfg = self.obtener_config_seccion(sec)
+        esq = cfg.esquema if (cfg and cfg.esquema) else self._construir_esquema(sec)
         dis = self.obtener_diseno_activo()
         carp_rec = self.obtener_carpeta_recursos_activa()
         return exportar_diseno(
@@ -1003,27 +1083,37 @@ class ControladorTrompo:
             esquema=esq,
             diseno=dis,
             carpeta_recursos=carp_rec,
-            seccion=self.diseno_seccion,
+            seccion=sec,
             formato_hoja=self.hoja_tipo,
+            dibujar=cfg.dibujar,
         )
 
     def exportar_hoja_diseno(self, ruta_destino: str) -> None:
         if not self.resultado or not self.entrada_actual:
             return
-        esq = self._construir_esquema()
+        sec = self.diseno_seccion
+        cfg = self.obtener_config_seccion(sec)
+        esq = cfg.esquema if (cfg and cfg.esquema) else self._construir_esquema(sec)
         dis = self.obtener_diseno_activo()
         carp_rec = self.obtener_carpeta_recursos_activa()
         svg_txt = svg_abanico(
             resultado=self.resultado,
             entrada=self.entrada_actual,
-            seccion=self.diseno_seccion,
+            seccion=sec,
             esquema=esq,
             estilo=IMPRESION,
             hoja=self.hoja_tipo,
-            dibujar=self.diseno_lienzo_modo,
+            dibujar=cfg.dibujar,
             diseno=dis,
             carpeta_recursos=carp_rec,
+            mostrar_reflejo=self.diseno_mostrar_reflejo,
+            ver_cuadricula=self.diseno_ver_cuadricula,
+            ver_rotulos=self.diseno_ver_rotulos,
+            ver_costuras=self.diseno_ver_costuras,
         )
         with open(ruta_destino, "w", encoding="utf-8") as f:
             f.write(svg_txt)
+
+    def exportar_abanico_diseno(self, ruta_destino: str) -> None:
+        self.exportar_hoja_diseno(ruta_destino)
 

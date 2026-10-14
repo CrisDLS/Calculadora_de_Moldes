@@ -1,5 +1,5 @@
 {
-    "version": 1,
+    "version": 2,
     "nombre": "ejemplo_espejo_12",
     "entrada": {
         "altura_cuerpo": 800.0,
@@ -105,6 +105,63 @@
                     "bloqueada": false
                 }
             ]
+        }
+    },
+    "config_secciones": {
+        "superior": {
+            "seccion": "superior",
+            "esquema": {
+                "modo": "espejo_total",
+                "tam_grupo": 12,
+                "ciclo": null
+            },
+            "esquema_pico": null,
+            "dibujar": "completo",
+            "lienzo": "abanico",
+            "escala": "auto"
+        },
+        "inferior": {
+            "seccion": "inferior",
+            "esquema": {
+                "modo": "espejo_total",
+                "tam_grupo": 12,
+                "ciclo": null
+            },
+            "esquema_pico": null,
+            "dibujar": "completo",
+            "lienzo": "abanico",
+            "escala": "auto"
+        },
+        "pico": {
+            "seccion": "pico",
+            "esquema": null,
+            "esquema_pico": {
+                "modo_repeticion": "todas_a",
+                "variante_a": {
+                    "modo_caras": "igual",
+                    "color_0": "amarillo",
+                    "color_1": "amarillo",
+                    "color_2": "amarillo",
+                    "color_3": "amarillo"
+                },
+                "usar_variante_b": false,
+                "variante_b": {
+                    "modo_caras": "igual",
+                    "color_0": "rojo",
+                    "color_1": "rojo",
+                    "color_2": "rojo",
+                    "color_3": "rojo"
+                },
+                "motivos_por_cara": [
+                    0,
+                    1,
+                    2,
+                    3
+                ]
+            },
+            "dibujar": "completo",
+            "lienzo": "abanico",
+            "escala": "auto"
         }
     },
     "recursos_faltantes": []

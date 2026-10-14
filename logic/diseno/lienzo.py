@@ -2,6 +2,7 @@ import os
 import shutil
 import re
 import uuid
+import math
 from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Optional, List, Dict, Any, Union, Tuple
@@ -231,11 +232,132 @@ def _validar_y_procesar_raster(ruta: Path) -> Tuple[float, float, Image.Image]:
     return ancho_cm, alto_cm, img
 
 
+def ajustar_capa(
+    capa: CapaDiseno,
+    ventana: Tuple[float, float, float, float],
+    modo: str,
+) -> CapaDiseno:
+    """Ajusta las coordenadas y dimensiones de una capa según la ventana especificada.
+    
+    ventana = (min_x, min_y, max_x, max_y) en cm.
+    modos:
+      - 'cubrir': escala conservando proporción para cubrir toda la ventana, centrada.
+      - 'contener': escala conservando proporción para caber completa en la ventana, centrada.
+      - 'estirar': llena exactamente la ventana modificando ancho y alto, centrada.
+      - 'ancho': ajusta al ancho de ventana conservando proporción, centrada en X y apoyada en min_y.
+      - 'alto': ajusta al alto de ventana conservando proporción, centrada en X y Y.
+      - 'centrar': conserva ancho y alto actuales, sólo centra la capa en la ventana.
+    """
+    min_x, min_y, max_x, max_y = ventana
+    w_v = max(1e-4, max_x - min_x)
+    h_v = max(1e-4, max_y - min_y)
+    cx_v = (min_x + max_x) / 2.0
+    cy_v = (min_y + max_y) / 2.0
+
+    w0 = capa.ancho_natural if capa.ancho_natural > 0 else capa.ancho
+    h0 = capa.alto_natural if capa.alto_natural > 0 else capa.alto
+    w0 = max(1e-4, w0)
+    h0 = max(1e-4, h0)
+
+    # Considerar rotación en la caja envolvente
+    ang_rad = math.radians(capa.rotacion)
+    cos_a = abs(math.cos(ang_rad))
+    sin_a = abs(math.sin(ang_rad))
+
+    w_rot0 = w0 * cos_a + h0 * sin_a
+    h_rot0 = w0 * sin_a + h0 * cos_a
+
+    modo_lower = modo.lower()
+
+    if modo_lower == "centrar":
+        w_final = capa.ancho
+        h_final = capa.alto
+        x_final = cx_v - w_final / 2.0
+        y_final = cy_v - h_final / 2.0
+
+    elif modo_lower == "contener":
+        s = min(w_v / w_rot0, h_v / h_rot0)
+        w_final = s * w0
+        h_final = s * h0
+        x_final = cx_v - w_final / 2.0
+        y_final = cy_v - h_final / 2.0
+
+    elif modo_lower == "cubrir":
+        s = max(w_v / w_rot0, h_v / h_rot0)
+        w_final = s * w0
+        h_final = s * h0
+        x_final = cx_v - w_final / 2.0
+        y_final = cy_v - h_final / 2.0
+
+    elif modo_lower == "estirar":
+        if abs(capa.rotacion) < 1e-4:
+            w_final = w_v
+            h_final = h_v
+        else:
+            det = cos_a * cos_a - sin_a * sin_a
+            if abs(det) > 1e-3:
+                w_cand = (w_v * cos_a - h_v * sin_a) / det
+                h_cand = (h_v * cos_a - w_v * sin_a) / det
+                if w_cand > 0 and h_cand > 0:
+                    w_final = w_cand
+                    h_final = h_cand
+                else:
+                    s = min(w_v / w_rot0, h_v / h_rot0)
+                    w_final = s * w0
+                    h_final = s * h0
+            else:
+                s = min(w_v / w_rot0, h_v / h_rot0)
+                w_final = s * w0
+                h_final = s * h0
+        x_final = cx_v - w_final / 2.0
+        y_final = cy_v - h_final / 2.0
+
+    elif modo_lower == "ancho":
+        s = w_v / w_rot0
+        w_final = s * w0
+        h_final = s * h0
+        x_final = cx_v - w_final / 2.0
+        # Apoyada en el fondo (y = min_y):
+        h_rot_final = w_final * sin_a + h_final * cos_a
+        cy_final = min_y + h_rot_final / 2.0
+        y_final = cy_final - h_final / 2.0
+
+    elif modo_lower == "alto":
+        s = h_v / h_rot0
+        w_final = s * w0
+        h_final = s * h0
+        x_final = cx_v - w_final / 2.0
+        y_final = cy_v - h_final / 2.0
+
+    else:
+        raise ValueError(f"Modo de ajuste no reconocido: {modo}. Use 'cubrir', 'contener', 'estirar', 'ancho', 'alto' o 'centrar'.")
+
+    return CapaDiseno(
+        id=capa.id,
+        nombre=capa.nombre,
+        tipo=capa.tipo,
+        archivo=capa.archivo,
+        ancho_natural=capa.ancho_natural,
+        alto_natural=capa.alto_natural,
+        x=round(x_final, 4),
+        y=round(y_final, 4),
+        ancho=round(w_final, 4),
+        alto=round(h_final, 4),
+        rotacion=capa.rotacion,
+        reflejo_h=capa.reflejo_h,
+        reflejo_v=capa.reflejo_v,
+        opacidad=capa.opacidad,
+        visible=capa.visible,
+        bloqueada=capa.bloqueada,
+    )
+
+
 def importar_recurso(
     ruta_origen: Union[str, Path],
     carpeta_recursos: Union[str, Path],
     id_capa: Optional[str] = None,
     nombre: Optional[str] = None,
+    ventana: Optional[Tuple[float, float, float, float]] = None,
 ) -> CapaDiseno:
     """Importa un archivo SVG o raster a la carpeta de recursos con validación rigurosa."""
     origen = Path(ruta_origen)
@@ -271,7 +393,7 @@ def importar_recurso(
             ruta_destino = destino_dir / nombre_archivo
             img.save(ruta_destino, format="PNG")
 
-    return CapaDiseno(
+    capa = CapaDiseno(
         id=uid,
         nombre=nombre,
         tipo=tipo,
@@ -289,3 +411,8 @@ def importar_recurso(
         visible=True,
         bloqueada=False,
     )
+
+    if ventana is not None:
+        capa = ajustar_capa(capa, ventana, modo="contener")
+
+    return capa
