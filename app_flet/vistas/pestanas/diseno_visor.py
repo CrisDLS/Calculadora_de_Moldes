@@ -1,16 +1,16 @@
-"""Gestión del visor SVG de diseño: renderizado, zoom, paneo, telemetría y recomposición."""
+"""Gestión del visor SVG de diseño: renderizado, zoom, paneo, telemetría y marco de edición."""
 
 import logging
 import threading
 import time
 from typing import Callable, Optional, Tuple
 import flet as ft
+from app_flet.vistas.componentes.marco_edicion import MarcoEdicion
 from app_flet.vistas.componentes.visor_svg import VisorSvg
 from logic.exportacion.vista_svg import (
     VistaSvg,
     adaptar_aspecto,
     ajustar,
-    aplicar_viewbox,
     desplazar,
     extraer_dimensiones_svg,
     zoom,
@@ -39,10 +39,14 @@ class VisorDisenoGestor:
         self.modo_interaccion_diseno: str = "navegar"
         self._svg_diseno_raw: str = ""
 
-        # Visor compartido
+        self._inicializar_visor_y_marco()
+        self._inicializar_telemetria()
+
+    def _inicializar_visor_y_marco(self) -> None:
+        """Inicializa VisorSvg, MarcoEdicion y sus contenedores."""
         self.visor = VisorSvg(
             papel_blanco=True,
-            drag_interval=35,
+            drag_interval=16,
             margen_ajuste=0.04,
             on_custom_pan_start=self._on_gesture_pan_start,
             on_custom_pan_update=self._on_gesture_pan_update,
@@ -50,7 +54,6 @@ class VisorDisenoGestor:
             on_custom_pan_cancel=self._on_gesture_pan_cancel,
             on_custom_exit=self._on_gesture_exit,
         )
-        self.container_viewer = self.visor.container_viewer_svg
         self.img_svg = self.visor.img_svg
         self.detector_gestos = self.visor.detector_gestos
         self.btn_zoom_in = self.visor.btn_zoom_in
@@ -58,6 +61,24 @@ class VisorDisenoGestor:
         self.btn_ajustar = self.visor.btn_ajustar
         self.lbl_zoom_porcentaje = self.visor.lbl_zoom_porcentaje
         self.lbl_instruccion_zoom = self.visor.lbl_instruccion_zoom
+
+        self.marco_edicion = MarcoEdicion(
+            on_cambio_geometria=self._al_cambiar_geometria_marco,
+            debug_mode=self.debug_mode,
+        )
+
+        self.stack_visor = ft.Stack(
+            controls=[
+                self.visor.detector_gestos,
+                self.marco_edicion.stack,
+            ],
+            expand=True,
+        )
+        self.visor.container_viewer_svg.content = self.stack_visor
+        self.container_viewer = self.visor.container_viewer_svg
+
+        self._on_size_change_original = self.visor.container_viewer_svg.on_size_change
+        self.visor.container_viewer_svg.on_size_change = self._on_container_diseno_size_change
 
         self.lbl_estado_diseno = ft.Text(
             "",
@@ -78,16 +99,15 @@ class VisorDisenoGestor:
             spacing=4,
         )
 
-        # Telemetría de arrastre y recomposición
+    def _inicializar_telemetria(self) -> None:
+        """Inicializa métricas de rendimiento y depuración."""
         self.telemetria_arrastre_eventos: int = 0
-        self.telemetria_arrastre_inicio_ts: float = 0.0
         self.telemetria_eventos_por_segundo: float = 0.0
         self.telemetria_ms_ultima_recomposicion: float = 0.0
         self.telemetria_recomposiciones_pendientes: int = 0
         self.telemetria_recomposiciones_descartadas: int = 0
-        self.arrastrando_capa: bool = False
         self._id_recomposicion_diseno: int = 0
-        self._timer_seguridad_arrastre: Optional[threading.Timer] = None
+        self._timer_debounce_recomposicion: Optional[threading.Timer] = None
 
         self.lbl_debug_diseno = ft.Text(
             "",
@@ -96,6 +116,10 @@ class VisorDisenoGestor:
             text_align=ft.TextAlign.CENTER,
             visible=self.debug_mode,
         )
+
+    @property
+    def arrastrando_capa(self) -> bool:
+        return getattr(self.marco_edicion, "_arrastrando", False)
 
     @property
     def vista_svg(self) -> Optional[VistaSvg]:
@@ -129,18 +153,23 @@ class VisorDisenoGestor:
     def zona_alto(self, val: float) -> None:
         self.visor.zona_alto = val
 
-    def _porcentaje_zoom_diseno(self) -> float:
-        return self.visor.porcentaje_zoom()
-
-    def _limites_zoom_diseno(self) -> Tuple[float, float]:
-        if not self.vista_base_svg:
-            return (1.0, 1000.0)
-        ancho_min = self.vista_base_svg.ancho / 40.0
-        ancho_max = self.vista_base_svg.ancho * 1.5
-        return (ancho_min, ancho_max)
+    def obtener_conversion(self):
+        """Obtiene la conversión matemática actual entre pantalla (px) y plano (cm)."""
+        if not self.vista_svg:
+            return None
+        return self.controlador.obtener_conversion_diseno(
+            (self.zona_ancho, self.zona_alto), self.vista_svg
+        )
 
     def _on_container_diseno_size_change(self, e) -> None:
-        self.visor._on_container_size_change(e)
+        """Adapta la vista y reposiciona el marco ante cambios de tamaño de ventana."""
+        self.visor.on_container_size_change(e)
+        if self.modo_interaccion_diseno == "editar":
+            capa = self.controlador.obtener_capa_seleccionada()
+            conv = self.obtener_conversion()
+            if capa and conv:
+                carp = self.controlador.obtener_carpeta_recursos_activa()
+                self.marco_edicion.actualizar(capa, conv, carp)
 
     def renderizar_diseno(self, reset_vista: bool = False) -> None:
         if not self.controlador.svg_diseno:
@@ -149,133 +178,102 @@ class VisorDisenoGestor:
         self._svg_diseno_raw = self.controlador.svg_diseno
         self.visor.cargar_svg(self._svg_diseno_raw, reset_vista=reset_vista)
 
-    def _actualizar_imagen_diseno(self) -> None:
-        self.visor.actualizar_imagen()
+    # ==========================================================================
+    # Modos Excluyentes: Navegar vs Editar
+    # ==========================================================================
 
-    def _actualizar_imagen_diseno_zoom(self, force: bool = False) -> None:
-        self.visor.actualizar_imagen_zoom(force=force)
-
-    def _on_gesture_pan_start(self, e) -> None:
-        if self.modo_interaccion_diseno == "mover":
+    def cambiar_modo_interaccion(self, modo: str) -> bool:
+        """Cambia entre modo navegar (pan/zoom) y modo editar (marco/tiradores)."""
+        if modo == "editar":
             capa = self.controlador.obtener_capa_seleccionada()
-            if capa and not capa.bloqueada:
-                self.arrastrando_capa = True
-                self.telemetria_arrastre_eventos = 0
-                self.telemetria_arrastre_inicio_ts = time.time()
-                self._reiniciar_timer_seguridad_arrastre()
+            if not capa or capa.bloqueada:
+                self.lbl_estado_diseno.value = "Selecciona una capa no bloqueada para editar"
                 try:
-                    logger.info(f"Inicio de arrastre de capa '{capa.nombre}' (id={capa.id})")
+                    self.lbl_estado_diseno.update()
                 except Exception:
                     pass
+                return False
 
-    def _on_gesture_pan_update(self, e: ft.DragUpdateEvent) -> None:
-        if not self.vista_svg or not self.vista_base_svg:
-            return
-        delta = getattr(e, "local_delta", None) or getattr(e, "global_delta", None)
-        if not (delta and hasattr(delta, "x") and hasattr(delta, "y")):
-            return
+            self.modo_interaccion_diseno = "editar"
+            # En modo editar, el visor SVG queda desactivado
+            self.visor.gestos_habilitados = False
 
-        capa_sel = self.controlador.obtener_capa_seleccionada()
-        if self.modo_interaccion_diseno == "mover" and capa_sel and not capa_sel.bloqueada:
-            self.arrastrando_capa = True
-            self.telemetria_arrastre_eventos += 1
-            dt = time.time() - getattr(self, "telemetria_arrastre_inicio_ts", time.time())
-            if dt > 0.05:
-                self.telemetria_eventos_por_segundo = self.telemetria_arrastre_eventos / dt
-            self._reiniciar_timer_seguridad_arrastre()
+            # Cargar SVG ligero en modo fantasma
+            self.controlador.actualizar_svg_diseno(modo_fantasma=True)
+            self.renderizar_diseno(reset_vista=False)
 
-            w_control = max(50.0, self.zona_ancho)
-            h_control = max(50.0, self.zona_alto)
-            dx_mm = delta.x * (self.vista_svg.ancho / w_control)
-            dy_mm = delta.y * (self.vista_svg.alto / h_control)
-            vent = self.controlador.ventana_lienzo()
-            w_cm = max(1.0, vent[2] - vent[0])
-            factor_escala = self.vista_base_svg.ancho / w_cm
-            if factor_escala <= 0:
-                factor_escala = 1.0
-            dx_cm = dx_mm / factor_escala
-            dy_cm = dy_mm / factor_escala
+            # Mostrar marco de edición superpuesto
+            conv = self.obtener_conversion()
+            carp = self.controlador.obtener_carpeta_recursos_activa()
+            if conv:
+                self.marco_edicion.mostrar(
+                    capa, conv, carp, mantener_proporcion=self.controlador.mantener_proporcion
+                )
 
-            self.controlador.empujar_capa_seleccionada(dx=dx_cm, dy=dy_cm, actualizar_svg=False)
-
-            capa_act = self.controlador.obtener_capa_seleccionada()
-            if capa_act:
-                self.inspector._actualizando_programatico = True
-                try:
-                    self.inspector.txt_pos_x.value = f"{capa_act.x:.2f}"
-                    self.inspector.txt_pos_y.value = f"{capa_act.y:.2f}"
-                    self.inspector.txt_pos_x.update()
-                    self.inspector.txt_pos_y.update()
-                except Exception:
-                    pass
-                finally:
-                    self.inspector._actualizando_programatico = False
-
-            if self.debug_mode:
-                self._actualizar_debug_diseno()
-        else:
-            w_control = max(50.0, self.zona_ancho)
-            h_control = max(50.0, self.zona_alto)
-            dx = delta.x * (self.vista_svg.ancho / w_control)
-            dy = delta.y * (self.vista_svg.alto / h_control)
-            limites_cont = (self.vista_base_svg.ancho, self.vista_base_svg.alto)
-            self.vista_svg = desplazar(self.vista_svg, dx=dx, dy=dy, limites_contenido=limites_cont)
-            self._actualizar_imagen_diseno_zoom()
-
-    def _on_gesture_pan_end(self, e) -> None:
-        self.finalizar_arrastre_capa()
-
-    def _on_gesture_pan_cancel(self, e) -> None:
-        self.finalizar_arrastre_capa()
-
-    def _on_gesture_exit(self, e) -> None:
-        if getattr(self, "arrastrando_capa", False):
-            self.finalizar_arrastre_capa()
-
-    def _reiniciar_timer_seguridad_arrastre(self) -> None:
-        if self._timer_seguridad_arrastre:
+            self.lbl_estado_diseno.value = "Modo Editar: arrastra el marco o sus tiradores"
             try:
-                self._timer_seguridad_arrastre.cancel()
+                self.lbl_estado_diseno.update()
             except Exception:
                 pass
-        self._timer_seguridad_arrastre = threading.Timer(2.0, self._timeout_arrastre_capa)
-        self._timer_seguridad_arrastre.daemon = True
-        self._timer_seguridad_arrastre.start()
+            return True
 
-    def _timeout_arrastre_capa(self) -> None:
-        if getattr(self, "arrastrando_capa", False):
+        else:  # "navegar"
+            self.modo_interaccion_diseno = "navegar"
+            # En modo navegar, reactivar gestos normales del visor
+            self.visor.gestos_habilitados = True
+            self.marco_edicion.ocultar()
+
+            # Regenerar SVG completo con capas decoradas normales
+            self.controlador.actualizar_svg_diseno(modo_fantasma=False)
+            self.renderizar_diseno(reset_vista=False)
+
+            self.lbl_estado_diseno.value = ""
             try:
-                logger.warning("Arrastre de capa finalizado por timeout de seguridad (2.0s)")
+                self.lbl_estado_diseno.update()
             except Exception:
                 pass
-            self.finalizar_arrastre_capa()
+            return True
 
-    def finalizar_arrastre_capa(self) -> None:
-        if self._timer_seguridad_arrastre:
+    def _al_cambiar_geometria_marco(self, capa, finalizado: bool) -> None:
+        """Callback invocado por MarcoEdicion ante micro-arrastres o al soltar."""
+        # 1. Actualizar campos del inspector inmediatamente sin recargar SVG
+        self.inspector.actualizar_campos_geometria(
+            capa.x, capa.y, capa.ancho, capa.alto, capa.rotacion
+        )
+        if self.debug_mode:
+            self.telemetria_arrastre_eventos = self.marco_edicion.telemetria_eventos_arrastre
+            self.telemetria_eventos_por_segundo = self.marco_edicion.telemetria_eventos_sec
+            self._actualizar_debug_diseno()
+
+        # 2. Al soltar: confirmar en el controlador y recomponer SVG en segundo plano
+        if finalizado:
+            self.controlador.actualizar_geometria_capa_seleccionada(
+                x=capa.x,
+                y=capa.y,
+                ancho=capa.ancho,
+                alto=capa.alto,
+                rotacion=capa.rotacion,
+                actualizar_svg=False,
+            )
+            self._programar_recomposicion_debounced()
+
+    def _programar_recomposicion_debounced(self) -> None:
+        """Programa la recomposición en segundo plano con debounce de 100 ms."""
+        if self._timer_debounce_recomposicion:
             try:
-                self._timer_seguridad_arrastre.cancel()
+                self._timer_debounce_recomposicion.cancel()
             except Exception:
                 pass
-            self._timer_seguridad_arrastre = None
 
-        if not getattr(self, "arrastrando_capa", False):
-            return
-
-        self.arrastrando_capa = False
         self._id_recomposicion_diseno += 1
-        current_id = self._id_recomposicion_diseno
-        self.telemetria_recomposiciones_pendientes += 1
-
-        try:
-            self.lbl_estado_diseno.value = "Actualizando…"
-            self.lbl_estado_diseno.update()
-        except Exception:
-            pass
+        req_id = self._id_recomposicion_diseno
 
         def worker():
             t0 = time.time()
             try:
-                self.controlador.actualizar_svg_diseno()
+                # Si sigue en modo editar, actualiza el SVG ligero de fondo
+                fantasma = self.modo_interaccion_diseno == "editar"
+                self.controlador.actualizar_svg_diseno(modo_fantasma=fantasma)
             except Exception as err:
                 try:
                     logger.error(f"Error al recomponer SVG de diseño: {err}", exc_info=True)
@@ -284,31 +282,24 @@ class VisorDisenoGestor:
             finally:
                 ms = (time.time() - t0) * 1000.0
                 self.telemetria_ms_ultima_recomposicion = ms
-                self._aplicar_recomposicion_diseno(current_id)
+                self._aplicar_recomposicion_diseno(req_id)
 
-        t = threading.Thread(target=worker, daemon=True)
-        t.start()
+        self._timer_debounce_recomposicion = threading.Timer(0.100, worker)
+        self._timer_debounce_recomposicion.daemon = True
+        self._timer_debounce_recomposicion.start()
 
     def _aplicar_recomposicion_diseno(self, req_id: int) -> None:
-        self.telemetria_recomposiciones_pendientes = max(0, self.telemetria_recomposiciones_pendientes - 1)
         if req_id != self._id_recomposicion_diseno:
             self.telemetria_recomposiciones_descartadas += 1
             return
 
         def sync_ui():
-            try:
-                self.lbl_estado_diseno.value = ""
-                self.lbl_estado_diseno.update()
-            except Exception:
-                pass
+            self.renderizar_diseno(reset_vista=False)
             if self.on_solicitar_sync:
                 try:
                     self.on_solicitar_sync()
-                except Exception as ex:
-                    try:
-                        logger.error(f"Error al sincronizar vista tras recomposición: {ex}")
-                    except Exception:
-                        pass
+                except Exception:
+                    pass
 
         pagina = self._obtener_pagina() if self._obtener_pagina else None
         if pagina:
@@ -319,26 +310,52 @@ class VisorDisenoGestor:
         else:
             sync_ui()
 
+    # Callbacks de gestos del visor delegados (modo navegar)
+    def _on_gesture_pan_start(self, e) -> None:
+        pass
+
+    def _on_gesture_pan_update(self, e) -> bool:
+        # En modo navegar, retorna False para que VisorSvg haga su paneo normal
+        return False
+
+    def _on_gesture_pan_end(self, e) -> None:
+        pass
+
+    def _on_gesture_pan_cancel(self, e) -> None:
+        pass
+
+    def _on_gesture_exit(self, e) -> None:
+        pass
+
     def ajustar_vista(self) -> None:
-        self.visor.ajustar()
+        self.visor.ajustar_vista()
+        if self.modo_interaccion_diseno == "editar":
+            conv = self.obtener_conversion()
+            capa = self.controlador.obtener_capa_seleccionada()
+            if conv and capa:
+                self.marco_edicion.actualizar(capa, conv)
 
     def obtener_estado_telemetria(self) -> dict:
         return {
-            "arrastrando": getattr(self, "arrastrando_capa", False),
-            "modo": getattr(self, "modo_interaccion_diseno", "navegar"),
-            "eventos_arrastre": getattr(self, "telemetria_arrastre_eventos", 0),
-            "pendientes": getattr(self, "telemetria_recomposiciones_pendientes", 0),
-            "descartadas": getattr(self, "telemetria_recomposiciones_descartadas", 0),
+            "arrastrando": self.arrastrando_capa,
+            "modo": self.modo_interaccion_diseno,
+            "eventos_arrastre": self.telemetria_arrastre_eventos,
+            "pendientes": self.telemetria_recomposiciones_pendientes,
+            "descartadas": self.telemetria_recomposiciones_descartadas,
         }
 
     def _actualizar_debug_diseno(self) -> None:
         if not self.debug_mode:
             return
+        m = self.marco_edicion
+        lat = m.telemetria_latencia_ms
+        ev_s = m.telemetria_eventos_sec
+        v = self.visor.vista_svg
+        enc = f"vBox:{v.x:.0f},{v.y:.0f},{v.ancho:.0f},{v.alto:.0f}" if v else "vBox:-"
+        zona = f"zona:{self.visor.ancho_zona:.0f}x{self.visor.alto_zona:.0f}"
+        ult = getattr(m, "_ultimo_evento_desc", "ninguno")
         self.lbl_debug_diseno.value = (
-            f"arrastre: {self.telemetria_eventos_por_segundo:.1f} ev/s · "
-            f"última recomp: {self.telemetria_ms_ultima_recomposicion:.1f} ms · "
-            f"pendientes: {self.telemetria_recomposiciones_pendientes} · "
-            f"descartadas: {self.telemetria_recomposiciones_descartadas}"
+            f"modo:{self.modo_interaccion_diseno} · {ult} · {zona} · {enc} · {ev_s:.0f} ev/s ({lat:.1f} ms)"
         )
         try:
             self.lbl_debug_diseno.update()

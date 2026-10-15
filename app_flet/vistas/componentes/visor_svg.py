@@ -55,6 +55,7 @@ class VisorSvg:
         self.vista_svg: Optional[VistaSvg] = None
         self.vista_base_svg: Optional[VistaSvg] = None
         self.svg_actual_raw: str = ""
+        self.gestos_habilitados: bool = True
 
         # Telemetría de depuración
         self.debug_mode = os.environ.get("GLOBOS_DEBUG") == "1"
@@ -315,7 +316,7 @@ class VisorSvg:
 
     def on_gesture_scroll(self, e: ft.ScrollEvent) -> None:
         """Zoom centrado en el cursor mediante la rueda del ratón."""
-        if not self.vista_svg:
+        if not self.gestos_habilitados or not self.vista_svg:
             return
         delta_y = getattr(e, "scroll_delta", None)
         factor = 1.15
@@ -337,11 +338,15 @@ class VisorSvg:
         self.actualizar_imagen_zoom()
 
     def on_gesture_pan_start(self, e) -> None:
+        if not self.gestos_habilitados:
+            return
         if self.on_custom_pan_start:
             self.on_custom_pan_start(e)
 
     def on_gesture_pan_update(self, e: ft.DragUpdateEvent) -> None:
         """Arrastre para desplazar el lienzo o delegado a callback personalizado."""
+        if not self.gestos_habilitados:
+            return
         if self.on_custom_pan_update:
             consumido = self.on_custom_pan_update(e)
             if consumido:
@@ -362,18 +367,26 @@ class VisorSvg:
         self.actualizar_imagen_zoom()
 
     def on_gesture_pan_end(self, e) -> None:
+        if not self.gestos_habilitados:
+            return
         if self.on_custom_pan_end:
             self.on_custom_pan_end(e)
 
     def on_gesture_pan_cancel(self, e) -> None:
+        if not self.gestos_habilitados:
+            return
         if self.on_custom_pan_cancel:
             self.on_custom_pan_cancel(e)
 
     def on_gesture_exit(self, e) -> None:
+        if not self.gestos_habilitados:
+            return
         if self.on_custom_exit:
             self.on_custom_exit(e)
 
     def on_gesture_double_tap(self, e) -> None:
+        if not self.gestos_habilitados:
+            return
         self.ajustar_vista()
 
     def on_btn_zoom_in(self, e) -> None:

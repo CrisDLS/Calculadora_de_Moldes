@@ -179,7 +179,7 @@ class PestanaDiseno(PestanaBase):
             allow_multiple_selection=False,
             segments=[
                 ft.Segment(value="navegar", label=ft.Text("Navegar"), icon=ft.Icon(ft.Icons.PAN_TOOL, size=16)),
-                ft.Segment(value="mover", label=ft.Text("Mover capa"), icon=ft.Icon(ft.Icons.TOUCH_APP, size=16)),
+                ft.Segment(value="editar", label=ft.Text("Editar"), icon=ft.Icon(ft.Icons.HIGHLIGHT_ALT, size=16)),
             ],
             on_change=self.on_cambio_modo_interaccion,
         )
@@ -301,6 +301,22 @@ class PestanaDiseno(PestanaBase):
 
         self.inspector.actualizar(vm)
 
+        # Sincronización del modo de interacción y del marco superpuesto
+        capa_sel = self.controlador.obtener_capa_seleccionada()
+        if self.gestor_visor.modo_interaccion_diseno == "editar":
+            if not capa_sel or capa_sel.bloqueada:
+                self.gestor_visor.cambiar_modo_interaccion("navegar")
+                self.selector_interaccion_diseno.selected = ["navegar"]
+            else:
+                conv = self.gestor_visor.obtener_conversion()
+                carp = self.controlador.obtener_carpeta_recursos_activa()
+                if conv:
+                    self.gestor_visor.marco_edicion.actualizar(
+                        capa_sel, conv, carp, mantener_proporcion=self.controlador.mantener_proporcion
+                    )
+        else:
+            self.selector_interaccion_diseno.selected = ["navegar"]
+
     def on_cambio_seccion_diseno(self, e) -> None:
         sel = self.selector_seccion_diseno.selected[0] if self.selector_seccion_diseno.selected else "superior"
         self.selector_variante_pico_diseno.visible = (sel == "pico")
@@ -337,8 +353,14 @@ class PestanaDiseno(PestanaBase):
 
     def on_cambio_modo_interaccion(self, e) -> None:
         sel = self.selector_interaccion_diseno.selected
-        modo = sel[0] if sel else "navegar"
-        self.gestor_visor.modo_interaccion_diseno = modo
+        modo = list(sel)[0] if sel else "navegar"
+        exito = self.gestor_visor.cambiar_modo_interaccion(modo)
+        if not exito:
+            self.selector_interaccion_diseno.selected = ["navegar"]
+            try:
+                self.selector_interaccion_diseno.update()
+            except Exception:
+                pass
 
     async def on_exportar_abanico_click(self, e) -> None:
         nom_def = f"abanico_{self.controlador.diseno_seccion}.svg"

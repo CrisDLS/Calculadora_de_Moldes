@@ -175,6 +175,36 @@ class PanelCapasInspector:
         else:
             self.panel_inspector_capa.visible = False
 
+    def actualizar_campos_geometria(
+        self,
+        x: float,
+        y: float,
+        ancho: float,
+        alto: float,
+        rotacion: Optional[float] = None,
+    ) -> None:
+        """Actualiza los campos de texto del inspector sin disparar eventos on_change."""
+        self._actualizando_programatico = True
+        try:
+            self.txt_pos_x.value = f"{x:.2f}"
+            self.txt_pos_y.value = f"{y:.2f}"
+            self.txt_ancho_capa.value = f"{ancho:.2f}"
+            self.txt_alto_capa.value = f"{alto:.2f}"
+            if rotacion is not None:
+                self.slider_rotacion.value = float(rotacion)
+                self.lbl_rotacion_val.value = f"{rotacion:.0f}°"
+            self.txt_pos_x.update()
+            self.txt_pos_y.update()
+            self.txt_ancho_capa.update()
+            self.txt_alto_capa.update()
+            if rotacion is not None:
+                self.slider_rotacion.update()
+                self.lbl_rotacion_val.update()
+        except Exception:
+            pass
+        finally:
+            self._actualizando_programatico = False
+
     async def on_anadir_capa_click(self, e) -> None:
         archivos = await self.file_picker.pick_files(
             dialog_title="Seleccionar imagen o SVG para diseño",
