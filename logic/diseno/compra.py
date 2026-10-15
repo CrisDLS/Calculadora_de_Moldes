@@ -1,6 +1,6 @@
 import math
 from dataclasses import dataclass
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Optional
 from logic.models import BalloonInput, BalloonCalculationResult, Condiciones
 from logic.diseno.esquema import EsquemaDiseno
 from logic.diseno.pintura import EsquemaPintura, color_de_cara

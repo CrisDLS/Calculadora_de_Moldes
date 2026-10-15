@@ -2,7 +2,6 @@
 import re
 from dataclasses import dataclass
 from typing import Optional, Tuple
-import xml.etree.ElementTree as ET
 
 @dataclass
 class VistaSvg:

@@ -4,7 +4,6 @@ pytest.importorskip("flet")
 import flet as ft
 
 from app_flet.vistas.trompo import VistaTrompo
-from app_flet.controlador import ControladorTrompo
 
 def test_construccion_flet_estado_inicial():
     v = VistaTrompo()
@@ -298,7 +297,6 @@ def test_visor_adaptacion_tamano_zona():
 
     # Con zona de 400x800, posición x=200, y=400 debe representar fx=0.5, fy=0.5
     ev_scroll = MockScrollEvent(200.0, 400.0)
-    vista_pre_scroll = v.vista_svg
     v._on_gesture_scroll(ev_scroll)
     # Al hacer zoom en el centro (0.5, 0.5), el centro debe permanecer idéntico
     cx_scroll = v.vista_svg.x + v.vista_svg.ancho / 2.0

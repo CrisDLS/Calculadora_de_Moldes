@@ -1,5 +1,5 @@
 # app_flet/vistas/tabla_molde.py
-from typing import List, Optional
+from typing import Optional
 import flet as ft
 from presentacion.trompo_estrella import TablaMolde
 from app_flet.tema import PaletaTema

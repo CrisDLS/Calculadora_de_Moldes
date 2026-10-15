@@ -1,10 +1,6 @@
 """Pruebas del controlador para F3: esquema de diseño, hoja de trazo y proyectos."""
 
-import os
-import pytest
 from app_flet.controlador import ControladorTrompo
-from logic.diseno.esquema import EsquemaDiseno
-from logic.exportacion.estilos import PANTALLA_OSCURO, PANTALLA_CLARO, IMPRESION
 
 
 def test_controlador_esquema_y_hoja_defecto():

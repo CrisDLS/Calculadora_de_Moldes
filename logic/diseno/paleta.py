@@ -2,8 +2,7 @@ import os
 import json
 import re
 import csv
-from io import StringIO
-from dataclasses import dataclass, asdict, field
+from dataclasses import dataclass, asdict
 from typing import List, Dict, Optional, Tuple
 
 @dataclass
@@ -174,7 +173,6 @@ def importar_csv(ruta: str, ruta_usuario_destino: Optional[str] = None) -> Tuple
         if "notas" in primera_fila: idx_notas = primera_fila.index("notas")
 
     ids_vistos = set()
-    cat_existente = {c.id: c for c in cargar_catalogo()}
 
     for num_fila, fila in enumerate(filas[fila_inicio:], start=fila_inicio + 1):
         if not fila or all(not celda.strip() for celda in fila):

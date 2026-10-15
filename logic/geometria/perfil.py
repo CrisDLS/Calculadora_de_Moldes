@@ -2,10 +2,10 @@
 Cálculo del perfil armado proyectado de la malla 3D.
 """
 from dataclasses import dataclass
-from typing import List, Tuple, Dict, Any
+from typing import List, Tuple
 import math
 from logic.models import BalloonInput, BalloonCalculationResult
-from logic.geometria.malla_trompo import construir_malla, Malla
+from logic.geometria.malla_trompo import construir_malla
 
 @dataclass
 class AnilloPerfil:
@@ -72,8 +72,6 @@ def perfil_armado(
 
     anillos_picos = malla.anillos["picos"]
     zs_picos = [verts_rot[anillo[0]][1] for anillo in anillos_picos]
-    # Apotema o radio del cuerpo en la silueta
-    xs_picos = [verts_rot[anillo[0]][0] for anillo in anillos_picos]
     r_cuerpo_silueta = max(max(verts_rot[i][0] for i in anillo) for anillo in anillos_picos)
 
     idx_apex = malla.anillos["apex"]
@@ -141,7 +139,6 @@ def perfil_armado(
 
     # Para cada hilera, si hay pirámide extrema al borde, el contorno sale hacia el ápice
     for j in range(hileras):
-        z_inf = zs_picos[j]
         z_sup = zs_picos[j+1]
         pir_extrema = next((p for p in piramides_lista if p.hilera == j and p.lado == "derecha" and p.es_borde_extremo), None)
         if pir_extrema:

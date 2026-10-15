@@ -1,7 +1,7 @@
 # app_flet/controlador.py
 import os
 import warnings
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple, Union
 from logic.calculators.trompo_estrella import TrompoEstrellaCalculator
 from logic.models import BalloonInput, BalloonCalculationResult, Condiciones
@@ -11,9 +11,9 @@ from logic.exportacion.svg_abanico import svg_abanico
 from logic.geometria.perfil import perfil_armado
 from logic.exportacion.svg_perfil import svg_perfil
 from logic.diseno.esquema import EsquemaDiseno
-from logic.exportacion.paquete import parsear_ciclo, resumen_esquema, generar_paquete, guardar_paquete
+from logic.exportacion.paquete import parsear_ciclo, resumen_esquema
 from logic.proyecto.modelo import Proyecto, guardar_proyecto, cargar_proyecto
-from logic.diseno.diseno_pico import EsquemaDisenoPico, ResumenPico, resumen_pico
+from logic.diseno.diseno_pico import EsquemaDisenoPico, resumen_pico
 from presentacion.trompo_estrella import (
     leer_entrada,
     formatear_resumen,
@@ -23,13 +23,12 @@ from presentacion.trompo_estrella import (
 )
 
 from logic.diseno.pintura import EsquemaPintura
-from logic.diseno.paleta import ColorPapel, cargar_catalogo, color_por_id
+from logic.diseno.paleta import cargar_catalogo
 from logic.diseno.compra import ItemCompra, lista_de_compra
 from logic.exportacion.escena3d import escena_a_dict
 from logic.exportacion.visor3d import ServidorVisor, exportar_visor_autocontenido
 from logic.diseno.lienzo import Diseno, CapaDiseno, importar_recurso, ajustar_capa
-from logic.exportacion.svg_diseno import svg_gajo, exportar_diseno
-from logic.geometria.abanico import pieza_a_geometria_plana
+from logic.exportacion.svg_diseno import exportar_diseno
 from pathlib import Path
 
 @dataclass

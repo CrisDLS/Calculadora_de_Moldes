@@ -1,7 +1,6 @@
-import math
 from typing import Dict, Any, List, Optional
 from logic.models import BalloonInput, BalloonCalculationResult
-from logic.geometria.malla_trompo import construir_malla, normal_triangulo, Cara
+from logic.geometria.malla_trompo import construir_malla, normal_triangulo
 from logic.diseno.esquema import EsquemaDiseno
 from logic.diseno.pintura import EsquemaPintura, color_de_cara
 from logic.diseno.paleta import ColorPapel, color_por_id, cargar_catalogo

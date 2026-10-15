@@ -1,8 +1,5 @@
-import pytest
-import os
 from app_flet.controlador import ControladorTrompo
 from app_flet.vistas.trompo import VistaTrompo
-from logic.diseno.pintura import EsquemaPintura
 
 class MockClipboard:
     def __init__(self):

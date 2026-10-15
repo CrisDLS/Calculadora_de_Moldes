@@ -1,13 +1,9 @@
-import pytest
-import os
 from logic.diseno.paleta import (
     ColorPapel,
     importar_csv,
     exportar_csv,
-    cargar_catalogo,
-    guardar_color_usuario,
 )
-from logic.diseno.compra import lista_de_compra, ItemCompra
+from logic.diseno.compra import lista_de_compra
 from logic.models import BalloonInput
 from logic.calculators.trompo_estrella import TrompoEstrellaCalculator
 from logic.diseno.pintura import EsquemaPintura

@@ -1,10 +1,9 @@
 import math
-import base64
 from pathlib import Path
-from typing import List, Tuple, Optional, Union, Dict, Any
+from typing import List, Tuple, Optional, Union
 from logic.models import BalloonInput, BalloonCalculationResult
 from logic.diseno.esquema import EsquemaDiseno
-from logic.diseno.lienzo import Diseno, CapaDiseno, obtener_fragmento_capa
+from logic.diseno.lienzo import Diseno, obtener_fragmento_capa
 from logic.diseno.transformaciones import (
     transformacion_a_gajo,
     gajos_equivalentes,
@@ -210,7 +209,6 @@ def svg_gajo(
     # Capa: etiquetas
     lines.append('  <g inkscape:groupmode="layer" inkscape:label="etiquetas" id="layer-etiquetas">')
     fs_tit = max(3.5 * estilo.factor_texto, svg_w * 0.030)
-    fs_sub = max(2.2 * estilo.factor_texto, svg_w * 0.020)
 
     nombre_sec = seccion.capitalize()
     espejo_str = " (Espejo)" if es_reflejo else ""

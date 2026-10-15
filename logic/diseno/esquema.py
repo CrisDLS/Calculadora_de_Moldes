@@ -73,7 +73,7 @@ class EsquemaDiseno:
 
     def asignar(self, num_gajos: int) -> List[AsignacionGajo]:
         ciclo_base = self._generar_ciclo()
-        reps = self.repeticiones(num_gajos) # Lanza ValueError si no divide
+        self.repeticiones(num_gajos)  # Lanza ValueError si no divide
         
         longitud_ciclo = len(ciclo_base)
         asignaciones = []

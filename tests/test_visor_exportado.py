@@ -1,8 +1,6 @@
-import pytest
 from logic.models import BalloonInput
 from logic.calculators.trompo_estrella import TrompoEstrellaCalculator
 from logic.diseno.pintura import EsquemaPintura
-from logic.diseno.compra import lista_de_compra
 from logic.exportacion.visor3d import exportar_visor_autocontenido
 from logic.exportacion.escena3d import escena_a_dict
 

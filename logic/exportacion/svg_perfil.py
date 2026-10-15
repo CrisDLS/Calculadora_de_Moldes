@@ -1,7 +1,7 @@
 """
 Generación de SVG del perfil armado.
 """
-from typing import List, Tuple
+from typing import Tuple
 from logic.geometria.perfil import PerfilArmado
 from logic.exportacion.estilos import EstiloSvg, IMPRESION
 

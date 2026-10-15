@@ -1,4 +1,3 @@
-import pytest
 from logic.models import BalloonInput, Condiciones
 from logic.diseno.esquema import EsquemaDiseno, tiene_simetria_espejo
 from logic.diseno.diseno_pico import EsquemaDisenoPico

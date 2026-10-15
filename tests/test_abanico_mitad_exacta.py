@@ -1,7 +1,5 @@
 import re
-import math
 import pytest
-from pathlib import Path
 from logic.models import BalloonInput
 from logic.calculators.trompo_estrella import TrompoEstrellaCalculator
 from logic.diseno.esquema import EsquemaDiseno
@@ -14,10 +12,9 @@ from logic.geometria.abanico import (
 )
 from logic.diseno.transformaciones import (
     transformacion_a_gajo,
-    construir_grupo,
 )
 from logic.exportacion.svg_abanico import svg_abanico
-from logic.exportacion.svg_diseno import exportar_diseno, svg_gajo
+from logic.exportacion.svg_diseno import exportar_diseno
 
 def test_poligono_mitad_exacta_y_area():
     """Verifica que el polígono de mitad tiene x >= 0, borde recto en x=0, y área = mitad exacta."""

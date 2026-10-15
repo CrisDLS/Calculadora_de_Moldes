@@ -1,6 +1,5 @@
 import os
 import re
-import pytest
 from logic.models import BalloonInput
 from logic.calculators.trompo_estrella import TrompoEstrellaCalculator
 from logic.diseno.esquema import EsquemaDiseno

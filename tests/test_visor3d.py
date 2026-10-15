@@ -1,4 +1,3 @@
-import pytest
 import urllib.request
 import json
 from logic.models import BalloonInput

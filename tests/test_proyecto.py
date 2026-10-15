@@ -1,5 +1,4 @@
 import pytest
-import os
 from logic.models import BalloonInput, Condiciones
 from logic.diseno.esquema import EsquemaDiseno
 from logic.proyecto.modelo import Proyecto, guardar_proyecto, cargar_proyecto

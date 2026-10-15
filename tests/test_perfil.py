@@ -11,7 +11,6 @@ from tests.test_estilos import _ratio_contraste
 
 @pytest.fixture
 def casos_perfil():
-    calc = TrompoEstrellaCalculator()
     return [
         (BalloonInput(950, 30, 2, 1, usar_parametros_avanzados=False), "950_simple"),
         (BalloonInput(950, 30, 2, 1, usar_parametros_avanzados=True, diametro_boca=104.5, pestana_boca=4), "950_avanzado"),
@@ -81,12 +80,7 @@ def test_svg_perfil_validez_y_cotas(casos_perfil):
             assert "Medidas del polígono exacto" in svg
             assert "Perfil armado" in svg
 
-def test_svg_perfil_wcag_contraste(casos_perfil):
-    calc = TrompoEstrellaCalculator()
-    inp, _ = casos_perfil[0]
-    res = calc.calcular(inp)
-    perf = perfil_armado(inp, res)
-
+def test_svg_perfil_wcag_contraste():
     nombres_a_hex = {
         "black": "#000000",
         "white": "#ffffff",

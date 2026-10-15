@@ -2,7 +2,7 @@ import math
 import pytest
 from logic.models import BalloonInput
 from logic.calculators.trompo_estrella import TrompoEstrellaCalculator
-from logic.geometria.malla_trompo import construir_malla, malla_a_dict, Malla, Cara
+from logic.geometria.malla_trompo import construir_malla, malla_a_dict
 
 def dist_3d(v1, v2):
     return math.hypot(v1[0]-v2[0], v1[1]-v2[1], v1[2]-v2[2])

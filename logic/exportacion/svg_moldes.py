@@ -1,5 +1,4 @@
-from typing import List, Optional
-from logic.models import BalloonInput, BalloonCalculationResult, SectionResult, Point2D
+from logic.models import BalloonInput, BalloonCalculationResult
 from logic.exportacion.estilos import EstiloSvg, IMPRESION
 
 def svg_pieza(resultado: BalloonCalculationResult, entrada: BalloonInput, seccion: str, escala: float = 10.0, estilo: EstiloSvg = IMPRESION) -> str:
@@ -135,10 +134,8 @@ def svg_pieza(resultado: BalloonCalculationResult, entrada: BalloonInput, seccio
         pestana_cm = entrada.pestana_boca
         p_pestana = pestana_cm * factor
         y_boca = get_y(0.0)
-        y_end = y_boca + p_pestana
         w_boca = sec_res.puntos[0].ancho_medio * factor
         x1 = cx - w_boca
-        x2 = cx + w_boca
         w_pest = 0.5 * estilo.factor_trazo
         lines.append(f'    <rect x="{x1:.2f}" y="{y_boca:.2f}" width="{w_boca*2:.2f}" height="{p_pestana:.2f}" fill="none" stroke="{estilo.pestana}" stroke-width="{w_pest:.2f}" stroke-dasharray="2,2" id="rect-pestana"/>')
         lines.append('  </g>')

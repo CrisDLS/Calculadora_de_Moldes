@@ -1,12 +1,10 @@
 import json
-from pathlib import Path
 import pytest
 
 from logic.models import BalloonInput
 from logic.calculators.trompo_estrella import TrompoEstrellaCalculator
 from logic.diseno.esquema import EsquemaDiseno
-from logic.diseno.lienzo import Diseno, importar_recurso
-from logic.exportacion.estilos import IMPRESION
+from logic.diseno.lienzo import Diseno
 from logic.exportacion.svg_moldes import svg_pieza, svg_conjunto, svg_hoja
 from logic.exportacion.svg_abanico import svg_abanico
 from logic.exportacion.svg_perfil import svg_perfil

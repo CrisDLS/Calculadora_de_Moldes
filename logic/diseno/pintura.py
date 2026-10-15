@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Dict, Any, List, Optional
+from typing import Dict, List, Optional
 from logic.geometria.malla_trompo import Cara
 from logic.diseno.esquema import EsquemaDiseno
 

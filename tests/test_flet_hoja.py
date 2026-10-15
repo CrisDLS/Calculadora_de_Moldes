@@ -2,7 +2,6 @@
 
 import os
 import pytest
-import flet as ft
 from app_flet.vistas.trompo import VistaTrompo
 
 

@@ -1,12 +1,11 @@
 import math
 import warnings
-import base64
 from pathlib import Path
-from typing import List, Tuple, Optional, Union
+from typing import Tuple, Optional, Union
 from logic.models import BalloonInput, BalloonCalculationResult
 from logic.diseno.esquema import EsquemaDiseno
 from logic.exportacion.estilos import EstiloSvg, IMPRESION
-from logic.geometria.abanico import pieza_a_geometria_plana, abanico, contorno_abanico, PiezaPlana, Abanico
+from logic.geometria.abanico import pieza_a_geometria_plana, abanico, contorno_abanico
 from logic.diseno.lienzo import Diseno, CapaDiseno, obtener_fragmento_capa
 from logic.diseno.transformaciones import construir_grupo
 

@@ -1,5 +1,4 @@
 import pytest
-import os
 from logic.models import BalloonInput, Condiciones
 from logic.calculators.trompo_estrella import TrompoEstrellaCalculator
 from logic.diseno.pintura import EsquemaPintura, VariantePico, color_de_cara
@@ -8,10 +7,6 @@ from logic.geometria.malla_trompo import Cara
 from logic.proyecto.modelo import Proyecto, guardar_proyecto, cargar_proyecto
 
 def test_patrones_cono_superior_e_inferior():
-    calc = TrompoEstrellaCalculator()
-    ent = BalloonInput(950.0, 30, 2, 1.0)
-    res = calc.calcular(ent)
-
     # Modo liso
     p_liso = EsquemaPintura(modo_superior="liso", colores_superior=["blanco"])
     colores_sup = [color_de_cara(p_liso, Cara([], "superior", k, None, None, [0, 0, 1], []), None, 30) for k in range(30)]

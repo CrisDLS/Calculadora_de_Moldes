@@ -1,15 +1,10 @@
-import os
 import pytest
-import math
-from pathlib import Path
 from logic.diseno.lienzo import (
     CapaDiseno,
-    Diseno,
     ajustar_capa,
     importar_recurso,
 )
 from logic.exportacion.svg_abanico import svg_abanico
-from logic.exportacion.estilos import PANTALLA_OSCURO, IMPRESION
 from logic.diseno.esquema import EsquemaDiseno
 from logic.calculators.trompo_estrella import TrompoEstrellaCalculator
 from logic.models import BalloonInput

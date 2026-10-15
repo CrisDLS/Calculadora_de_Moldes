@@ -1,11 +1,9 @@
-import math
 import pytest
 from logic.models import BalloonInput
 from logic.calculators.trompo_estrella import TrompoEstrellaCalculator
 from logic.geometria.abanico import (
     pieza_a_geometria_plana,
     abanico,
-    Transformacion2D,
     reflejo_del_abanico,
     transformacion_a_gajo,
     recorte_gajo,
@@ -100,6 +98,7 @@ def test_gajos_equivalentes_modos():
     assert len(equiv_cen) == 20
     # Verifica que tiene espejos en los extremos
     motivos_grupo = [m for m, _, _ in equiv_cen[:5]]
+    assert len(motivos_grupo) == 5
     espejos_grupo = [esp for _, esp, _ in equiv_cen[:5]]
     assert True in espejos_grupo  # Hay al menos un espejo
 

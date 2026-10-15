@@ -1,4 +1,3 @@
-import os
 import pytest
 from pathlib import Path
 from PIL import Image

@@ -3,11 +3,9 @@
 duplicados potenciales e importaciones circulares usando AST.
 """
 import ast
-import os
-import sys
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Set, Tuple
+from typing import Dict, List, Set
 
 DIRECTORIOS_ANALIZAR = ["app_flet", "logic", "presentacion", "referencia"]
 
@@ -26,14 +24,14 @@ def obtener_archivos_py(raiz: Path) -> List[Path]:
 def analizar_archivo(ruta: Path):
     try:
         texto = ruta.read_text(encoding="utf-8")
-    except Exception as e:
+    except Exception:
         return None
     
     lineas_totales = len(texto.splitlines())
     
     try:
         arbol = ast.parse(texto, filename=str(ruta))
-    except SyntaxError as e:
+    except SyntaxError:
         return None
     
     funciones = []
@@ -113,7 +111,6 @@ def main():
         if info:
             rel_str = str(arch.relative_to(raiz)).replace("\\", "/")
             datos_archivos[rel_str] = info
-            mod = ruta_a_modulo(raiz, arch)
             
             for nombre_fn, inicio, fin, tam in info["funciones"]:
                 funciones_por_nombre[nombre_fn].append((rel_str, inicio, tam))

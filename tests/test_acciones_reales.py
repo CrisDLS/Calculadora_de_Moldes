@@ -1,10 +1,7 @@
 import os
 import json
 import urllib.request
-import pytest
-from logic.models import BalloonInput, Condiciones
-from logic.calculators.trompo_estrella import TrompoEstrellaCalculator
-from logic.exportacion.estilos import PANTALLA_OSCURO, PANTALLA_CLARO, IMPRESION
+from logic.exportacion.estilos import PANTALLA_OSCURO, PANTALLA_CLARO
 from logic.exportacion.paquete import generar_paquete, guardar_paquete
 from logic.diseno.paleta import ColorPapel, cargar_catalogo, guardar_color_usuario, exportar_csv, importar_csv
 from presentacion.trompo_estrella import tabla_a_texto

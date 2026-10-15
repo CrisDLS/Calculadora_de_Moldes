@@ -1,7 +1,6 @@
-import pytest
 from logic.geometria.malla_trompo import Cara
 from logic.diseno.esquema import EsquemaDiseno
-from logic.diseno.pintura import EsquemaPintura, color_de_cara, clave_cara
+from logic.diseno.pintura import EsquemaPintura, color_de_cara
 
 def test_color_de_cara_defaults():
     pintura = EsquemaPintura(color_superior="rojo", color_pico="verde_bandera", color_inferior="azul_rey")

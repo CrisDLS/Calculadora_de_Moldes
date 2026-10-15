@@ -1,13 +1,9 @@
 import time
-import threading
 from pathlib import Path
 from PIL import Image
 import pytest
-import flet as ft
-from app_flet.controlador import ControladorTrompo
 from app_flet.vistas.trompo import VistaTrompo
-from logic.diseno.lienzo import Diseno, CapaDiseno, importar_recurso, _validar_y_procesar_svg
-from logic.exportacion.svg_abanico import svg_abanico
+from logic.diseno.lienzo import importar_recurso, _validar_y_procesar_svg
 
 class DummyPoint:
     def __init__(self, x: float, y: float):

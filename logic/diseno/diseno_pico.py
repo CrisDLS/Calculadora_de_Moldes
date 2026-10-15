@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Dict, List
 from logic.models import BalloonInput, BalloonCalculationResult
 from logic.diseno.pintura import VariantePico, variante_de_piramide
 

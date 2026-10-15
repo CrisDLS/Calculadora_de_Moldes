@@ -1,4 +1,3 @@
-import pytest
 from logic.models import BalloonInput, Condiciones
 from logic.calculators.trompo_estrella import TrompoEstrellaCalculator
 from logic.diseno.pintura import VariantePico

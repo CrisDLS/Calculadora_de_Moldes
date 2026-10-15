@@ -1,7 +1,7 @@
 import math
 from dataclasses import dataclass
-from typing import List, Tuple, Optional, Dict, Any
-from logic.geometria.abanico import Abanico, PiezaPlana
+from typing import List, Tuple, Optional
+from logic.geometria.abanico import Abanico
 from logic.diseno.esquema import EsquemaDiseno
 from logic.diseno.lienzo import Diseno, CapaDiseno
 
@@ -99,7 +99,6 @@ def recorte_gajo(
 
     # Construir contorno canónico ensanchado y proyectarlo al abanico
     s0 = abanico.pieza.distancia_vertice
-    s1 = abanico.pieza.radio_arco
     largo = abanico.pieza.largo
     costura_mitad = margen_costura / 2.0
 

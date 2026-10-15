@@ -119,8 +119,6 @@ def _calcular_escala_comun_hojas(
 
 from logic.diseno.pintura import EsquemaPintura
 from logic.exportacion.escena3d import escena_a_dict
-from logic.exportacion.visor3d import exportar_visor_autocontenido, _directorio_assets
-import json
 
 from logic.diseno.config_seccion import ConfigSeccion
 

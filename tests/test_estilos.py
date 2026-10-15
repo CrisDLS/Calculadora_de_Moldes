@@ -1,6 +1,6 @@
 import pytest
 import xml.etree.ElementTree as ET
-from logic.exportacion.estilos import EstiloSvg, IMPRESION, PANTALLA_OSCURO, PANTALLA_CLARO
+from logic.exportacion.estilos import IMPRESION, PANTALLA_OSCURO, PANTALLA_CLARO
 from logic.exportacion.svg_moldes import svg_pieza, svg_conjunto
 from logic.models import BalloonInput
 from logic.calculators.trompo_estrella import TrompoEstrellaCalculator

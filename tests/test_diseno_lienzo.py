@@ -1,7 +1,4 @@
-import os
-import io
 import pytest
-from pathlib import Path
 from PIL import Image
 from logic.models import BalloonInput, Condiciones
 from logic.diseno.lienzo import (
@@ -9,8 +6,6 @@ from logic.diseno.lienzo import (
     Diseno,
     importar_recurso,
     MAX_RASTER_DIM,
-    MAX_RASTER_BYTES,
-    MAX_SVG_BYTES,
 )
 from logic.proyecto.modelo import (
     Proyecto,

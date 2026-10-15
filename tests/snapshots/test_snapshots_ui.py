@@ -1,7 +1,6 @@
 import json
 from pathlib import Path
 import pytest
-import flet as ft
 
 from app_flet.vistas.trompo import VistaTrompo
 from tests.snapshots.generar_snapshots import (

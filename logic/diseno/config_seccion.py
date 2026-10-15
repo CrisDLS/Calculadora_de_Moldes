@@ -1,7 +1,7 @@
 """
 Configuración independiente por sección para el cálculo y trazado de moldes.
 """
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, asdict
 from typing import Optional, Dict, Any, Union, Tuple
 from logic.diseno.esquema import EsquemaDiseno, tiene_simetria_espejo
 from logic.diseno.diseno_pico import EsquemaDisenoPico

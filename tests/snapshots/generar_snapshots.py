@@ -2,7 +2,6 @@
 """Generador y verificador de instantáneas (snapshots) del árbol de controles
 y de las salidas SVG / 3D.
 """
-import ast
 import hashlib
 import json
 import re
@@ -13,16 +12,14 @@ RAIZ = Path(__file__).resolve().parent.parent.parent
 if str(RAIZ) not in sys.path:
     sys.path.insert(0, str(RAIZ))
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 import flet as ft
 
-from app_flet.controlador import ControladorTrompo
 from app_flet.vistas.trompo import VistaTrompo
-from logic.models import BalloonInput, Condiciones
+from logic.models import BalloonInput
 from logic.calculators.trompo_estrella import TrompoEstrellaCalculator
 from logic.diseno.esquema import EsquemaDiseno
-from logic.diseno.lienzo import Diseno, CapaDiseno, importar_recurso
-from logic.exportacion.estilos import IMPRESION, PANTALLA_OSCURO, PANTALLA_CLARO
+from logic.diseno.lienzo import Diseno, CapaDiseno
 from logic.exportacion.svg_moldes import svg_pieza, svg_conjunto, svg_hoja
 from logic.exportacion.svg_abanico import svg_abanico
 from logic.exportacion.svg_perfil import svg_perfil

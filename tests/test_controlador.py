@@ -1,4 +1,3 @@
-import pytest
 from app_flet.controlador import ControladorTrompo
 
 def test_controlador_simple():

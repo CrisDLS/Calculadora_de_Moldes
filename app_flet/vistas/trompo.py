@@ -22,9 +22,8 @@ from logic.exportacion.vista_svg import (
 from presentacion.trompo_estrella import tabla_a_texto, TablaMolde
 from logic.exportacion.paquete import generar_paquete, guardar_paquete
 from logic.diseno.paleta import ColorPapel, cargar_catalogo, color_por_id, exportar_csv, importar_csv, guardar_color_usuario
-from logic.diseno.pintura import EsquemaPintura, VariantePico, color_de_cara
+from logic.diseno.pintura import VariantePico, color_de_cara
 from logic.geometria.malla_trompo import Cara
-from logic.exportacion.visor3d import exportar_visor_autocontenido
 from logic.registro import logger
 
 class VistaTrompo(ft.Container):
@@ -2342,7 +2341,6 @@ class VistaTrompo(ft.Container):
                 )
 
     def _actualizar_vista_previa_2d(self):
-        vm = self.controlador.get_view_model()
         p = self.controlador.pintura
         N = int(self.controlador.gajos or 30)
         hileras = int(self.controlador.hileras or 2)

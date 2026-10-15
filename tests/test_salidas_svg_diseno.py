@@ -1,12 +1,10 @@
-import os
 import pytest
-from pathlib import Path
 from PIL import Image
 import defusedxml.ElementTree as ET
 from logic.models import BalloonInput
 from logic.calculators.trompo_estrella import TrompoEstrellaCalculator
 from logic.diseno.esquema import EsquemaDiseno
-from logic.diseno.lienzo import Diseno, CapaDiseno, importar_recurso
+from logic.diseno.lienzo import Diseno, importar_recurso
 from logic.exportacion.svg_abanico import svg_abanico
 from logic.exportacion.svg_diseno import svg_gajo, exportar_diseno
 

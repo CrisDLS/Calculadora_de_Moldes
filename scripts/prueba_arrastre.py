@@ -2,7 +2,6 @@ import sys
 import os
 import time
 import math
-import io
 from pathlib import Path
 from PIL import Image
 
@@ -10,7 +9,6 @@ from PIL import Image
 sys.path.insert(0, os.path.abspath("."))
 
 from app_flet.vistas.trompo import VistaTrompo
-from app_flet.controlador import ControladorTrompo
 
 
 class DoublePage:
@@ -118,14 +116,13 @@ def ejecutar_benchmark():
         ctrl.ruta_proyecto = str(tmp_dir / f"proy_{nombre}.json")
 
         # Añadir capa
-        capa = ctrl.anadir_capa(str(ruta))
+        ctrl.anadir_capa(str(ruta))
         vista.modo_interaccion_diseno = "mover"
         vista._sync_controlador_a_vista(ctrl.get_view_model())
 
         # Reset métricas de página
         page.updates_count = 0
         vista_updates_count = 0
-        old_vista_update = vista.update
         def count_vista_update():
             nonlocal vista_updates_count
             vista_updates_count += 1
@@ -137,7 +134,6 @@ def ejecutar_benchmark():
         bytes_totales = 0
         termino = True
 
-        t_inicio = time.perf_counter()
         for i in range(300):
             ev = DoubleEvent(dx=1.0, dy=0.5)
             t0 = time.perf_counter()
@@ -158,8 +154,7 @@ def ejecutar_benchmark():
                 elif isinstance(src_val, str):
                     bytes_totales += len(src_val.encode("utf-8"))
 
-        t_fin = time.perf_counter()
-        duracion_tot = (t_fin - t_inicio)
+        time.perf_counter()
 
         media_ms = sum(tiempos_ms) / len(tiempos_ms) if tiempos_ms else 0.0
         max_ms = max(tiempos_ms) if tiempos_ms else 0.0
@@ -205,11 +200,9 @@ def ejecutar_benchmark():
 
     ctrl_f.empujar_capa_seleccionada = fallo_empujar
 
-    excepcion_capturada = False
     try:
         vista_f._on_gesture_diseno_pan_update(DoubleEvent(dx=1.0, dy=1.0))
     except RuntimeError as ex:
-        excepcion_capturada = True
         print("Excepción capturada durante arrastre:", ex)
 
     # Comprobar si "Calcular" funciona después

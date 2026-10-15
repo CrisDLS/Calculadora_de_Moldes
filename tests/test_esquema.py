@@ -1,5 +1,5 @@
 import pytest
-from logic.diseno.esquema import EsquemaDiseno, AsignacionGajo
+from logic.diseno.esquema import EsquemaDiseno
 
 def test_esquema_repeticion():
     # N=20, repeticion, G=5 → 5 motivos, 4 repeticiones, ningún espejo
