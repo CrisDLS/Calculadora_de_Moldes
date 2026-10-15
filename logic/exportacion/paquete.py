@@ -7,6 +7,7 @@ from typing import Dict, List, Tuple, Union, Optional
 from logic.models import BalloonInput, BalloonCalculationResult
 from logic.diseno.esquema import EsquemaDiseno
 from logic.exportacion.estilos import IMPRESION
+from logic.exportacion.comun import guardar_svg
 from logic.exportacion.svg_moldes import svg_hoja, svg_conjunto
 from logic.exportacion.svg_abanico import svg_abanico
 from logic.geometria.perfil import perfil_armado
@@ -280,8 +281,7 @@ def guardar_paquete(
     for nombre, contenido in archivos.items():
         seguro = _nombre_seguro(nombre)
         ruta = os.path.join(carpeta, seguro)
-        with open(ruta, "w", encoding="utf-8") as f:
-            f.write(contenido)
+        guardar_svg(ruta, contenido)
         rutas_escritas.append(os.path.abspath(ruta))
 
     return rutas_escritas

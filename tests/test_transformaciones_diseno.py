@@ -4,6 +4,8 @@ from logic.calculators.trompo_estrella import TrompoEstrellaCalculator
 from logic.geometria.abanico import (
     pieza_a_geometria_plana,
     abanico,
+)
+from logic.diseno.transformaciones import (
     reflejo_del_abanico,
     transformacion_a_gajo,
     recorte_gajo,

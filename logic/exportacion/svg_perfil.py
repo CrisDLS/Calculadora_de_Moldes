@@ -4,6 +4,7 @@ Generación de SVG del perfil armado.
 from typing import Tuple
 from logic.geometria.perfil import PerfilArmado
 from logic.exportacion.estilos import EstiloSvg, IMPRESION
+from logic.exportacion.comun import defs_marcadores_flechas, formatear_path
 
 def svg_perfil(
     perfil: PerfilArmado,
@@ -62,7 +63,7 @@ def svg_perfil(
     for x, z in reversed(perfil.contorno_izquierdo):
         pts_perfil.append(pt(x, z))
 
-    path_silueta = "M " + " L ".join(f"{x:.2f},{y:.2f}" for x, y in pts_perfil) + " Z"
+    path_silueta = formatear_path(pts_perfil, cerrado=True)
 
     # Líneas y grosores
     w_cont = 1.0 * estilo.factor_trazo
@@ -78,16 +79,7 @@ def svg_perfil(
     ]
 
     # Marcadores de flechas para cotas
-    lines.extend([
-        '  <defs>',
-        f'    <marker id="arrow-start" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">',
-        f'      <path d="M 5 1 L 1 3 L 5 5 Z" fill="{estilo.texto}" />',
-        '    </marker>',
-        f'    <marker id="arrow-end" markerWidth="6" markerHeight="6" refX="1" refY="3" orient="auto">',
-        f'      <path d="M 1 1 L 5 3 L 1 5 Z" fill="{estilo.texto}" />',
-        '    </marker>',
-        '  </defs>',
-    ])
+    lines.extend(defs_marcadores_flechas(estilo.texto))
 
     if estilo.fondo:
         lines.append(f'  <rect width="100%" height="100%" fill="{estilo.fondo}" id="fondo"/>')

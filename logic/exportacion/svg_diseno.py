@@ -10,6 +10,7 @@ from logic.diseno.transformaciones import (
     construir_grupo,
 )
 from logic.exportacion.estilos import EstiloSvg, IMPRESION
+from logic.exportacion.comun import guardar_svg, formatear_path_simetrico
 from logic.geometria.abanico import pieza_a_geometria_plana, abanico
 from logic.exportacion.svg_abanico import svg_abanico
 
@@ -76,13 +77,8 @@ def svg_gajo(
         pts_left_seam.append((cx - w_seam, y))
         pts_right_seam.append((cx + w_seam, y))
 
-    path_cut = "M " + " L ".join(f"{x:.2f},{y:.2f}" for x, y in pts_right_cut)
-    path_cut += " L " + " L ".join(f"{x:.2f},{y:.2f}" for x, y in reversed(pts_left_cut))
-    path_cut += " Z"
-
-    path_seam = "M " + " L ".join(f"{x:.2f},{y:.2f}" for x, y in pts_right_seam)
-    path_seam += " L " + " L ".join(f"{x:.2f},{y:.2f}" for x, y in reversed(pts_left_seam))
-    path_seam += " Z"
+    path_cut = formatear_path_simetrico(pts_right_cut, pts_left_cut)
+    path_seam = formatear_path_simetrico(pts_right_seam, pts_left_seam)
 
     # SVG XML
     lines = [
@@ -250,8 +246,7 @@ def exportar_diseno(
         dibujar=dibujar,
         vista_previa=False,
     )
-    with open(ruta_abanico, "w", encoding="utf-8") as f:
-        f.write(svg_ab)
+    guardar_svg(str(ruta_abanico), svg_ab)
     archivos_creados.append(ruta_abanico)
 
     # 2. SVGs de cada gajo decorado
@@ -274,8 +269,7 @@ def exportar_diseno(
             dibujar=dibujar,
             vista_previa=False,
         )
-        with open(ruta_gajo, "w", encoding="utf-8") as f:
-            f.write(svg_g)
+        guardar_svg(str(ruta_gajo), svg_g)
         archivos_creados.append(ruta_gajo)
 
     return archivos_creados

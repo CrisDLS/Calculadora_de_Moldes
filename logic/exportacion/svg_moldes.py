@@ -1,5 +1,6 @@
 from logic.models import BalloonInput, BalloonCalculationResult
 from logic.exportacion.estilos import EstiloSvg, IMPRESION
+from logic.exportacion.comun import guardar_svg, formatear_path_simetrico
 
 def svg_pieza(resultado: BalloonCalculationResult, entrada: BalloonInput, seccion: str, escala: float = 10.0, estilo: EstiloSvg = IMPRESION) -> str:
     if seccion == "superior":
@@ -57,13 +58,8 @@ def svg_pieza(resultado: BalloonCalculationResult, entrada: BalloonInput, seccio
         pts_left_seam.append((cx - w_seam, y))
         pts_right_seam.append((cx + w_seam, y))
 
-    path_cut = "M " + " L ".join(f"{x:.2f},{y:.2f}" for x, y in pts_right_cut)
-    path_cut += " L " + " L ".join(f"{x:.2f},{y:.2f}" for x, y in reversed(pts_left_cut))
-    path_cut += " Z"
-
-    path_seam = "M " + " L ".join(f"{x:.2f},{y:.2f}" for x, y in pts_right_seam)
-    path_seam += " L " + " L ".join(f"{x:.2f},{y:.2f}" for x, y in reversed(pts_left_seam))
-    path_seam += " Z"
+    path_cut = formatear_path_simetrico(pts_right_cut, pts_left_cut)
+    path_seam = formatear_path_simetrico(pts_right_seam, pts_left_seam)
 
     # SVG XML
     lines = [
@@ -148,9 +144,6 @@ def svg_pieza(resultado: BalloonCalculationResult, entrada: BalloonInput, seccio
     
     return "\n".join(lines)
 
-def guardar_svg(ruta: str, svg: str) -> None:
-    with open(ruta, "w", encoding="utf-8") as f:
-        f.write(svg)
 
 
 def svg_hoja(resultado: BalloonCalculationResult, entrada: BalloonInput, seccion: str,
@@ -271,13 +264,8 @@ def svg_hoja(resultado: BalloonCalculationResult, entrada: BalloonInput, seccion
         pts_left_seam.append((cx - w_seam, y))
         pts_right_seam.append((cx + w_seam, y))
 
-    path_cut = "M " + " L ".join(f"{x:.2f},{y:.2f}" for x, y in pts_right_cut)
-    path_cut += " L " + " L ".join(f"{x:.2f},{y:.2f}" for x, y in reversed(pts_left_cut))
-    path_cut += " Z"
-
-    path_seam = "M " + " L ".join(f"{x:.2f},{y:.2f}" for x, y in pts_right_seam)
-    path_seam += " L " + " L ".join(f"{x:.2f},{y:.2f}" for x, y in reversed(pts_left_seam))
-    path_seam += " Z"
+    path_cut = formatear_path_simetrico(pts_right_cut, pts_left_cut)
+    path_seam = formatear_path_simetrico(pts_right_seam, pts_left_seam)
 
     total_w_content = cols * W_svg + (cols - 1) * gap_mm
     total_h_content = rows * H_svg + (rows - 1) * gap_mm
@@ -538,13 +526,8 @@ def svg_conjunto(resultado: BalloonCalculationResult, entrada: BalloonInput, esc
             pts_left_seam.append((cx - w_seam, y))
             pts_right_seam.append((cx + w_seam, y))
 
-        path_cut = "M " + " L ".join(f"{x:.2f},{y:.2f}" for x, y in pts_right_cut)
-        path_cut += " L " + " L ".join(f"{x:.2f},{y:.2f}" for x, y in reversed(pts_left_cut))
-        path_cut += " Z"
-
-        path_seam = "M " + " L ".join(f"{x:.2f},{y:.2f}" for x, y in pts_right_seam)
-        path_seam += " L " + " L ".join(f"{x:.2f},{y:.2f}" for x, y in reversed(pts_left_seam))
-        path_seam += " Z"
+        path_cut = formatear_path_simetrico(pts_right_cut, pts_left_cut)
+        path_seam = formatear_path_simetrico(pts_right_seam, pts_left_seam)
 
         lines.append(f'  <g id="grupo-{clave}" inkscape:label="{nombre}">')
         

@@ -296,12 +296,4 @@ def contorno_abanico(
     return pts
 
 
-# Re-exportaciones para diseño y transformaciones
-from logic.diseno.transformaciones import (
-    Transformacion2D as Transformacion2D,  # noqa: F401
-    reflejo_del_abanico as reflejo_del_abanico,  # noqa: F401
-    transformacion_a_gajo as transformacion_a_gajo,  # noqa: F401
-    recorte_gajo as recorte_gajo,  # noqa: F401
-    gajos_equivalentes as gajos_equivalentes,  # noqa: F401
-    construir_grupo as construir_grupo,  # noqa: F401
-)
+
