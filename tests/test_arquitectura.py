@@ -10,23 +10,11 @@ RAIZ = Path(__file__).resolve().parent.parent
 
 # Excepciones temporales justificadas de archivos > 700 líneas.
 # El refactor modularizará app_flet/ y logic/ para vaciar estas listas.
-EXCEPCIONES_ARCHIVOS: Dict[str, str] = {
-    "app_flet/vistas/trompo.py": "Monolito original de vista UI; se dividirá en compositor y pestañas en Parte 4",
-}
+EXCEPCIONES_ARCHIVOS: Dict[str, str] = {}
 
 # Excepciones temporales justificadas de funciones > 90 líneas.
-# En Parte 4 se eliminarán todas las de app_flet/, y en Parte 5 las de logic/exportacion.
+# En Parte 4 se eliminaron todas las de app_flet/; en Parte 5 se modularizarán las de logic/exportacion.
 EXCEPCIONES_FUNCIONES: Dict[Tuple[str, str], str] = {
-    ("app_flet/vistas/trompo.py", "__init__"): "Constructor del monolito original con montaje completo de UI",
-    ("app_flet/vistas/trompo.py", "_crear_tab_resumen"): "Construcción de controles de la pestaña resumen",
-    ("app_flet/vistas/trompo.py", "_crear_tab_tablas"): "Construcción de controles de la pestaña tablas",
-    ("app_flet/vistas/trompo.py", "_crear_tab_moldes"): "Construcción de controles de la pestaña moldes 2D",
-    ("app_flet/vistas/trompo.py", "_crear_tab_hoja"): "Construcción de controles de la pestaña hoja de trazo",
-    ("app_flet/vistas/trompo.py", "_crear_tab_vista_3d"): "Construcción de controles de la pestaña vista 3D",
-    ("app_flet/vistas/trompo.py", "_crear_tab_diseno"): "Construcción de controles de la pestaña diseño",
-    ("app_flet/vistas/trompo.py", "_actualizar_panel_capas_y_inspector"): "Inspector lateral de capas y propiedades en diseño",
-    ("app_flet/vistas/trompo.py", "_sync_controlador_a_vista"): "Sincronización monolítica de estado UI",
-    ("app_flet/vistas/trompo.py", "_exportar_hoja_diseno"): "Exportación de hoja de trazo decorada",
     ("logic/calculators/trompo_estrella.py", "calcular"): "Algoritmo central de cálculo de moldes del globo",
     ("logic/diseno/lienzo.py", "_validar_y_procesar_svg"): "Validación XML estricta y reescritura de prefijos en SVGs importados",
     ("logic/diseno/lienzo.py", "ajustar_capa"): "Cálculo de ajuste de capas a límites del abanico",
