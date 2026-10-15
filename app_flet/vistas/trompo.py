@@ -10,6 +10,7 @@ from app_flet.controlador import ControladorTrompo, ViewModelTrompo
 from app_flet import tema
 from app_flet.vistas.tabla_molde import TablaMoldePersonalizada
 from app_flet.vistas.componentes.visor_svg import VisorSvg
+from app_flet.vistas.pestanas.resumen import PestanaResumen
 from logic.exportacion.estilos import PANTALLA_OSCURO, PANTALLA_CLARO
 from logic.exportacion.vista_svg import (
     VistaSvg,
@@ -208,17 +209,11 @@ class VistaTrompo(ft.Container):
         
         # --- ZONA DERECHA: PESTAÑAS ---
         # 1. Pestaña Resumen
-        self.grid_tarjetas = ft.ResponsiveRow(run_spacing=10)
-        self.col_avisos = ft.Column(spacing=5)
-        tab_resumen = ft.ListView(
-            padding=20,
-            controls=[
-                self.lbl_desactualizado,
-                self.grid_tarjetas,
-                ft.Divider(color=ft.Colors.OUTLINE),
-                self.col_avisos
-            ]
-        )
+        self.pestana_resumen = PestanaResumen(self.paleta)
+        self.lbl_desactualizado = self.pestana_resumen.lbl_desactualizado
+        self.grid_tarjetas = self.pestana_resumen.grid_tarjetas
+        self.col_avisos = self.pestana_resumen.col_avisos
+        tab_resumen = self.pestana_resumen.construir()
 
         # 2. Pestaña Tablas
         self.selector_tabla = ft.SegmentedButton(
@@ -1329,7 +1324,7 @@ class VistaTrompo(ft.Container):
 
     def _actualizar_estilos_paleta(self):
         self.lbl_error.color = self.paleta.color_error
-        self.lbl_desactualizado.color = self.paleta.color_aviso
+        self.pestana_resumen.aplicar_tema(self.paleta)
         self.lbl_nota_tabla.content.color = self.paleta.color_aviso
         self.tabla_componente.actualizar_paleta(self.paleta)
 
@@ -1629,47 +1624,8 @@ class VistaTrompo(ft.Container):
         else:
             self.lbl_error.visible = False
             
-        # 2. Desactualizado
-        self.lbl_desactualizado.visible = vm.desactualizado
-        
-        # 3. Tarjetas de resumen
-        self.grid_tarjetas.controls.clear()
-        if not vm.desactualizado:
-            for tj in vm.tarjetas:
-                bg_color = ft.Colors.SURFACE_CONTAINER
-                text_color = ft.Colors.ON_SURFACE
-                if tj.etiqueta == "Viable":
-                    bg_color = self.paleta.color_ok if tj.valor == "Sí" else self.paleta.color_error
-                    text_color = ft.Colors.WHITE
-                    
-                card = ft.Container(
-                    content=ft.Column(
-                        controls=[
-                            ft.Text(tj.etiqueta, size=11, color=ft.Colors.ON_SURFACE_VARIANT),
-                            ft.Text(tj.valor, size=18, weight=ft.FontWeight.BOLD, color=text_color),
-                        ],
-                        spacing=2,
-                    ),
-                    bgcolor=bg_color,
-                    padding=10,
-                    border_radius=8,
-                    col={"sm": 6, "md": 4, "lg": 3},
-                )
-                self.grid_tarjetas.controls.append(card)
-                
-        # 4. Avisos
-        self.col_avisos.controls.clear()
-        if not vm.desactualizado:
-            for av in vm.avisos:
-                c = ft.Colors.ON_SURFACE
-                if av.clase == "ok": c = self.paleta.color_ok
-                elif av.clase == "aviso": c = self.paleta.color_aviso
-                elif av.clase == "error": c = self.paleta.color_error
-                elif av.clase == "info": c = self.paleta.color_info
-                
-                self.col_avisos.controls.append(
-                    ft.Text(av.texto, color=c)
-                )
+        # 2, 3 y 4. Resumen (desactualizado, tarjetas, avisos)
+        self.pestana_resumen.actualizar(vm)
 
         # 5. Tablas
         if vm.tablas and not vm.desactualizado:
