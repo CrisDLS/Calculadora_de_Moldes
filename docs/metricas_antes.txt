@@ -1,0 +1,131 @@
+================================================================================
+REPORTE DE MÉTRICAS DE CÓDIGO (LÍNEA BASE)
+================================================================================
+
+1. ARCHIVOS QUE SUPERAN 700 LÍNEAS (2 encontrados):
+--------------------------------------------------------------------------------
+   3443 líneas : app_flet/vistas/trompo.py
+   1125 líneas : app_flet/controlador.py
+
+2. FUNCIONES / MÉTODOS QUE SUPERAN 90 LÍNEAS (21 encontrados):
+--------------------------------------------------------------------------------
+  1373 líneas : app_flet/vistas/trompo.py:31 -> __init__()
+   451 líneas : logic/exportacion/svg_abanico.py:13 -> svg_abanico()
+   235 líneas : logic/exportacion/svg_moldes.py:159 -> svg_hoja()
+   213 líneas : logic/exportacion/svg_moldes.py:396 -> svg_conjunto()
+   206 líneas : logic/exportacion/svg_diseno.py:17 -> svg_gajo()
+   196 líneas : logic/exportacion/svg_perfil.py:8 -> svg_perfil()
+   185 líneas : app_flet/vistas/trompo.py:1788 -> _sync_controlador_a_vista()
+   148 líneas : logic/exportacion/svg_moldes.py:5 -> svg_pieza()
+   136 líneas : logic/diseno/lienzo.py:157 -> _validar_y_procesar_svg()
+   132 líneas : logic/geometria/perfil.py:46 -> perfil_armado()
+   124 líneas : logic/exportacion/paquete.py:127 -> generar_paquete()
+   118 líneas : logic/diseno/lienzo.py:387 -> ajustar_capa()
+   118 líneas : logic/geometria/malla_trompo.py:56 -> construir_malla()
+   104 líneas : logic/geometria/abanico.py:79 -> abanico()
+   101 líneas : logic/diseno/paleta.py:130 -> importar_csv()
+    99 líneas : logic/geometria/abanico.py:198 -> contorno_abanico()
+    99 líneas : logic/proyecto/modelo.py:72 -> from_dict()
+    96 líneas : app_flet/controlador.py:95 -> __init__()
+    96 líneas : logic/calculators/trompo_estrella.py:54 -> calcular()
+    93 líneas : app_flet/vistas/trompo.py:3130 -> _actualizar_panel_capas_y_inspector()
+    93 líneas : logic/exportacion/escena3d.py:9 -> escena_a_dict()
+
+3. NOMBRES DE FUNCIONES COMPARTIDOS EN VARIOS MÓDULOS (11 casos):
+--------------------------------------------------------------------------------
+  - calcular() en 5 archivos: app_flet/controlador.py (34 lin), logic/calculators/trompo_estrella.py (96 lin), logic/interfaces.py (6 lin), referencia/parche/trompo_estrella.py (83 lin), referencia/trompo_estrella.py (65 lin)
+  - from_dict() en 4 archivos: logic/diseno/config_seccion.py (37 lin), logic/diseno/lienzo.py (27 lin), logic/diseno/lienzo.py (7 lin), logic/proyecto/modelo.py (99 lin)
+  - get_y() en 4 archivos: logic/exportacion/svg_diseno.py (4 lin), logic/exportacion/svg_moldes.py (6 lin), logic/exportacion/svg_moldes.py (6 lin), logic/exportacion/svg_moldes.py (5 lin)
+  - _par_arriba() en 3 archivos: logic/calculators/trompo_estrella.py (3 lin), referencia/parche/trompo_estrella.py (3 lin), referencia/trompo_estrella.py (3 lin)
+  - _diagnostico() en 3 archivos: logic/calculators/trompo_estrella.py (23 lin), referencia/parche/trompo_estrella.py (20 lin), referencia/trompo_estrella.py (22 lin)
+  - _puntos() en 2 archivos: logic/calculators/trompo_estrella.py (4 lin), referencia/parche/trompo_estrella.py (4 lin)
+  - _empuje_por_m3() en 2 archivos: logic/calculators/trompo_estrella.py (5 lin), referencia/parche/trompo_estrella.py (5 lin)
+  - _validar() en 2 archivos: logic/calculators/trompo_estrella.py (19 lin), referencia/parche/trompo_estrella.py (5 lin)
+  - to_dict() en 2 archivos: logic/diseno/lienzo.py (30 lin), logic/diseno/lienzo.py (6 lin)
+  - iniciar() en 2 archivos: logic/exportacion/visor3d.py (14 lin), logic/registro.py (7 lin)
+  - detener() en 2 archivos: logic/exportacion/visor3d.py (6 lin), logic/registro.py (2 lin)
+
+4. IMPORTACIONES CIRCULARES (1 ciclos encontrados):
+--------------------------------------------------------------------------------
+  CICLO: logic/geometria/abanico.py -> logic/diseno/transformaciones.py -> logic/geometria/abanico.py
+
+5. RESUMEN COMPLETO POR ARCHIVO (ORDENADO POR LÍNEAS):
+--------------------------------------------------------------------------------
+   3443 líneas | 152 funciones/métodos : app_flet/vistas/trompo.py
+         * __init__() : 1373 líneas (L31-L1403)
+         * _sync_controlador_a_vista() : 185 líneas (L1788-L1972)
+         * _actualizar_panel_capas_y_inspector() : 93 líneas (L3130-L3222)
+         * _actualizar_dropdowns_patrones() : 81 líneas (L2223-L2303)
+         * _on_gesture_diseno_pan_update() : 59 líneas (L2909-L2967)
+   1125 líneas |  60 funciones/métodos : app_flet/controlador.py
+         * __init__() : 96 líneas (L95-L190)
+         * get_view_model() : 88 líneas (L767-L854)
+         * desde_proyecto() : 71 líneas (L670-L740)
+         * nuevo() : 58 líneas (L474-L531)
+    608 líneas |   8 funciones/métodos : logic/exportacion/svg_moldes.py
+         * svg_hoja() : 235 líneas (L159-L393)
+         * svg_conjunto() : 213 líneas (L396-L608)
+         * svg_pieza() : 148 líneas (L5-L152)
+    592 líneas |  11 funciones/métodos : logic/diseno/lienzo.py
+         * _validar_y_procesar_svg() : 136 líneas (L157-L292)
+         * ajustar_capa() : 118 líneas (L387-L504)
+         * importar_recurso() : 86 líneas (L507-L592)
+         * obtener_fragmento_capa() : 55 líneas (L330-L384)
+    519 líneas |   4 funciones/métodos : logic/exportacion/svg_abanico.py
+         * svg_abanico() : 451 líneas (L13-L463)
+         * _renderizar_capa_en_abanico() : 53 líneas (L466-L518)
+    307 líneas |   4 funciones/métodos : logic/geometria/abanico.py
+         * abanico() : 104 líneas (L79-L182)
+         * contorno_abanico() : 99 líneas (L198-L296)
+    294 líneas |  10 funciones/métodos : referencia/trompo_estrella.py
+         * calcular() : 65 líneas (L162-L226)
+    289 líneas |   6 funciones/métodos : logic/exportacion/paquete.py
+         * generar_paquete() : 124 líneas (L127-L250)
+    283 líneas |   3 funciones/métodos : logic/exportacion/svg_diseno.py
+         * svg_gajo() : 206 líneas (L17-L222)
+         * exportar_diseno() : 59 líneas (L225-L283)
+    256 líneas |   7 funciones/métodos : logic/proyecto/modelo.py
+         * from_dict() : 99 líneas (L72-L170)
+    243 líneas |  10 funciones/métodos : presentacion/trompo_estrella.py
+    238 líneas |  10 funciones/métodos : logic/diseno/paleta.py
+         * importar_csv() : 101 líneas (L130-L230)
+    212 líneas |   7 funciones/métodos : logic/calculators/trompo_estrella.py
+         * calcular() : 96 líneas (L54-L149)
+    203 líneas |   2 funciones/métodos : logic/exportacion/svg_perfil.py
+         * svg_perfil() : 196 líneas (L8-L203)
+    188 líneas |   4 funciones/métodos : logic/geometria/malla_trompo.py
+         * construir_malla() : 118 líneas (L56-L173)
+    185 líneas |   8 funciones/métodos : logic/diseno/transformaciones.py
+    181 líneas |   6 funciones/métodos : logic/diseno/pintura.py
+         * color_de_cara() : 66 líneas (L116-L181)
+    177 líneas |   1 funciones/métodos : logic/geometria/perfil.py
+         * perfil_armado() : 132 líneas (L46-L177)
+    172 líneas |  11 funciones/métodos : logic/exportacion/visor3d.py
+    165 líneas |   7 funciones/métodos : logic/exportacion/vista_svg.py
+    159 líneas |   7 funciones/métodos : referencia/parche/trompo_estrella.py
+         * calcular() : 83 líneas (L31-L113)
+    152 líneas |   6 funciones/métodos : logic/diseno/esquema.py
+         * tiene_simetria_espejo() : 51 líneas (L101-L151)
+    122 líneas |   4 funciones/métodos : app_flet/vistas/tabla_molde.py
+         * _construir_ui() : 55 líneas (L68-L122)
+    120 líneas |   5 funciones/métodos : logic/diseno/config_seccion.py
+    119 líneas |   9 funciones/métodos : logic/registro.py
+    118 líneas |   0 funciones/métodos : referencia/parche/models.py
+    117 líneas |   0 funciones/métodos : logic/models.py
+    105 líneas |   2 funciones/métodos : logic/diseno/compra.py
+         * lista_de_compra() : 85 líneas (L21-L105)
+    101 líneas |   1 funciones/métodos : logic/exportacion/escena3d.py
+         * escena_a_dict() : 93 líneas (L9-L101)
+     90 líneas |   1 funciones/métodos : app_flet/tema.py
+     79 líneas |  10 funciones/métodos : referencia/parche/test_trompo_estrella.py
+     74 líneas |   1 funciones/métodos : logic/diseno/diseno_pico.py
+     61 líneas |   0 funciones/métodos : logic/exportacion/estilos.py
+     60 líneas |   5 funciones/métodos : logic/gestor_archivos.py
+     35 líneas |   1 funciones/métodos : app_flet/main.py
+     23 líneas |   3 funciones/métodos : logic/utils.py
+     17 líneas |   1 funciones/métodos : logic/interfaces.py
+      6 líneas |   0 funciones/métodos : main.py
+      1 líneas |   0 funciones/métodos : logic/geometria/__init__.py
+      0 líneas |   0 funciones/métodos : logic/__init__.py
+      0 líneas |   0 funciones/métodos : logic/calculators/__init__.py
+      0 líneas |   0 funciones/métodos : presentacion/__init__.py
