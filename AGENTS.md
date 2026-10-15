@@ -18,23 +18,36 @@ que el usuario ponga debe validarse como viable o explicar por qué no.
 - `main.py` → punto de entrada de la app en Flet (`ft.run(main)`).
 - `app_flet/` → interfaz en Flet:
   - `main.py`: configuración de ventana y montaje de vistas.
-  - `tema.py`: diseño, paleta y estilos.
-  - `controlador.py`: estado puro en Python y puente con la lógica/presentación.
-  - `vistas/trompo.py`: vista principal del trompo estrella.
+  - `tema.py`: diseño, paleta y estilos atómicos.
+  - `controlador/`: paquete modular con fachada delgada (`__init__.py`) y mixins especializados (`entradas.py`, `hoja.py`, `diseno.py`, `vista3d.py`, `proyecto.py`, `modelos.py`).
+  - `vistas/`:
+    - `trompo.py`: compositor principal (`VistaTrompo`, ≤ 400 líneas).
+    - `panel_entradas.py`: panel izquierdo con campos de geometría y cálculo.
+    - `barra_proyecto.py`: barra de estado y operaciones de proyecto (nuevo, abrir, guardar).
+    - `trompo_compat.py`: capa de compatibilidad y delegación de proxies para tests.
+    - `pestanas/`: módulos desacoplados para cada pestaña (`base.py`, `resumen.py`, `tablas.py`, `moldes2d.py`, `hoja.py`, `diseno.py`, `diseno_inspector.py`, `diseno_visor.py`, `vista3d.py`, `vista3d_aux.py`, `dialogos_catalogo.py`).
+    - `componentes/`: controles reutilizables (`visor_svg.py`).
 - `logic/` → lógica de negocio pura:
   - `interfaces.py` (`BalloonCalculator`).
   - `models.py` (`BalloonInput`, `BalloonCalculationResult`, `SectionResult`, `Point2D`).
   - `proyecto/modelo.py` (`Proyecto` guardado en JSON, versionado).
-  - `diseno/esquema.py` (esquemas `repeticion`, `central_espejo`, `espejo_total` con tamaño de grupo).
-  - `exportacion/svg_moldes.py` (generación de moldes sueltos en mm a escala real y hojas de trazo automáticas en Carta/A4 con múltiples copias).
-  - `geometria/malla_trompo.py` para construir una malla 3D exacta mapeando isométricamente 2D a 3D (para exportar a JSON/three.js).
+  - `diseno/`: `esquema.py`, `lienzo.py`, `paleta.py`, `pintura.py`, `compra.py`, `diseno_pico.py`, `config_seccion.py`, `transformaciones.py`.
+  - `exportacion/`:
+    - `comun.py`: ayudantes compartidos de SVG (paths con precisión fija, marcadores de flechas, Inkscape, guardado UTF-8).
+    - `svg_moldes.py`: moldes sueltos y hojas de trazo automáticas en Carta/A4.
+    - `svg_abanico.py`: hojas de trazo en abanico completo y mitad.
+    - `svg_diseno.py`: piezas decoradas individuales y por lote.
+    - `svg_perfil.py`: perfil armado proyectado con cotas.
+    - `paquete.py`: generador integral de paquete de exportación.
+    - `escena3d.py`, `visor3d.py`: exportación y servidor Three.js.
+  - `geometria/`: `malla_trompo.py`, `perfil.py`, `abanico.py`.
   - `gestor_archivos.py` (`GestorArchivos`: guarda/carga/lista JSON en `guardados/`).
 - `presentacion/` → capa pura compartida de formateo de datos para la UI (`presentacion/trompo_estrella.py`, define `DECIMALES_TABLA`).
 - `recursos/` → iconos e imágenes del proyecto.
-- `scripts/reporte_trompo_estrella.py` → runner de consola (argparse: altura gajos hileras costura `--avanzado`).
+- `scripts/` → runners de consola y utilidades de métricas de código (`metricas_codigo.py`).
 - `referencia/trompo_estrella.py` → prototipo autocontenido con la lógica CORRECTA y validada.
-- `tests/` → pruebas con pytest (se corren desde la raíz; `pytest.ini` fija `pythonpath = .`).
-- `requirements.txt` → dependencias (`pytest`, `flet`).
+- `tests/` → pruebas con pytest y snapshots (`tests/snapshots/`).
+- `requirements.txt`, `requirements-dev.txt` → dependencias de producción y desarrollo.
 - La interfaz previa en CustomTkinter fue retirada y queda preservada en la etiqueta `ctk-final` (`git checkout ctk-final` para consultarla).
 
 ## Reglas de arquitectura

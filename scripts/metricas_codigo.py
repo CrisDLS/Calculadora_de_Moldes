@@ -116,12 +116,16 @@ def main():
                 funciones_por_nombre[nombre_fn].append((rel_str, inicio, tam))
             
             for imp in info["imports"]:
+                coincidencias = []
                 for arch_dest in archivos:
                     mod_dest = ruta_a_modulo(raiz, arch_dest)
                     if imp == mod_dest or imp.startswith(mod_dest + "."):
-                        rel_dest = str(arch_dest.relative_to(raiz)).replace("\\", "/")
-                        if rel_str != rel_dest:
-                            grafo_deps[rel_str].add(rel_dest)
+                        coincidencias.append((mod_dest, arch_dest))
+                if coincidencias:
+                    _, mejor_arch = max(coincidencias, key=lambda x: len(x[0]))
+                    rel_dest = str(mejor_arch.relative_to(raiz)).replace("\\", "/")
+                    if rel_str != rel_dest:
+                        grafo_deps[rel_str].add(rel_dest)
 
     # Reporte
     lineas_reporte = []
@@ -192,10 +196,11 @@ def main():
     
     reporte_final = "\n".join(lineas_reporte) + "\n"
     
-    # Guardar en docs/metricas_antes.txt
+    import sys
     docs_dir = raiz / "docs"
     docs_dir.mkdir(exist_ok=True)
-    salida_txt = docs_dir / "metricas_antes.txt"
+    salida_nombre = sys.argv[1] if len(sys.argv) > 1 else ("metricas_despues.txt" if (docs_dir / "metricas_antes.txt").exists() else "metricas_antes.txt")
+    salida_txt = docs_dir / salida_nombre
     salida_txt.write_text(reporte_final, encoding="utf-8")
     
     print(reporte_final)

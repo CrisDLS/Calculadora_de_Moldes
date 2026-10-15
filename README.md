@@ -38,12 +38,22 @@ pytest
 ```
 
 ## Estructura del proyecto
-- `main.py`: Punto de entrada de la aplicación.
-- `app_flet/`: Interfaz de usuario construida con Flet (vistas, tema, controlador reactivo y visor 3D).
-- `logic/`: Núcleo de lógica pura (cálculo de moldes, geometría, esquemas de diseño, exportación SVG y modelo 3D).
+- `main.py`: Punto de entrada de la aplicación en Flet.
+- `app_flet/`: Interfaz de usuario reactiva en Flet:
+  - `tema.py`: Paleta, colores atómicos y modos claro/oscuro.
+  - `controlador/`: Paquete modular con fachada fina y mixins especializados (`entradas`, `hoja`, `diseno`, `vista3d`, `proyecto`, `modelos`).
+  - `vistas/`: Compositor principal (`trompo.py`), panel de entradas (`panel_entradas.py`), barra de proyecto (`barra_proyecto.py`), capa de compatibilidad (`trompo_compat.py`) y arquitectura de pestañas desacopladas en `pestanas/`.
+  - `componentes/`: Controles interactivos reutilizables (`visor_svg.py`).
+- `logic/`: Núcleo de lógica pura de negocio (sin dependencias de interfaz):
+  - `calculators/`: Algoritmo de cálculo del trompo estrella.
+  - `diseno/`: Esquemas de simetría, lienzo de capas, transformaciones isométricas, paleta, pintura y lista de compra.
+  - `exportacion/`: Generación de SVG (`svg_moldes`, `svg_abanico`, `svg_diseno`, `svg_perfil`), utilidades comunes (`comun.py`), paquetes y escenas 3D Three.js.
+  - `geometria/`: Malla 3D exacta, silueta de perfil armado y geometría analítica de abanicos.
+  - `proyecto/`: Modelo de datos versionado y serialización JSON.
 - `presentacion/`: Capa compartida de formateo de datos y tablas para la UI.
 - `datos/`: Catálogo de colores tradicionales de papel china (`colores_papel.json`).
-- `tests/`: Batería de pruebas unitarias y de regresión con pytest.
+- `tests/`: Batería integral de pruebas unitarias, de integración, snapshots de UI y hashes SVG.
+- `docs/`: Métricas de código, reportes y ejemplos.
 
 ## Calibración y seguridad
 > **Nota de calibración física**: Los supuestos físicos del cálculo (temperatura interior de 70 °C, temperatura ambiente de 28 °C, gramaje de papel de 20 g/m² + pegamento, pestaña de boca y holgura mínima de mecha) son estimaciones teóricas que deben calibrarse mediante pruebas prácticas y prototipos controlados.
