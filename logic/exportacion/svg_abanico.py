@@ -1,7 +1,7 @@
 import math
 import warnings
 from pathlib import Path
-from typing import Tuple, Optional, Union
+from typing import Tuple, Optional, Union, Dict, Any
 from logic.models import BalloonInput, BalloonCalculationResult
 from logic.diseno.esquema import EsquemaDiseno
 from logic.exportacion.estilos import EstiloSvg, IMPRESION
@@ -9,99 +9,23 @@ from logic.geometria.abanico import pieza_a_geometria_plana, abanico, contorno_a
 from logic.diseno.lienzo import Diseno, CapaDiseno, obtener_fragmento_capa
 from logic.diseno.transformaciones import construir_grupo
 
-def svg_abanico(
-    resultado: BalloonCalculationResult,
-    entrada: BalloonInput,
-    seccion: str,
-    esquema: Optional[EsquemaDiseno] = None,
-    estilo: EstiloSvg = IMPRESION,
-    escala: Union[str, float, int] = "auto",
-    hoja: str = "carta",
-    margen_mm: float = 10.0,
-    dibujar: str = "completo",
-    diseno: Optional[Diseno] = None,
-    unir_grupos: bool = False,
-    carpeta_recursos: Optional[Union[str, Path]] = None,
-    mostrar_reflejo: bool = False,
-    ver_cuadricula: bool = True,
-    ver_rotulos: bool = True,
-    ver_costuras: bool = True,
-    overlay_capa_activa: Optional[CapaDiseno] = None,
-    vista_previa: bool = True,
-) -> str:
-    """Genera un SVG con la hoja de trazo en abanico para impresión o Inkscape.
-    
-    Orientación: ápice / lado estrecho ABAJO.
-    Escala auto: prueba orientaciones de hoja para maximizar aprovechamiento.
-    Capas Inkscape: papel, cuadricula, ejes, aristas_comunes, contorno, costura, rotulos (y pestana).
-    """
-    if hoja not in ["carta", "a4"]:
-        raise ValueError(f"Hoja no soportada: {hoja}. Use 'carta' o 'a4'.")
 
-    hoja_w, hoja_h = (215.9, 279.4) if hoja == "carta" else (210.0, 297.0)
-
-    # 1. Determinar número de gajos n del abanico completo
-    if seccion == "pico":
-        n = 4
-    else:
-        tam_g = esquema.tam_grupo if esquema else 5
-        if unir_grupos and esquema and esquema.modo == "repeticion":
-            reps = entrada.num_gajos // tam_g
-            n = min(entrada.num_gajos, tam_g * 2) if reps >= 2 else tam_g
-        else:
-            n = tam_g
-
-    # 2. Geometría pura (abanico completo centrado)
-    pieza = pieza_a_geometria_plana(resultado, entrada, seccion)
-    ab = abanico(pieza, n=n, centrado=True)
-
-    psi = pieza.angulo_abertura_rad
-    s0 = pieza.distancia_vertice
-    s1 = pieza.radio_arco
-    costura_cm = entrada.ancho_costura
-
-    # Incluir pestaña en cono inferior para el cálculo de caja
-    pestana_cm = 0.0
-    if seccion == "inferior" and entrada.usar_parametros_avanzados and entrada.pestana_boca > 0:
-        pestana_cm = entrada.pestana_boca
-
-    # Calcular bounding box total
-    if dibujar == "mitad" and not mostrar_reflejo:
-        min_x_cm = 0.0
-        max_x_cm = ab.caja_max_x
-    else:
-        min_x_cm = ab.caja_min_x
-        max_x_cm = ab.caja_max_x
-
-    min_y_cm = ab.caja_min_y
-    max_y_cm = ab.caja_max_y
-
-    if pestana_cm > 0:
-        r_pestana = max(0.0, s0 - pestana_cm)
-        ang_min_pest = 0.0 if (dibujar == "mitad" and not mostrar_reflejo) else -n * psi / 2.0
-        ang_max_pest = n * psi / 2.0
-        pts_pest = [
-            (r_pestana * math.sin(ang_min_pest), r_pestana * math.cos(ang_min_pest)),
-            (r_pestana * math.sin(ang_max_pest), r_pestana * math.cos(ang_max_pest)),
-        ]
-        min_x_cm = min(min_x_cm, *(p[0] for p in pts_pest))
-        max_x_cm = max(max_x_cm, *(p[0] for p in pts_pest))
-        min_y_cm = min(min_y_cm, *(p[1] for p in pts_pest))
-        max_y_cm = max(max_y_cm, *(p[1] for p in pts_pest))
-
-    w_cm = max_x_cm - min_x_cm
-    h_cm = max_y_cm - min_y_cm
-
-    # 3. Cálculo de escala y orientación óptima
+def _calcular_orientacion_y_escala_abanico(
+    w_cm: float,
+    h_cm: float,
+    hoja_w: float,
+    hoja_h: float,
+    margen_mm: float,
+    escala: Union[str, float, int],
+) -> Tuple[str, float]:
+    """Determina la mejor orientación ('vertical'|'horizontal') y el factor_s."""
     def compute_s(orient: str) -> Optional[float]:
         w_p, h_p = (hoja_w, hoja_h) if orient == "vertical" else (hoja_h, hoja_w)
         av_w = w_p - 2 * margen_mm
         av_h = h_p - 2 * margen_mm
         if av_w <= 0 or av_h <= 0:
             return None
-        s_x = (w_cm * 10.0) / av_w
-        s_y = (h_cm * 10.0) / av_h
-        return max(s_x, s_y)
+        return max((w_cm * 10.0) / av_w, (h_cm * 10.0) / av_h)
 
     mejor_orientacion = "vertical"
     if str(escala).lower() == "auto":
@@ -127,12 +51,97 @@ def svg_abanico(
 
     if not factor_s or factor_s <= 0:
         factor_s = 10.0
+    return mejor_orientacion, factor_s
+
+
+def _calcular_caja_abanico(
+    ab: Any,
+    n: int,
+    psi: float,
+    s0: float,
+    pestana_cm: float,
+    dibujar: str,
+    mostrar_reflejo: bool,
+) -> Tuple[float, float, float, float]:
+    """Calcula el bounding box [min_x, max_x, min_y, max_y] en cm del abanico."""
+    if dibujar == "mitad" and not mostrar_reflejo:
+        min_x_cm = 0.0
+        max_x_cm = ab.caja_max_x
+    else:
+        min_x_cm = ab.caja_min_x
+        max_x_cm = ab.caja_max_x
+
+    min_y_cm = ab.caja_min_y
+    max_y_cm = ab.caja_max_y
+
+    if pestana_cm > 0:
+        r_pestana = max(0.0, s0 - pestana_cm)
+        ang_min_pest = 0.0 if (dibujar == "mitad" and not mostrar_reflejo) else -n * psi / 2.0
+        ang_max_pest = n * psi / 2.0
+        pts_pest = [
+            (r_pestana * math.sin(ang_min_pest), r_pestana * math.cos(ang_min_pest)),
+            (r_pestana * math.sin(ang_max_pest), r_pestana * math.cos(ang_max_pest)),
+        ]
+        min_x_cm = min(min_x_cm, *(p[0] for p in pts_pest))
+        max_x_cm = max(max_x_cm, *(p[0] for p in pts_pest))
+        min_y_cm = min(min_y_cm, *(p[1] for p in pts_pest))
+        max_y_cm = max(max_y_cm, *(p[1] for p in pts_pest))
+
+    return min_x_cm, max_x_cm, min_y_cm, max_y_cm
+
+
+def calcular_parametros_proyeccion_abanico(
+    resultado: BalloonCalculationResult,
+    entrada: BalloonInput,
+    seccion: str = "superior",
+    esquema: Optional[EsquemaDiseno] = None,
+    hoja: str = "carta",
+    escala: Union[str, float, int] = "auto",
+    margen_mm: float = 10.0,
+    dibujar: str = "completo",
+    mostrar_reflejo: bool = True,
+    unir_grupos: bool = False,
+) -> Dict[str, Any]:
+    """Calcula la geometría plana del abanico y los parámetros afines de proyección a SVG."""
+    if hoja not in ["carta", "a4"]:
+        raise ValueError(f"Hoja no soportada: {hoja}. Use 'carta' o 'a4'.")
+
+    hoja_w, hoja_h = (215.9, 279.4) if hoja == "carta" else (210.0, 297.0)
+
+    if seccion == "pico":
+        n = 4
+    else:
+        tam_g = esquema.tam_grupo if esquema else 5
+        unir = unir_grupos and bool(esquema and esquema.modo == "repeticion" and (entrada.num_gajos // tam_g >= 2))
+        n = min(entrada.num_gajos, tam_g * 2) if unir else tam_g
+
+    # 2. Geometría pura (abanico completo centrado)
+    pieza = pieza_a_geometria_plana(resultado, entrada, seccion)
+    ab = abanico(pieza, n=n, centrado=True)
+    psi = pieza.angulo_abertura_rad
+    s0 = pieza.distancia_vertice
+    s1 = pieza.radio_arco
+    costura_cm = entrada.ancho_costura
+
+    pestana_cm = 0.0
+    if seccion == "inferior" and entrada.usar_parametros_avanzados and entrada.pestana_boca > 0:
+        pestana_cm = entrada.pestana_boca
+
+    min_x_cm, max_x_cm, min_y_cm, max_y_cm = _calcular_caja_abanico(
+        ab, n, psi, s0, pestana_cm, dibujar, mostrar_reflejo
+    )
+
+    w_cm = max_x_cm - min_x_cm
+    h_cm = max_y_cm - min_y_cm
+
+    mejor_orientacion, factor_s = _calcular_orientacion_y_escala_abanico(
+        w_cm, h_cm, hoja_w, hoja_h, margen_mm, escala
+    )
 
     w_page, h_page = (hoja_w, hoja_h) if mejor_orientacion == "vertical" else (hoja_h, hoja_w)
     avail_w = w_page - 2 * margen_mm
     avail_h = h_page - 2 * margen_mm
-
-    factor = 10.0 / factor_s  # mm por cm real
+    factor = 10.0 / factor_s
 
     if dibujar == "mitad" and not mostrar_reflejo:
         cx_page = margen_mm + (avail_w - w_cm * factor) / 2.0
@@ -141,6 +150,87 @@ def svg_abanico(
 
     cy_page = margen_mm + avail_h / 2.0
     y_mid_cm = (min_y_cm + max_y_cm) / 2.0
+
+    return {
+        "factor": factor,
+        "factor_s": factor_s,
+        "cx_page": cx_page,
+        "cy_page": cy_page,
+        "y_mid_cm": y_mid_cm,
+        "w_page": w_page,
+        "h_page": h_page,
+        "avail_w": avail_w,
+        "avail_h": avail_h,
+        "mejor_orientacion": mejor_orientacion,
+        "min_x_cm": min_x_cm,
+        "max_x_cm": max_x_cm,
+        "min_y_cm": min_y_cm,
+        "max_y_cm": max_y_cm,
+        "w_cm": w_cm,
+        "h_cm": h_cm,
+        "pieza": pieza,
+        "ab": ab,
+        "n": n,
+        "s0": s0,
+        "s1": s1,
+        "psi": psi,
+        "costura_cm": costura_cm,
+        "pestana_cm": pestana_cm,
+    }
+
+
+def svg_abanico(
+    resultado: BalloonCalculationResult,
+    entrada: BalloonInput,
+    seccion: str,
+    esquema: Optional[EsquemaDiseno] = None,
+    estilo: EstiloSvg = IMPRESION,
+    escala: Union[str, float, int] = "auto",
+    hoja: str = "carta",
+    margen_mm: float = 10.0,
+    dibujar: str = "completo",
+    diseno: Optional[Diseno] = None,
+    unir_grupos: bool = False,
+    carpeta_recursos: Optional[Union[str, Path]] = None,
+    mostrar_reflejo: bool = False,
+    ver_cuadricula: bool = True,
+    ver_rotulos: bool = True,
+    ver_costuras: bool = True,
+    overlay_capa_activa: Optional[CapaDiseno] = None,
+    vista_previa: bool = True,
+    modo_fantasma: bool = False,
+) -> str:
+    """Genera un SVG con la hoja de trazo en abanico para impresión o Inkscape."""
+    geom = calcular_parametros_proyeccion_abanico(
+        resultado=resultado,
+        entrada=entrada,
+        seccion=seccion,
+        esquema=esquema,
+        hoja=hoja,
+        escala=escala,
+        margen_mm=margen_mm,
+        dibujar=dibujar,
+        mostrar_reflejo=mostrar_reflejo,
+        unir_grupos=unir_grupos,
+    )
+
+    factor = geom["factor"]
+    factor_s = geom["factor_s"]
+    cx_page = geom["cx_page"]
+    cy_page = geom["cy_page"]
+    y_mid_cm = geom["y_mid_cm"]
+    w_page = geom["w_page"]
+    h_page = geom["h_page"]
+    avail_w = geom["avail_w"]
+    avail_h = geom["avail_h"]
+    pieza = geom["pieza"]
+    ab = geom["ab"]
+    n = geom["n"]
+    s0 = geom["s0"]
+    s1 = geom["s1"]
+    psi = geom["psi"]
+    costura_cm = geom["costura_cm"]
+    pestana_cm = geom["pestana_cm"]
 
     # Transformación cm -> mm SVG con ÁPICE ABAJO:
     def to_svg(x: float, y: float) -> Tuple[float, float]:
@@ -240,7 +330,9 @@ def svg_abanico(
             # Capas en mitad derecha activa (clipPath al contorno de mitad)
             lines.append('    <g id="diseno-mitad-activa" clip-path="url(#clip-abanico)">')
             for c in diseno.capas:
-                elem_svg = _renderizar_capa_en_abanico(c, to_svg, factor, carp_rec, opacidad_mult=1.0, vista_previa=vista_previa)
+                elem_svg = _renderizar_capa_en_abanico(
+                    c, to_svg, factor, carp_rec, opacidad_mult=1.0, vista_previa=vista_previa, modo_fantasma=modo_fantasma
+                )
                 if elem_svg:
                     lines.append(f'      {elem_svg}')
             lines.append('    </g>')
@@ -251,14 +343,18 @@ def svg_abanico(
                 lines.append('    <g id="diseno-mitad-reflejo" opacity="0.38">')
                 for c in todas_capas:
                     if c.id.endswith("_reflejo"):
-                        elem_svg = _renderizar_capa_en_abanico(c, to_svg, factor, carp_rec, opacidad_mult=1.0, vista_previa=vista_previa)
+                        elem_svg = _renderizar_capa_en_abanico(
+                            c, to_svg, factor, carp_rec, opacidad_mult=1.0, vista_previa=vista_previa, modo_fantasma=modo_fantasma
+                        )
                         if elem_svg:
                             lines.append(f'      {elem_svg}')
                 lines.append('    </g>')
         else:
             lines.append('    <g id="diseno-completo" clip-path="url(#clip-abanico)">')
             for c in diseno.capas:
-                elem_svg = _renderizar_capa_en_abanico(c, to_svg, factor, carp_rec, opacidad_mult=1.0, vista_previa=vista_previa)
+                elem_svg = _renderizar_capa_en_abanico(
+                    c, to_svg, factor, carp_rec, opacidad_mult=1.0, vista_previa=vista_previa, modo_fantasma=modo_fantasma
+                )
                 if elem_svg:
                     lines.append(f'      {elem_svg}')
             lines.append('    </g>')
@@ -469,6 +565,7 @@ def _renderizar_capa_en_abanico(
     carpeta_recursos: Optional[Path],
     opacidad_mult: float = 1.0,
     vista_previa: bool = True,
+    modo_fantasma: bool = False,
 ) -> str:
     """Renderiza un elemento SVG nativo o imagen raster para una capa en el abanico."""
     if not capa.visible:
@@ -493,6 +590,13 @@ def _renderizar_capa_en_abanico(
 
     trans_str = f' transform="{" ".join(transforms)}"' if transforms else ""
     opac = max(0.0, min(1.0, capa.opacidad * opacidad_mult))
+
+    if modo_fantasma:
+        return (
+            f'<rect x="{x_svg:.2f}" y="{y_svg:.2f}" width="{w_svg:.2f}" height="{h_svg:.2f}" '
+            f'fill="none" stroke="#2196F3" stroke-width="0.5" stroke-dasharray="3,2" '
+            f'opacity="{opac * 0.4:.2f}"{trans_str} id="capa-fantasma-{capa.id}"/>'
+        )
 
     contenido_frag, vb = obtener_fragmento_capa(capa, carpeta_recursos, vista_previa=vista_previa)
 

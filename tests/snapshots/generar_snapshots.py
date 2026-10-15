@@ -42,6 +42,8 @@ class MockPage:
 def normalizar_valor(val: Any) -> Any:
     if val is None:
         return None
+    if hasattr(val, "value"):
+        val = val.value
     if isinstance(val, (bool, int, float)):
         return val
     s = str(val)

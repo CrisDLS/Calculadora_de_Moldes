@@ -8,7 +8,7 @@
       "visible": true,
       "disabled": false,
       "wrap": false,
-      "alignment": "MainAxisAlignment.START",
+      "alignment": "start",
       "hijos": [
         {
           "tipo": "Container",
@@ -20,7 +20,7 @@
               "visible": true,
               "disabled": false,
               "wrap": false,
-              "alignment": "MainAxisAlignment.START",
+              "alignment": "start",
               "hijos": [
                 {
                   "tipo": "Text",
@@ -96,7 +96,7 @@
                           "visible": false,
                           "disabled": false,
                           "wrap": false,
-                          "alignment": "MainAxisAlignment.START",
+                          "alignment": "start",
                           "hijos": [
                             {
                               "tipo": "TextField",
@@ -211,14 +211,14 @@
                   "visible": true,
                   "disabled": false,
                   "wrap": false,
-                  "alignment": "MainAxisAlignment.SPACE_BETWEEN",
+                  "alignment": "spaceBetween",
                   "hijos": [
                     {
                       "tipo": "Column",
                       "visible": true,
                       "disabled": false,
                       "wrap": false,
-                      "alignment": "MainAxisAlignment.START",
+                      "alignment": "start",
                       "hijos": [
                         {
                           "tipo": "Text",
@@ -240,7 +240,7 @@
                       "visible": true,
                       "disabled": false,
                       "wrap": false,
-                      "alignment": "MainAxisAlignment.START",
+                      "alignment": "start",
                       "hijos": [
                         {
                           "tipo": "IconButton",
@@ -286,7 +286,7 @@
                   "visible": true,
                   "disabled": false,
                   "wrap": false,
-                  "alignment": "MainAxisAlignment.SPACE_BETWEEN",
+                  "alignment": "spaceBetween",
                   "hijos": [
                     {
                       "tipo": "Text",
@@ -326,7 +326,7 @@
                   "visible": true,
                   "disabled": false,
                   "wrap": false,
-                  "alignment": "MainAxisAlignment.START",
+                  "alignment": "start",
                   "hijos": [
                     {
                       "tipo": "TabBar",
@@ -398,7 +398,7 @@
                               "tipo": "ResponsiveRow",
                               "visible": true,
                               "disabled": false,
-                              "alignment": "MainAxisAlignment.START"
+                              "alignment": "start"
                             },
                             {
                               "tipo": "Divider",
@@ -410,7 +410,7 @@
                               "visible": true,
                               "disabled": false,
                               "wrap": false,
-                              "alignment": "MainAxisAlignment.START"
+                              "alignment": "start"
                             }
                           ],
                           "num_hijos": 4
@@ -425,14 +425,14 @@
                               "visible": true,
                               "disabled": false,
                               "wrap": false,
-                              "alignment": "MainAxisAlignment.START",
+                              "alignment": "start",
                               "hijos": [
                                 {
                                   "tipo": "Row",
                                   "visible": true,
                                   "disabled": false,
                                   "wrap": false,
-                                  "alignment": "MainAxisAlignment.CENTER",
+                                  "alignment": "center",
                                   "hijos": [
                                     {
                                       "tipo": "SegmentedButton",
@@ -468,21 +468,21 @@
                                   "visible": false,
                                   "disabled": false,
                                   "wrap": false,
-                                  "alignment": "MainAxisAlignment.START",
+                                  "alignment": "start",
                                   "hijos": [
                                     {
                                       "tipo": "Row",
                                       "visible": true,
                                       "disabled": false,
                                       "wrap": false,
-                                      "alignment": "MainAxisAlignment.SPACE_BETWEEN",
+                                      "alignment": "spaceBetween",
                                       "hijos": [
                                         {
                                           "tipo": "Column",
                                           "visible": true,
                                           "disabled": false,
                                           "wrap": false,
-                                          "alignment": "MainAxisAlignment.START",
+                                          "alignment": "start",
                                           "hijos": [
                                             {
                                               "tipo": "Text",
@@ -537,7 +537,7 @@
                                           "visible": true,
                                           "disabled": false,
                                           "wrap": false,
-                                          "alignment": "MainAxisAlignment.START",
+                                          "alignment": "start",
                                           "hijos": [
                                             {
                                               "tipo": "Container",
@@ -549,7 +549,7 @@
                                                   "visible": true,
                                                   "disabled": false,
                                                   "wrap": false,
-                                                  "alignment": "MainAxisAlignment.START"
+                                                  "alignment": "start"
                                                 }
                                               ],
                                               "num_hijos": 1
@@ -592,14 +592,14 @@
                               "visible": true,
                               "disabled": false,
                               "wrap": false,
-                              "alignment": "MainAxisAlignment.START",
+                              "alignment": "start",
                               "hijos": [
                                 {
                                   "tipo": "Row",
                                   "visible": true,
                                   "disabled": false,
                                   "wrap": false,
-                                  "alignment": "MainAxisAlignment.CENTER",
+                                  "alignment": "center",
                                   "hijos": [
                                     {
                                       "tipo": "SegmentedButton",
@@ -635,7 +635,7 @@
                                   "visible": false,
                                   "disabled": false,
                                   "wrap": false,
-                                  "alignment": "MainAxisAlignment.START",
+                                  "alignment": "start",
                                   "hijos": [
                                     {
                                       "tipo": "Container",
@@ -664,7 +664,7 @@
                                       "visible": true,
                                       "disabled": false,
                                       "wrap": false,
-                                      "alignment": "MainAxisAlignment.CENTER",
+                                      "alignment": "center",
                                       "hijos": [
                                         {
                                           "tipo": "IconButton",
@@ -700,7 +700,7 @@
                                       "visible": true,
                                       "disabled": false,
                                       "wrap": false,
-                                      "alignment": "MainAxisAlignment.CENTER",
+                                      "alignment": "center",
                                       "hijos": [
                                         {
                                           "tipo": "Text",
@@ -721,7 +721,7 @@
                                       "visible": true,
                                       "disabled": false,
                                       "wrap": false,
-                                      "alignment": "MainAxisAlignment.CENTER",
+                                      "alignment": "center",
                                       "hijos": [
                                         {
                                           "tipo": "Text",
@@ -751,14 +751,14 @@
                               "visible": true,
                               "disabled": false,
                               "wrap": false,
-                              "alignment": "MainAxisAlignment.START",
+                              "alignment": "start",
                               "hijos": [
                                 {
                                   "tipo": "Row",
                                   "visible": true,
                                   "disabled": false,
                                   "wrap": true,
-                                  "alignment": "MainAxisAlignment.CENTER",
+                                  "alignment": "center",
                                   "hijos": [
                                     {
                                       "tipo": "SegmentedButton",
@@ -804,7 +804,7 @@
                                       "visible": true,
                                       "disabled": false,
                                       "wrap": false,
-                                      "alignment": "MainAxisAlignment.START",
+                                      "alignment": "start",
                                       "hijos": [
                                         {
                                           "tipo": "Text",
@@ -817,7 +817,7 @@
                                           "visible": true,
                                           "disabled": false,
                                           "wrap": false,
-                                          "alignment": "MainAxisAlignment.START",
+                                          "alignment": "start",
                                           "hijos": [
                                             {
                                               "tipo": "Dropdown",
@@ -852,7 +852,7 @@
                                   "visible": true,
                                   "disabled": false,
                                   "wrap": true,
-                                  "alignment": "MainAxisAlignment.START",
+                                  "alignment": "start",
                                   "hijos": [
                                     {
                                       "tipo": "Dropdown",
@@ -947,7 +947,7 @@
                                           "visible": true,
                                           "disabled": false,
                                           "wrap": false,
-                                          "alignment": "MainAxisAlignment.START"
+                                          "alignment": "start"
                                         }
                                       ],
                                       "num_hijos": 1
@@ -980,7 +980,7 @@
                                   "visible": false,
                                   "disabled": false,
                                   "wrap": false,
-                                  "alignment": "MainAxisAlignment.START",
+                                  "alignment": "start",
                                   "hijos": [
                                     {
                                       "tipo": "Container",
@@ -1009,7 +1009,7 @@
                                       "visible": true,
                                       "disabled": false,
                                       "wrap": false,
-                                      "alignment": "MainAxisAlignment.CENTER",
+                                      "alignment": "center",
                                       "hijos": [
                                         {
                                           "tipo": "IconButton",
@@ -1045,7 +1045,7 @@
                                       "visible": true,
                                       "disabled": false,
                                       "wrap": false,
-                                      "alignment": "MainAxisAlignment.CENTER",
+                                      "alignment": "center",
                                       "hijos": [
                                         {
                                           "tipo": "Text",
@@ -1075,7 +1075,7 @@
                               "visible": true,
                               "disabled": false,
                               "wrap": false,
-                              "alignment": "MainAxisAlignment.START",
+                              "alignment": "start",
                               "hijos": [
                                 {
                                   "tipo": "Container",
@@ -1097,7 +1097,7 @@
                                   "visible": false,
                                   "disabled": false,
                                   "wrap": false,
-                                  "alignment": "MainAxisAlignment.START",
+                                  "alignment": "start",
                                   "hijos": [
                                     {
                                       "tipo": "Container",
@@ -1143,7 +1143,7 @@
                                               "visible": true,
                                               "disabled": false,
                                               "wrap": false,
-                                              "alignment": "MainAxisAlignment.SPACE_BETWEEN",
+                                              "alignment": "spaceBetween",
                                               "hijos": [
                                                 {
                                                   "tipo": "Text",
@@ -1165,7 +1165,7 @@
                                               "visible": true,
                                               "disabled": false,
                                               "wrap": false,
-                                              "alignment": "MainAxisAlignment.START"
+                                              "alignment": "start"
                                             },
                                             {
                                               "tipo": "Divider",
@@ -1177,7 +1177,7 @@
                                               "visible": false,
                                               "disabled": false,
                                               "wrap": false,
-                                              "alignment": "MainAxisAlignment.START",
+                                              "alignment": "start",
                                               "hijos": [
                                                 {
                                                   "tipo": "Text",
@@ -1199,7 +1199,7 @@
                                                   "visible": true,
                                                   "disabled": false,
                                                   "wrap": false,
-                                                  "alignment": "MainAxisAlignment.START",
+                                                  "alignment": "start",
                                                   "hijos": [
                                                     {
                                                       "tipo": "TextField",
@@ -1227,7 +1227,7 @@
                                                   "visible": true,
                                                   "disabled": false,
                                                   "wrap": false,
-                                                  "alignment": "MainAxisAlignment.START",
+                                                  "alignment": "start",
                                                   "hijos": [
                                                     {
                                                       "tipo": "Text",
@@ -1271,7 +1271,7 @@
                                                   "visible": true,
                                                   "disabled": false,
                                                   "wrap": false,
-                                                  "alignment": "MainAxisAlignment.START",
+                                                  "alignment": "start",
                                                   "hijos": [
                                                     {
                                                       "tipo": "TextField",
@@ -1312,7 +1312,7 @@
                                                   "visible": true,
                                                   "disabled": false,
                                                   "wrap": true,
-                                                  "alignment": "MainAxisAlignment.START",
+                                                  "alignment": "start",
                                                   "hijos": [
                                                     {
                                                       "tipo": "TextButton",
@@ -1343,7 +1343,7 @@
                                                   "visible": true,
                                                   "disabled": false,
                                                   "wrap": true,
-                                                  "alignment": "MainAxisAlignment.START",
+                                                  "alignment": "start",
                                                   "hijos": [
                                                     {
                                                       "tipo": "TextButton",
@@ -1380,7 +1380,7 @@
                                                   "visible": true,
                                                   "disabled": false,
                                                   "wrap": false,
-                                                  "alignment": "MainAxisAlignment.START",
+                                                  "alignment": "start",
                                                   "hijos": [
                                                     {
                                                       "tipo": "Slider",
@@ -1402,7 +1402,7 @@
                                                   "visible": true,
                                                   "disabled": false,
                                                   "wrap": false,
-                                                  "alignment": "MainAxisAlignment.START",
+                                                  "alignment": "start",
                                                   "hijos": [
                                                     {
                                                       "tipo": "TextButton",
@@ -1430,7 +1430,7 @@
                                                   "visible": true,
                                                   "disabled": false,
                                                   "wrap": false,
-                                                  "alignment": "MainAxisAlignment.START",
+                                                  "alignment": "start",
                                                   "hijos": [
                                                     {
                                                       "tipo": "IconButton",
@@ -1460,7 +1460,7 @@
                                                   "visible": true,
                                                   "disabled": false,
                                                   "wrap": false,
-                                                  "alignment": "MainAxisAlignment.START",
+                                                  "alignment": "start",
                                                   "hijos": [
                                                     {
                                                       "tipo": "Slider",
@@ -1525,21 +1525,21 @@
                                       "visible": true,
                                       "disabled": false,
                                       "wrap": false,
-                                      "alignment": "MainAxisAlignment.START",
+                                      "alignment": "start",
                                       "hijos": [
                                         {
                                           "tipo": "Row",
                                           "visible": true,
                                           "disabled": false,
                                           "wrap": true,
-                                          "alignment": "MainAxisAlignment.SPACE_BETWEEN",
+                                          "alignment": "spaceBetween",
                                           "hijos": [
                                             {
                                               "tipo": "Row",
                                               "visible": true,
                                               "disabled": false,
                                               "wrap": false,
-                                              "alignment": "MainAxisAlignment.START",
+                                              "alignment": "start",
                                               "hijos": [
                                                 {
                                                   "tipo": "Checkbox",
@@ -1588,17 +1588,171 @@
                                           "alignment": "Alignment(x=0, y=0)",
                                           "hijos": [
                                             {
-                                              "tipo": "GestureDetector",
+                                              "tipo": "Stack",
                                               "visible": true,
                                               "disabled": false,
                                               "hijos": [
                                                 {
-                                                  "tipo": "Image",
+                                                  "tipo": "GestureDetector",
                                                   "visible": true,
-                                                  "disabled": false
+                                                  "disabled": false,
+                                                  "hijos": [
+                                                    {
+                                                      "tipo": "Image",
+                                                      "visible": true,
+                                                      "disabled": false
+                                                    }
+                                                  ],
+                                                  "num_hijos": 1
+                                                },
+                                                {
+                                                  "tipo": "Stack",
+                                                  "visible": false,
+                                                  "disabled": false,
+                                                  "hijos": [
+                                                    {
+                                                      "tipo": "GestureDetector",
+                                                      "visible": true,
+                                                      "disabled": false,
+                                                      "hijos": [
+                                                        {
+                                                          "tipo": "Container",
+                                                          "visible": false,
+                                                          "disabled": false,
+                                                          "hijos": [
+                                                            {
+                                                              "tipo": "Image",
+                                                              "visible": false,
+                                                              "disabled": false
+                                                            }
+                                                          ],
+                                                          "num_hijos": 1
+                                                        }
+                                                      ],
+                                                      "num_hijos": 1
+                                                    },
+                                                    {
+                                                      "tipo": "GestureDetector",
+                                                      "visible": true,
+                                                      "disabled": false,
+                                                      "hijos": [
+                                                        {
+                                                          "tipo": "Container",
+                                                          "visible": false,
+                                                          "disabled": false
+                                                        }
+                                                      ],
+                                                      "num_hijos": 1
+                                                    },
+                                                    {
+                                                      "tipo": "GestureDetector",
+                                                      "visible": true,
+                                                      "disabled": false,
+                                                      "hijos": [
+                                                        {
+                                                          "tipo": "Container",
+                                                          "visible": false,
+                                                          "disabled": false
+                                                        }
+                                                      ],
+                                                      "num_hijos": 1
+                                                    },
+                                                    {
+                                                      "tipo": "GestureDetector",
+                                                      "visible": true,
+                                                      "disabled": false,
+                                                      "hijos": [
+                                                        {
+                                                          "tipo": "Container",
+                                                          "visible": false,
+                                                          "disabled": false
+                                                        }
+                                                      ],
+                                                      "num_hijos": 1
+                                                    },
+                                                    {
+                                                      "tipo": "GestureDetector",
+                                                      "visible": true,
+                                                      "disabled": false,
+                                                      "hijos": [
+                                                        {
+                                                          "tipo": "Container",
+                                                          "visible": false,
+                                                          "disabled": false
+                                                        }
+                                                      ],
+                                                      "num_hijos": 1
+                                                    },
+                                                    {
+                                                      "tipo": "GestureDetector",
+                                                      "visible": true,
+                                                      "disabled": false,
+                                                      "hijos": [
+                                                        {
+                                                          "tipo": "Container",
+                                                          "visible": false,
+                                                          "disabled": false
+                                                        }
+                                                      ],
+                                                      "num_hijos": 1
+                                                    },
+                                                    {
+                                                      "tipo": "GestureDetector",
+                                                      "visible": true,
+                                                      "disabled": false,
+                                                      "hijos": [
+                                                        {
+                                                          "tipo": "Container",
+                                                          "visible": false,
+                                                          "disabled": false
+                                                        }
+                                                      ],
+                                                      "num_hijos": 1
+                                                    },
+                                                    {
+                                                      "tipo": "GestureDetector",
+                                                      "visible": true,
+                                                      "disabled": false,
+                                                      "hijos": [
+                                                        {
+                                                          "tipo": "Container",
+                                                          "visible": false,
+                                                          "disabled": false
+                                                        }
+                                                      ],
+                                                      "num_hijos": 1
+                                                    },
+                                                    {
+                                                      "tipo": "GestureDetector",
+                                                      "visible": true,
+                                                      "disabled": false,
+                                                      "hijos": [
+                                                        {
+                                                          "tipo": "Container",
+                                                          "visible": false,
+                                                          "disabled": false
+                                                        }
+                                                      ],
+                                                      "num_hijos": 1
+                                                    },
+                                                    {
+                                                      "tipo": "GestureDetector",
+                                                      "visible": true,
+                                                      "disabled": false,
+                                                      "hijos": [
+                                                        {
+                                                          "tipo": "Container",
+                                                          "visible": false,
+                                                          "disabled": false
+                                                        }
+                                                      ],
+                                                      "num_hijos": 1
+                                                    }
+                                                  ],
+                                                  "num_hijos": 10
                                                 }
                                               ],
-                                              "num_hijos": 1
+                                              "num_hijos": 2
                                             }
                                           ],
                                           "num_hijos": 1
@@ -1608,7 +1762,7 @@
                                           "visible": true,
                                           "disabled": false,
                                           "wrap": false,
-                                          "alignment": "MainAxisAlignment.CENTER",
+                                          "alignment": "center",
                                           "hijos": [
                                             {
                                               "tipo": "IconButton",
@@ -1650,7 +1804,7 @@
                                           "visible": true,
                                           "disabled": false,
                                           "wrap": false,
-                                          "alignment": "MainAxisAlignment.CENTER",
+                                          "alignment": "center",
                                           "hijos": [
                                             {
                                               "tipo": "Text",
@@ -1688,7 +1842,7 @@
                               "visible": true,
                               "disabled": false,
                               "wrap": false,
-                              "alignment": "MainAxisAlignment.START",
+                              "alignment": "start",
                               "hijos": [
                                 {
                                   "tipo": "Container",
@@ -1710,14 +1864,14 @@
                                   "visible": false,
                                   "disabled": false,
                                   "wrap": false,
-                                  "alignment": "MainAxisAlignment.START",
+                                  "alignment": "start",
                                   "hijos": [
                                     {
                                       "tipo": "Row",
                                       "visible": true,
                                       "disabled": false,
                                       "wrap": true,
-                                      "alignment": "MainAxisAlignment.SPACE_BETWEEN",
+                                      "alignment": "spaceBetween",
                                       "hijos": [
                                         {
                                           "tipo": "Text",
@@ -1730,7 +1884,7 @@
                                           "visible": true,
                                           "disabled": false,
                                           "wrap": false,
-                                          "alignment": "MainAxisAlignment.START",
+                                          "alignment": "start",
                                           "hijos": [
                                             {
                                               "tipo": "Dropdown",
@@ -1786,7 +1940,7 @@
                                       "visible": true,
                                       "disabled": false,
                                       "wrap": false,
-                                      "alignment": "MainAxisAlignment.START",
+                                      "alignment": "start",
                                       "hijos": [
                                         {
                                           "tipo": "Dropdown",
@@ -1813,7 +1967,7 @@
                                       "visible": true,
                                       "disabled": false,
                                       "wrap": false,
-                                      "alignment": "MainAxisAlignment.START"
+                                      "alignment": "start"
                                     },
                                     {
                                       "tipo": "TextButton",
@@ -1844,14 +1998,14 @@
                                       "visible": true,
                                       "disabled": false,
                                       "wrap": false,
-                                      "alignment": "MainAxisAlignment.START",
+                                      "alignment": "start",
                                       "hijos": [
                                         {
                                           "tipo": "Row",
                                           "visible": true,
                                           "disabled": false,
                                           "wrap": false,
-                                          "alignment": "MainAxisAlignment.START",
+                                          "alignment": "start",
                                           "hijos": [
                                             {
                                               "tipo": "Dropdown",
@@ -1878,7 +2032,7 @@
                                           "visible": true,
                                           "disabled": false,
                                           "wrap": false,
-                                          "alignment": "MainAxisAlignment.START"
+                                          "alignment": "start"
                                         },
                                         {
                                           "tipo": "TextButton",
@@ -1905,7 +2059,7 @@
                                       "visible": true,
                                       "disabled": false,
                                       "wrap": false,
-                                      "alignment": "MainAxisAlignment.START",
+                                      "alignment": "start",
                                       "hijos": [
                                         {
                                           "tipo": "Dropdown",
@@ -1944,14 +2098,14 @@
                                       "visible": true,
                                       "disabled": false,
                                       "wrap": true,
-                                      "alignment": "MainAxisAlignment.START"
+                                      "alignment": "start"
                                     },
                                     {
                                       "tipo": "Column",
                                       "visible": false,
                                       "disabled": false,
                                       "wrap": false,
-                                      "alignment": "MainAxisAlignment.START",
+                                      "alignment": "start",
                                       "hijos": [
                                         {
                                           "tipo": "Dropdown",
@@ -1966,7 +2120,7 @@
                                           "visible": true,
                                           "disabled": false,
                                           "wrap": true,
-                                          "alignment": "MainAxisAlignment.START"
+                                          "alignment": "start"
                                         }
                                       ],
                                       "num_hijos": 2
@@ -1998,7 +2152,7 @@
                                           "visible": true,
                                           "disabled": false,
                                           "wrap": false,
-                                          "alignment": "MainAxisAlignment.START"
+                                          "alignment": "start"
                                         }
                                       ],
                                       "num_hijos": 1
@@ -2019,7 +2173,7 @@
                                           "visible": true,
                                           "disabled": false,
                                           "wrap": false,
-                                          "alignment": "MainAxisAlignment.START"
+                                          "alignment": "start"
                                         }
                                       ],
                                       "num_hijos": 1
@@ -2040,7 +2194,7 @@
                                           "visible": true,
                                           "disabled": false,
                                           "wrap": false,
-                                          "alignment": "MainAxisAlignment.START"
+                                          "alignment": "start"
                                         }
                                       ],
                                       "num_hijos": 1
@@ -2067,7 +2221,7 @@
                                       "visible": true,
                                       "disabled": false,
                                       "wrap": false,
-                                      "alignment": "MainAxisAlignment.START",
+                                      "alignment": "start",
                                       "hijos": [
                                         {
                                           "tipo": "FilledButton",
@@ -2094,14 +2248,14 @@
                                       "visible": true,
                                       "disabled": false,
                                       "wrap": false,
-                                      "alignment": "MainAxisAlignment.SPACE_BETWEEN",
+                                      "alignment": "spaceBetween",
                                       "hijos": [
                                         {
                                           "tipo": "Column",
                                           "visible": true,
                                           "disabled": false,
                                           "wrap": false,
-                                          "alignment": "MainAxisAlignment.START",
+                                          "alignment": "start",
                                           "hijos": [
                                             {
                                               "tipo": "Text",
@@ -2114,7 +2268,7 @@
                                               "visible": true,
                                               "disabled": false,
                                               "wrap": false,
-                                              "alignment": "MainAxisAlignment.START",
+                                              "alignment": "start",
                                               "hijos": [
                                                 {
                                                   "tipo": "TextField",

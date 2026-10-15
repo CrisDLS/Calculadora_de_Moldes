@@ -158,9 +158,65 @@ class ControladorDisenoMixin:
         if actualizar_svg:
             self._actualizar_svg_diseno()
 
-    def actualizar_svg_diseno(self) -> None:
+    def actualizar_geometria_capa_seleccionada(
+        self,
+        x: float,
+        y: float,
+        ancho: float,
+        alto: float,
+        rotacion: Optional[float] = None,
+        actualizar_svg: bool = True,
+    ) -> None:
+        """Actualiza la geometría completa de la capa seleccionada."""
+        capa = self.obtener_capa_seleccionada()
+        if not capa or capa.bloqueada:
+            return
+        capa.x = round(float(x), 4)
+        capa.y = round(float(y), 4)
+        capa.ancho = round(float(ancho), 4)
+        capa.alto = round(float(alto), 4)
+        if rotacion is not None:
+            capa.rotacion = round(float(rotacion), 2)
+        self.sin_guardar = True
+        if actualizar_svg:
+            self._actualizar_svg_diseno()
+
+    def obtener_conversion_diseno(
+        self,
+        zona_px: Tuple[float, float],
+        vista_svg,
+    ):
+        """Construye la instancia de Conversion matemática plano <-> px para la vista actual."""
+        if not self.resultado or not self.entrada_actual or not vista_svg:
+            return None
+        from logic.exportacion.svg_abanico import calcular_parametros_proyeccion_abanico
+        from logic.diseno.gestos_lienzo import Conversion
+
+        sec = self.diseno_seccion
+        cfg = self.obtener_config_seccion(sec)
+        esq = cfg.esquema if (cfg and cfg.esquema) else self._construir_esquema(sec)
+        geom = calcular_parametros_proyeccion_abanico(
+            resultado=self.resultado,
+            entrada=self.entrada_actual,
+            seccion=sec,
+            esquema=esq,
+            hoja=self.hoja_tipo,
+            dibujar=cfg.dibujar,
+            mostrar_reflejo=self.diseno_mostrar_reflejo,
+        )
+        return Conversion(
+            vista=vista_svg,
+            zona_px=zona_px,
+            y_arriba=True,
+            factor_escala=geom["factor"],
+            cx_vista=geom["cx_page"],
+            cy_vista=geom["cy_page"],
+            y_mid_plano=geom["y_mid_cm"],
+        )
+
+    def actualizar_svg_diseno(self, modo_fantasma: bool = False) -> None:
         """Fuerza la regeneración del SVG de diseño."""
-        self._actualizar_svg_diseno()
+        self._actualizar_svg_diseno(modo_fantasma=modo_fantasma)
 
     def cambiar_diseno_ver_cuadricula(self, val: bool) -> None:
         self.diseno_ver_cuadricula = val
@@ -198,7 +254,7 @@ class ControladorDisenoMixin:
         self.sin_guardar = True
         self._actualizar_svg_diseno()
 
-    def _actualizar_svg_diseno(self) -> None:
+    def _actualizar_svg_diseno(self, modo_fantasma: bool = False) -> None:
         if not self.resultado or not self.entrada_actual:
             self.svg_diseno = ""
             return
@@ -209,7 +265,7 @@ class ControladorDisenoMixin:
             dis = self.obtener_diseno_activo()
             carp = self.obtener_carpeta_recursos_activa()
             capa_sel = self.obtener_capa_seleccionada()
-            overlay = capa_sel if (capa_sel and not capa_sel.bloqueada) else None
+            overlay = None if modo_fantasma else (capa_sel if (capa_sel and not capa_sel.bloqueada) else None)
             self.svg_diseno = svg_abanico(
                 resultado=self.resultado,
                 entrada=self.entrada_actual,
@@ -225,6 +281,7 @@ class ControladorDisenoMixin:
                 ver_rotulos=self.diseno_ver_rotulos,
                 ver_costuras=self.diseno_ver_costuras,
                 overlay_capa_activa=overlay,
+                modo_fantasma=modo_fantasma,
             )
         except Exception as e:
             warnings.warn(f"Error generando SVG de diseño: {e}")
