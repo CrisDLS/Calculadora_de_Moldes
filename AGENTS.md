@@ -200,3 +200,9 @@ Cada pico es una pirámide de base cuadrada armada con 4 triángulos del molde d
       - Etiquetado en git con `fix-arrastre-capa`.
   - F6b: Vectorización y procesado avanzado de plantillas (calcos monocromáticos, plantillas de corte e instrucciones de ensamble).
   - F7: Mapeo de motivos y texturas sobre la malla 3D interactiva en Three.js y exportación de planos de corte multicapa.
+
+## Problemas conocidos
+- En la pestaña Hoja de trazo, al cambiar de sección (p. ej. de cono superior con "Piezas separadas" a Pico) el selector de lienzo tarda en refrescarse y muestra el valor de la sección anterior; el usuario decidió no corregirlo ahora.
+
+## Deuda técnica
+- `app_flet/vistas/trompo_compat.py`: Capa de proxies creada para compatibilidad con pruebas antiguas; debe eliminarse una vez migradas todas las pruebas a las APIs modulares correspondientes.
