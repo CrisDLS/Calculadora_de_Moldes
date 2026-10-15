@@ -50,6 +50,17 @@ que el usuario ponga debe validarse como viable o explicar por qué no.
 - `requirements.txt`, `requirements-dev.txt` → dependencias de producción y desarrollo.
 - La interfaz previa en CustomTkinter fue retirada y queda preservada en la etiqueta `ctk-final` (`git checkout ctk-final` para consultarla).
 
+## Protocolo de trabajo (aplica a toda tarea)
+- Haz solo lo que pide la tarea. No agregues funciones ni refactores no pedidos.
+- Para errores: primero una prueba que los reproduzca y FALLE; después la corrección.
+- Prohibido decir "debería funcionar" o "verificado" sin pegar la salida literal del comando
+  que lo demuestra. Si no puedes ejecutar algo (p. ej. ver la ventana), dilo así.
+- Toda acción de la interfaz se prueba con la lógica real; solo se simulan la página de Flet,
+  el selector de archivos y el portapapeles.
+- Commits con archivos explícitos y mensaje "tipo: descripción". Push solo si la tarea lo autoriza.
+- No amplíes trompo_compat.py; el código nuevo usa las APIs nuevas.
+- Informe final corto: qué cambió, evidencia (salidas), qué NO pudiste verificar.
+
 ## Reglas de arquitectura
 - `logic/` NUNCA importa `flet`, y NUNCA imprime ni lee consola:
   `calcular()` devuelve objetos. Nuevos tipos de globo implementan `BalloonCalculator`.
