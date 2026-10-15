@@ -11,6 +11,7 @@ from app_flet import tema
 from app_flet.vistas.tabla_molde import TablaMoldePersonalizada
 from app_flet.vistas.componentes.visor_svg import VisorSvg
 from app_flet.vistas.pestanas.resumen import PestanaResumen
+from app_flet.vistas.pestanas.tablas import PestanaTablas
 from logic.exportacion.estilos import PANTALLA_OSCURO, PANTALLA_CLARO
 from logic.exportacion.vista_svg import (
     VistaSvg,
@@ -216,70 +217,22 @@ class VistaTrompo(ft.Container):
         tab_resumen = self.pestana_resumen.construir()
 
         # 2. Pestaña Tablas
-        self.selector_tabla = ft.SegmentedButton(
-            selected=["0"],
-            allow_multiple_selection=False,
-            segments=[
-                ft.Segment(value="0", label=ft.Text("Cono superior")),
-                ft.Segment(value="1", label=ft.Text("Pico")),
-                ft.Segment(value="2", label=ft.Text("Cono inferior")),
-            ],
-            on_change=self.on_cambio_pieza_tabla
+        self.pestana_tablas = PestanaTablas(
+            paleta=self.paleta,
+            controlador=self.controlador,
+            servicio_clipboard=self.servicio_clipboard,
+            on_mostrar_snackbar=self._mostrar_snackbar,
+            obtener_pagina=lambda: self.obtener_pagina,
         )
-        self.lbl_vacio_tablas = ft.Container(
-            content=ft.Text("Calcula para ver las tablas", size=16, color=ft.Colors.ON_SURFACE_VARIANT),
-            alignment=ft.Alignment(0, 0),
-            expand=True,
-            visible=True,
-        )
-        self.lbl_titulo_tabla = ft.Text(size=20, weight=ft.FontWeight.BOLD, color=ft.Colors.ON_SURFACE)
-        self.lbl_resumen_tabla = ft.Text(size=14, color=ft.Colors.ON_SURFACE_VARIANT)
-        self.lbl_nota_tabla = ft.Container(
-            content=ft.Text(size=13, color=self.paleta.color_aviso, weight=ft.FontWeight.W_500),
-            bgcolor=ft.Colors.SURFACE_CONTAINER,
-            border_radius=6,
-            padding=8,
-            visible=False,
-        )
-        self.btn_copiar_tabla = ft.FilledButton(
-            "Copiar tabla",
-            icon=ft.Icons.COPY,
-            on_click=self.on_copiar_tabla
-        )
-        
-        self.tabla_componente = TablaMoldePersonalizada(self.paleta)
-        
-        self.panel_contenido_tablas = ft.Column(
-            expand=True,
-            visible=False,
-            controls=[
-                ft.Row(
-                    controls=[
-                        ft.Column(controls=[self.lbl_titulo_tabla, self.lbl_resumen_tabla], expand=True),
-                        self.btn_copiar_tabla
-                    ],
-                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN
-                ),
-                self.lbl_nota_tabla,
-                ft.Divider(color=ft.Colors.OUTLINE),
-                self.tabla_componente,
-            ],
-            spacing=10,
-        )
-
-        tab_tablas = ft.Container(
-            padding=15,
-            expand=True,
-            content=ft.Column(
-                expand=True,
-                controls=[
-                    ft.Row([self.selector_tabla], alignment=ft.MainAxisAlignment.CENTER),
-                    ft.Divider(color=ft.Colors.OUTLINE),
-                    self.lbl_vacio_tablas,
-                    self.panel_contenido_tablas,
-                ]
-            )
-        )
+        self.selector_tabla = self.pestana_tablas.selector_tabla
+        self.lbl_vacio_tablas = self.pestana_tablas.lbl_vacio_tablas
+        self.lbl_titulo_tabla = self.pestana_tablas.lbl_titulo_tabla
+        self.lbl_resumen_tabla = self.pestana_tablas.lbl_resumen_tabla
+        self.lbl_nota_tabla = self.pestana_tablas.lbl_nota_tabla
+        self.btn_copiar_tabla = self.pestana_tablas.btn_copiar_tabla
+        self.tabla_componente = self.pestana_tablas.tabla_componente
+        self.panel_contenido_tablas = self.pestana_tablas.panel_contenido_tablas
+        tab_tablas = self.pestana_tablas.construir()
 
         # 3. Pestaña Moldes 2D con zoom vectorial por viewBox
         self.selector_molde = ft.SegmentedButton(
@@ -1325,8 +1278,7 @@ class VistaTrompo(ft.Container):
     def _actualizar_estilos_paleta(self):
         self.lbl_error.color = self.paleta.color_error
         self.pestana_resumen.aplicar_tema(self.paleta)
-        self.lbl_nota_tabla.content.color = self.paleta.color_aviso
-        self.tabla_componente.actualizar_paleta(self.paleta)
+        self.pestana_tablas.aplicar_tema(self.paleta)
 
     def on_change_input(self, e):
         self._leer_vista_a_controlador()
@@ -1342,11 +1294,10 @@ class VistaTrompo(ft.Container):
         self._sync_controlador_a_vista(vm)
 
     def on_cambio_pieza_tabla(self, e):
-        self._renderizar_tabla_seleccionada()
-        try:
-            self.update()
-        except RuntimeError:
-            pass
+        self.pestana_tablas.on_cambio_pieza_tabla(e)
+
+    def on_copiar_tabla(self, e):
+        self.pestana_tablas.on_copiar_tabla(e)
 
     def on_cambio_pieza_molde(self, e):
         sel_molde = self.selector_molde.selected[0] if self.selector_molde.selected else "0"
@@ -1362,38 +1313,7 @@ class VistaTrompo(ft.Container):
             pass
 
     def on_copiar_tabla(self, e):
-        idx = int(self.selector_tabla.selected[0]) if self.selector_tabla.selected else 0
-        if not (self.controlador.tablas and idx < len(self.controlador.tablas)):
-            self._mostrar_snackbar("No se pudo copiar")
-            return
-
-        tabla = self.controlador.tablas[idx]
-        texto = tabla_a_texto(tabla)
-
-        # Usar servicio inyectado
-        copia_exitosa = False
-        page = self.obtener_pagina
-        try:
-            # Asegurar registro del servicio si hay página y es ft.Service
-            if page and isinstance(self.servicio_clipboard, ft.Service):
-                if self.servicio_clipboard not in page.services:
-                    page.services.append(self.servicio_clipboard)
-
-            if hasattr(self.servicio_clipboard, "set"):
-                res = self.servicio_clipboard.set(texto)
-                if asyncio.iscoroutine(res):
-                    if page:
-                        page.run_task(self.servicio_clipboard.set, texto)
-                    else:
-                        asyncio.run(res)
-                copia_exitosa = True
-        except Exception:
-            copia_exitosa = False
-
-        if copia_exitosa:
-            self._mostrar_snackbar("Tabla copiada al portapapeles")
-        else:
-            self._mostrar_snackbar("No se pudo copiar")
+        self.pestana_tablas.on_copiar_tabla(e)
 
     def _mostrar_snackbar(self, mensaje: str):
         self.ultimo_mensaje_snackbar = mensaje
@@ -1430,23 +1350,7 @@ class VistaTrompo(ft.Container):
         self._sync_controlador_a_vista(vm, reset_zoom=True)
 
     def _renderizar_tabla_seleccionada(self):
-        if not self.controlador.tablas:
-            return
-        idx = int(self.selector_tabla.selected[0]) if self.selector_tabla.selected else 0
-        if idx >= len(self.controlador.tablas):
-            return
-        tabla: TablaMolde = self.controlador.tablas[idx]
-
-        self.lbl_titulo_tabla.value = tabla.titulo
-        self.lbl_resumen_tabla.value = tabla.resumen
-
-        if tabla.nota:
-            self.lbl_nota_tabla.content.value = f"Nota: {tabla.nota}"
-            self.lbl_nota_tabla.visible = True
-        else:
-            self.lbl_nota_tabla.visible = False
-
-        self.tabla_componente.cargar_tabla(tabla, self.paleta)
+        self.pestana_tablas.renderizar_tabla_seleccionada()
 
     def _porcentaje_zoom(self) -> float:
         if not self.vista_base_svg or not self.vista_svg or self.vista_svg.ancho <= 0:
@@ -1628,13 +1532,7 @@ class VistaTrompo(ft.Container):
         self.pestana_resumen.actualizar(vm)
 
         # 5. Tablas
-        if vm.tablas and not vm.desactualizado:
-            self.lbl_vacio_tablas.visible = False
-            self.panel_contenido_tablas.visible = True
-            self._renderizar_tabla_seleccionada()
-        else:
-            self.lbl_vacio_tablas.visible = True
-            self.panel_contenido_tablas.visible = False
+        self.pestana_tablas.actualizar(vm)
 
         # 6. Moldes 2D
         sel_molde = self.selector_molde.selected[0] if self.selector_molde.selected else "0"
