@@ -12,6 +12,7 @@ from app_flet.vistas.tabla_molde import TablaMoldePersonalizada
 from app_flet.vistas.componentes.visor_svg import VisorSvg
 from app_flet.vistas.pestanas.resumen import PestanaResumen
 from app_flet.vistas.pestanas.tablas import PestanaTablas
+from app_flet.vistas.pestanas.moldes2d import PestanaMoldes2D
 from logic.exportacion.estilos import PANTALLA_OSCURO, PANTALLA_CLARO
 from logic.exportacion.vista_svg import (
     VistaSvg,
@@ -235,83 +236,26 @@ class VistaTrompo(ft.Container):
         tab_tablas = self.pestana_tablas.construir()
 
         # 3. Pestaña Moldes 2D con zoom vectorial por viewBox
-        self.selector_molde = ft.SegmentedButton(
-            selected=["0"],
-            allow_multiple_selection=False,
-            segments=[
-                ft.Segment(value="0", label=ft.Text("Las 3 piezas")),
-                ft.Segment(value="1", label=ft.Text("Cono superior")),
-                ft.Segment(value="2", label=ft.Text("Pico")),
-                ft.Segment(value="3", label=ft.Text("Cono inferior")),
-                ft.Segment(value="4", label=ft.Text("Perfil armado")),
-            ],
-            on_change=self.on_cambio_pieza_molde
-        )
-        self.lbl_vacio_moldes = ft.Container(
-            content=ft.Text("Calcula para ver los moldes", size=16, color=ft.Colors.ON_SURFACE_VARIANT),
-            alignment=ft.Alignment(0, 0),
-            expand=True,
-            visible=True,
-        )
-
-        # Visor de Moldes 2D (compartido)
-        self.visor_moldes = VisorSvg(papel_blanco=False, margen_ajuste=0.04)
-        self.container_viewer_svg = self.visor_moldes.container_viewer_svg
-        self.img_svg = self.visor_moldes.img_svg
-        self.detector_gestos = self.visor_moldes.detector_gestos
-        self.barra_zoom = self.visor_moldes.barra_zoom
-        self.lbl_zoom_porcentaje = self.visor_moldes.lbl_zoom_porcentaje
-        self.btn_zoom_in = self.visor_moldes.btn_zoom_in
-        self.btn_zoom_out = self.visor_moldes.btn_zoom_out
-        self.btn_ajustar = self.visor_moldes.btn_ajustar
-        self.lbl_instruccion_zoom = self.visor_moldes.lbl_instruccion_zoom
-        self.lbl_debug = self.visor_moldes.lbl_debug
-        self.debug_mode = self.visor_moldes.debug_mode
-        self._padding_container = self.visor_moldes._padding_container
-        self._border_width = self.visor_moldes._border_width
-        self.lbl_pie_moldes = ft.Text(
-            "La escala y la hoja de trazo en Carta llegarán en F3.",
-            size=12,
-            color=ft.Colors.ON_SURFACE_VARIANT,
-            text_align=ft.TextAlign.CENTER,
-        )
-
-        # Depuración con GLOBOS_DEBUG=1
-        self.debug_mode = os.environ.get("GLOBOS_DEBUG") == "1"
-        self.lbl_debug = ft.Text(
-            "",
-            size=10,
-            color=ft.Colors.ON_SURFACE_VARIANT,
-            text_align=ft.TextAlign.CENTER,
-            visible=self.debug_mode,
-        )
-
-        self.panel_contenido_moldes = ft.Column(
-            expand=True,
-            visible=False,
-            controls=[
-                self.container_viewer_svg,
-                self.barra_zoom,
-                ft.Row([self.lbl_instruccion_zoom], alignment=ft.MainAxisAlignment.CENTER),
-                ft.Row([self.lbl_debug], alignment=ft.MainAxisAlignment.CENTER) if self.debug_mode else ft.Container(),
-                ft.Row([self.lbl_pie_moldes], alignment=ft.MainAxisAlignment.CENTER),
-            ],
-            spacing=4,
-        )
-
-        tab_2d = ft.Container(
-            padding=15,
-            expand=True,
-            content=ft.Column(
-                expand=True,
-                controls=[
-                    ft.Row([self.selector_molde], alignment=ft.MainAxisAlignment.CENTER),
-                    ft.Divider(color=ft.Colors.OUTLINE),
-                    self.lbl_vacio_moldes,
-                    self.panel_contenido_moldes,
-                ]
-            )
-        )
+        self.pestana_moldes2d = PestanaMoldes2D(self.paleta, self.controlador)
+        self.selector_molde = self.pestana_moldes2d.selector_molde
+        self.lbl_vacio_moldes = self.pestana_moldes2d.lbl_vacio_moldes
+        self.panel_contenido_moldes = self.pestana_moldes2d.panel_contenido_moldes
+        self.visor_moldes = self.pestana_moldes2d.visor_moldes
+        self.container_viewer_svg = self.pestana_moldes2d.container_viewer_svg
+        self.img_svg = self.pestana_moldes2d.img_svg
+        self.detector_gestos = self.pestana_moldes2d.detector_gestos
+        self.barra_zoom = self.pestana_moldes2d.barra_zoom
+        self.lbl_zoom_porcentaje = self.pestana_moldes2d.lbl_zoom_porcentaje
+        self.btn_zoom_in = self.pestana_moldes2d.btn_zoom_in
+        self.btn_zoom_out = self.pestana_moldes2d.btn_zoom_out
+        self.btn_ajustar = self.pestana_moldes2d.btn_ajustar
+        self.lbl_instruccion_zoom = self.pestana_moldes2d.lbl_instruccion_zoom
+        self.lbl_debug = self.pestana_moldes2d.lbl_debug
+        self.debug_mode = self.pestana_moldes2d.debug_mode
+        self._padding_container = self.pestana_moldes2d._padding_container
+        self._border_width = self.pestana_moldes2d._border_width
+        self.lbl_pie_moldes = self.pestana_moldes2d.lbl_pie_moldes
+        tab_2d = self.pestana_moldes2d.construir()
 
         # 4. Pestaña Hoja de trazo (F3)
         self.selector_pieza_hoja = ft.SegmentedButton(
@@ -1300,20 +1244,7 @@ class VistaTrompo(ft.Container):
         self.pestana_tablas.on_copiar_tabla(e)
 
     def on_cambio_pieza_molde(self, e):
-        sel_molde = self.selector_molde.selected[0] if self.selector_molde.selected else "0"
-        if sel_molde == "4":
-            self.lbl_vacio_moldes.content.value = "Calcula para ver el perfil"
-        else:
-            self.lbl_vacio_moldes.content.value = "Calcula para ver los moldes"
-
-        self._renderizar_molde_seleccionado(reset_vista=True)
-        try:
-            self.update()
-        except RuntimeError:
-            pass
-
-    def on_copiar_tabla(self, e):
-        self.pestana_tablas.on_copiar_tabla(e)
+        self.pestana_moldes2d.on_cambio_pieza_molde(e)
 
     def _mostrar_snackbar(self, mensaje: str):
         self.ultimo_mensaje_snackbar = mensaje
@@ -1366,6 +1297,15 @@ class VistaTrompo(ft.Container):
     def vista_svg(self, val: Optional[VistaSvg]) -> None:
         if hasattr(self, "visor_moldes"):
             self.visor_moldes.vista_svg = val
+
+    @property
+    def _svg_actual_raw(self) -> str:
+        return self.pestana_moldes2d._svg_actual_raw if hasattr(self, "pestana_moldes2d") else ""
+
+    @_svg_actual_raw.setter
+    def _svg_actual_raw(self, val: str) -> None:
+        if hasattr(self, "pestana_moldes2d"):
+            self.pestana_moldes2d._svg_actual_raw = val
 
     @property
     def vista_base_svg(self) -> Optional[VistaSvg]:
@@ -1473,22 +1413,7 @@ class VistaTrompo(ft.Container):
         self.visor_moldes.on_container_size_change(e)
 
     def _renderizar_molde_seleccionado(self, reset_vista: bool = False):
-        vm = self.controlador.get_view_model()
-        sel = self.selector_molde.selected[0] if self.selector_molde.selected else "0"
-        svg_str = ""
-        if sel == "0":
-            svg_str = vm.svg_conjunto
-        elif sel == "1":
-            svg_str = vm.svg_superior
-        elif sel == "2":
-            svg_str = vm.svg_pico
-        elif sel == "3":
-            svg_str = vm.svg_inferior
-        elif sel == "4":
-            svg_str = vm.svg_perfil
-
-        self._svg_actual_raw = svg_str
-        self.visor_moldes.cargar_svg(svg_str, reset_vista=reset_vista)
+        self.pestana_moldes2d.renderizar_molde_seleccionado(reset_vista=reset_vista)
 
     def _actualizar_debug(self):
         self.visor_moldes.actualizar_debug()
@@ -1535,19 +1460,7 @@ class VistaTrompo(ft.Container):
         self.pestana_tablas.actualizar(vm)
 
         # 6. Moldes 2D
-        sel_molde = self.selector_molde.selected[0] if self.selector_molde.selected else "0"
-        if sel_molde == "4":
-            self.lbl_vacio_moldes.content.value = "Calcula para ver el perfil"
-        else:
-            self.lbl_vacio_moldes.content.value = "Calcula para ver los moldes"
-
-        if vm.svg_conjunto and not vm.desactualizado:
-            self.lbl_vacio_moldes.visible = False
-            self.panel_contenido_moldes.visible = True
-            self._renderizar_molde_seleccionado(reset_vista=reset_zoom)
-        else:
-            self.lbl_vacio_moldes.visible = True
-            self.panel_contenido_moldes.visible = False
+        self.pestana_moldes2d.actualizar(vm, reset_zoom=reset_zoom)
 
         # 7. Hoja de trazo (F3 y F5)
         sel_hoja = self.selector_pieza_hoja.selected[0] if self.selector_pieza_hoja.selected else "superior"
