@@ -8,6 +8,7 @@ Aplicación de escritorio para el diseño, cálculo geométrico y despiece de mo
 - **Moldes 2D vectoriales**: Visualización en pantalla y exportación de SVG a escala real con cotas y márgenes de costura.
 - **Hojas de trazo y abanicos**: Distribución automática y a escala para impresión en hojas Carta o A4, y trazo en abanico continuo o por mitad simétrica.
 - **Diseño gráfico sobre el abanico**: Capas vectoriales (SVG) e imágenes (PNG/JPG) con escalado, rotación, opacidad, reflejos rígidos simétricos, recorte exacto de gajos y exportación de piezas decoradas.
+- **Modos Navegar y Editar interactivo**: Modos excluyentes en el lienzo de diseño; el modo editar permite mover y redimensionar capas interactivamente a 60 fps mediante un marco superpuesto con 8 tiradores táctiles con invarianza del borde opuesto y rotación.
 - **Visualizador 3D interactivo**: Previsualización 3D en tiempo real con Three.js (luces solares, controles orbitales, modo día/noche y costuras).
 - **Esquemas de pintura y lista de compra**: Asignación de patrones de color para papel china, catálogo personalizable y cálculo de pliegos y paquetes de papel necesarios.
 

@@ -362,6 +362,11 @@ class PestanaDiseno(PestanaBase):
             except Exception:
                 pass
 
+    def cambiar_modo_interaccion(self, modo: str) -> bool:
+        """Cambia programáticamente el modo de interacción entre navegar y editar."""
+        self.selector_interaccion_diseno.selected = [modo]
+        return self.gestor_visor.cambiar_modo_interaccion(modo)
+
     async def on_exportar_abanico_click(self, e) -> None:
         nom_def = f"abanico_{self.controlador.diseno_seccion}.svg"
         ruta = await self.file_picker.save_file(

@@ -315,16 +315,26 @@ class VisorSvg:
             self.actualizar_imagen_zoom(force=True)
 
     def on_gesture_scroll(self, e: ft.ScrollEvent) -> None:
-        """Zoom centrado en el cursor mediante la rueda del ratón."""
-        if not self.gestos_habilitados or not self.vista_svg:
+        """Zoom centrado en el cursor mediante la rueda del ratón (activo en navegar y editar)."""
+        if not self.vista_svg:
             return
-        delta_y = getattr(e, "scroll_delta", None)
+        dy = 0.0
+        delta_obj = getattr(e, "scroll_delta", None)
+        if delta_obj is not None:
+            if hasattr(delta_obj, "y"):
+                dy = float(delta_obj.y)
+            elif isinstance(delta_obj, (int, float)):
+                dy = float(delta_obj)
+        elif hasattr(e, "scroll_delta_y"):
+            dy = float(getattr(e, "scroll_delta_y"))
+
         factor = 1.15
-        if delta_y and hasattr(delta_y, "y"):
-            if delta_y.y > 0:
-                factor = 1.0 / 1.15
-            elif delta_y.y < 0:
-                factor = 1.15
+        if dy > 0:
+            factor = 1.0 / 1.15
+        elif dy < 0:
+            factor = 1.15
+        else:
+            return
 
         fx = 0.5
         fy = 0.5

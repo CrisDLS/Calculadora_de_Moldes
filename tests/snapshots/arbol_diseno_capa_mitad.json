@@ -3386,7 +3386,16 @@
                                                         {
                                                           "tipo": "Container",
                                                           "visible": false,
-                                                          "disabled": false
+                                                          "disabled": false,
+                                                          "alignment": "Alignment(x=0.0, y=0.0)",
+                                                          "hijos": [
+                                                            {
+                                                              "tipo": "Container",
+                                                              "visible": true,
+                                                              "disabled": false
+                                                            }
+                                                          ],
+                                                          "num_hijos": 1
                                                         }
                                                       ],
                                                       "num_hijos": 1
@@ -3399,7 +3408,16 @@
                                                         {
                                                           "tipo": "Container",
                                                           "visible": false,
-                                                          "disabled": false
+                                                          "disabled": false,
+                                                          "alignment": "Alignment(x=0.0, y=0.0)",
+                                                          "hijos": [
+                                                            {
+                                                              "tipo": "Container",
+                                                              "visible": true,
+                                                              "disabled": false
+                                                            }
+                                                          ],
+                                                          "num_hijos": 1
                                                         }
                                                       ],
                                                       "num_hijos": 1
@@ -3412,7 +3430,16 @@
                                                         {
                                                           "tipo": "Container",
                                                           "visible": false,
-                                                          "disabled": false
+                                                          "disabled": false,
+                                                          "alignment": "Alignment(x=0.0, y=0.0)",
+                                                          "hijos": [
+                                                            {
+                                                              "tipo": "Container",
+                                                              "visible": true,
+                                                              "disabled": false
+                                                            }
+                                                          ],
+                                                          "num_hijos": 1
                                                         }
                                                       ],
                                                       "num_hijos": 1
@@ -3425,7 +3452,16 @@
                                                         {
                                                           "tipo": "Container",
                                                           "visible": false,
-                                                          "disabled": false
+                                                          "disabled": false,
+                                                          "alignment": "Alignment(x=0.0, y=0.0)",
+                                                          "hijos": [
+                                                            {
+                                                              "tipo": "Container",
+                                                              "visible": true,
+                                                              "disabled": false
+                                                            }
+                                                          ],
+                                                          "num_hijos": 1
                                                         }
                                                       ],
                                                       "num_hijos": 1
@@ -3438,7 +3474,16 @@
                                                         {
                                                           "tipo": "Container",
                                                           "visible": false,
-                                                          "disabled": false
+                                                          "disabled": false,
+                                                          "alignment": "Alignment(x=0.0, y=0.0)",
+                                                          "hijos": [
+                                                            {
+                                                              "tipo": "Container",
+                                                              "visible": true,
+                                                              "disabled": false
+                                                            }
+                                                          ],
+                                                          "num_hijos": 1
                                                         }
                                                       ],
                                                       "num_hijos": 1
@@ -3451,7 +3496,16 @@
                                                         {
                                                           "tipo": "Container",
                                                           "visible": false,
-                                                          "disabled": false
+                                                          "disabled": false,
+                                                          "alignment": "Alignment(x=0.0, y=0.0)",
+                                                          "hijos": [
+                                                            {
+                                                              "tipo": "Container",
+                                                              "visible": true,
+                                                              "disabled": false
+                                                            }
+                                                          ],
+                                                          "num_hijos": 1
                                                         }
                                                       ],
                                                       "num_hijos": 1
@@ -3464,7 +3518,16 @@
                                                         {
                                                           "tipo": "Container",
                                                           "visible": false,
-                                                          "disabled": false
+                                                          "disabled": false,
+                                                          "alignment": "Alignment(x=0.0, y=0.0)",
+                                                          "hijos": [
+                                                            {
+                                                              "tipo": "Container",
+                                                              "visible": true,
+                                                              "disabled": false
+                                                            }
+                                                          ],
+                                                          "num_hijos": 1
                                                         }
                                                       ],
                                                       "num_hijos": 1
@@ -3477,7 +3540,16 @@
                                                         {
                                                           "tipo": "Container",
                                                           "visible": false,
-                                                          "disabled": false
+                                                          "disabled": false,
+                                                          "alignment": "Alignment(x=0.0, y=0.0)",
+                                                          "hijos": [
+                                                            {
+                                                              "tipo": "Container",
+                                                              "visible": true,
+                                                              "disabled": false
+                                                            }
+                                                          ],
+                                                          "num_hijos": 1
                                                         }
                                                       ],
                                                       "num_hijos": 1
@@ -3490,7 +3562,16 @@
                                                         {
                                                           "tipo": "Container",
                                                           "visible": false,
-                                                          "disabled": false
+                                                          "disabled": false,
+                                                          "alignment": "Alignment(x=0.0, y=0.0)",
+                                                          "hijos": [
+                                                            {
+                                                              "tipo": "Container",
+                                                              "visible": true,
+                                                              "disabled": false
+                                                            }
+                                                          ],
+                                                          "num_hijos": 1
                                                         }
                                                       ],
                                                       "num_hijos": 1

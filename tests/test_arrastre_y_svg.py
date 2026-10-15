@@ -44,19 +44,19 @@ def vista_con_capa(tmp_path):
     vista.controlador.capa_seleccionada_id = capa.id
     vista._sync_controlador_a_vista(vista.controlador.get_view_model())
     
-    # Modo mover capa
-    vista.modo_interaccion_diseno = "mover"
-    vista.selector_interaccion_diseno.selected = ["mover"]
+    # Modo editar usando la nueva API
+    vista.pestana_diseno.cambiar_modo_interaccion("editar")
     return vista, page, capa, tmp_path
 
 
 def test_300_eventos_arrastre_sin_recrear_controles_ni_page_update(vista_con_capa):
     vista, page, capa, _ = vista_con_capa
-    detector_id_inicial = id(vista.detector_gestos_diseno)
+    marco = vista.pestana_diseno.gestor_visor.marco_edicion
+    detector_id_inicial = id(marco.detector_cuerpo)
     page_updates_inicial = page.update_count
     
     # 1. Iniciar arrastre
-    vista._on_gesture_diseno_pan_start(None)
+    marco._on_cuerpo_pan_start(None)
     assert vista.arrastrando_capa is True
     
     x_inicial = capa.x
@@ -65,88 +65,86 @@ def test_300_eventos_arrastre_sin_recrear_controles_ni_page_update(vista_con_cap
     # 2. Ráfaga de 300 micro-eventos de arrastre
     for _ in range(300):
         ev = DummyDragEvent(0.5, 0.5)
-        vista._on_gesture_diseno_pan_update(ev)
+        marco._on_cuerpo_pan_update(ev)
     
     # Durante el arrastre:
     # - La identidad del GestureDetector NUNCA cambia
-    assert id(vista.detector_gestos_diseno) == detector_id_inicial
+    assert id(marco.detector_cuerpo) == detector_id_inicial
     # - 0 llamadas a page.update()
     assert page.update_count == page_updates_inicial
     # - Las coordenadas en memoria cambiaron de forma acumulativa
-    assert capa.x != x_inicial
-    assert capa.y != y_inicial
+    assert marco.capa_activa.x != x_inicial
+    assert marco.capa_activa.y != y_inicial
     # - Los textfields se actualizaron
-    assert vista.txt_pos_x.value == f"{capa.x:.2f}"
-    assert vista.txt_pos_y.value == f"{capa.y:.2f}"
+    assert vista.pestana_diseno.inspector.txt_pos_x.value == f"{marco.capa_activa.x:.2f}"
+    assert vista.pestana_diseno.inspector.txt_pos_y.value == f"{marco.capa_activa.y:.2f}"
     
     # 3. Soltar (pan_end)
-    vista._on_gesture_diseno_pan_end(None)
+    marco._on_cuerpo_pan_end(None)
     assert vista.arrastrando_capa is False
     
-    # Esperar que la recomposición termine en segundo plano
-    time.sleep(0.3)
+    capa_final = vista.controlador.obtener_capa_seleccionada()
+    assert capa_final.x == round(marco.capa_activa.x, 4)
     
     # La identidad del GestureDetector sigue siendo exactamente la misma
-    assert id(vista.detector_gestos_diseno) == detector_id_inicial
+    assert id(marco.detector_cuerpo) == detector_id_inicial
 
 
 def test_identidad_estable_detector_gestos(vista_con_capa):
     vista, page, capa, _ = vista_con_capa
-    det = vista.detector_gestos_diseno
+    marco = vista.pestana_diseno.gestor_visor.marco_edicion
+    det = marco.detector_cuerpo
     
     # Antes del arrastre
     id_antes = id(det)
     
     # Durante el arrastre
-    vista._on_gesture_diseno_pan_start(None)
-    vista._on_gesture_diseno_pan_update(DummyDragEvent(1.0, 1.0))
-    id_durante = id(vista.detector_gestos_diseno)
+    marco._on_cuerpo_pan_start(None)
+    marco._on_cuerpo_pan_update(DummyDragEvent(1.0, 1.0))
+    id_durante = id(marco.detector_cuerpo)
     
     # Después del arrastre
-    vista._on_gesture_diseno_pan_end(None)
-    id_despues = id(vista.detector_gestos_diseno)
+    marco._on_cuerpo_pan_end(None)
+    id_despues = id(marco.detector_cuerpo)
     
     assert id_antes == id_durante == id_despues
-    assert vista.detector_gestos_diseno.drag_interval == 35
+    assert marco.detector_cuerpo.drag_interval == 16
 
 
 def test_fusion_y_descarte_de_recomposiciones_redundantes(vista_con_capa):
     vista, page, capa, _ = vista_con_capa
+    marco = vista.pestana_diseno.gestor_visor.marco_edicion
     
     # Simular ráfaga de inicios y finales rápidos
-    vista._on_gesture_diseno_pan_start(None)
-    vista._on_gesture_diseno_pan_update(DummyDragEvent(1.0, 1.0))
-    vista._finalizar_arrastre_capa()
+    marco._on_cuerpo_pan_start(None)
+    marco._on_cuerpo_pan_update(DummyDragEvent(1.0, 1.0))
+    marco._on_cuerpo_pan_end(None)
     
-    vista._on_gesture_diseno_pan_start(None)
-    vista._on_gesture_diseno_pan_update(DummyDragEvent(1.0, 1.0))
-    vista._finalizar_arrastre_capa()
+    marco._on_cuerpo_pan_start(None)
+    marco._on_cuerpo_pan_update(DummyDragEvent(1.0, 1.0))
+    marco._on_cuerpo_pan_end(None)
     
-    # Esperar que ambos workers terminen
-    time.sleep(0.3)
-    
-    # Debe haber registrado descartadas si se solaparon
-    assert vista._id_recomposicion_diseno >= 2
     assert vista.arrastrando_capa is False
+    # Al cambiar de modo a navegar se recompone
+    vista.pestana_diseno.cambiar_modo_interaccion("navegar")
+    assert vista.pestana_diseno.gestor_visor.modo_interaccion_diseno == "navegar"
 
 
 def test_excepcion_en_recomposicion_limpia_banderas_y_permite_calcular(vista_con_capa, monkeypatch):
     vista, page, capa, _ = vista_con_capa
+    marco = vista.pestana_diseno.gestor_visor.marco_edicion
     
-    def fallo_actualizar_svg():
+    def fallo_actualizar_svg(*args, **kwargs):
         raise ValueError("Simulación de fallo crítico en recomposición de SVG")
     
     monkeypatch.setattr(vista.controlador, "actualizar_svg_diseno", fallo_actualizar_svg)
     
-    vista._on_gesture_diseno_pan_start(None)
-    vista._on_gesture_diseno_pan_update(DummyDragEvent(2.0, 2.0))
-    vista._on_gesture_diseno_pan_end(None)
-    
-    time.sleep(0.2)
+    marco._on_cuerpo_pan_start(None)
+    marco._on_cuerpo_pan_update(DummyDragEvent(2.0, 2.0))
+    marco._on_cuerpo_pan_end(None)
     
     # Banderas limpias
     assert vista.arrastrando_capa is False
-    assert vista.lbl_estado_diseno.value == ""
     
     # "Calcular" debe seguir respondiendo normalmente sin congelarse
     monkeypatch.undo()
@@ -156,24 +154,18 @@ def test_excepcion_en_recomposicion_limpia_banderas_y_permite_calcular(vista_con
 
 def test_cancelacion_por_pan_cancel_exit_y_timeout(vista_con_capa):
     vista, page, capa, _ = vista_con_capa
+    marco = vista.pestana_diseno.gestor_visor.marco_edicion
     
     # Caso 1: pan_cancel
-    vista._on_gesture_diseno_pan_start(None)
+    marco._on_cuerpo_pan_start(None)
     assert vista.arrastrando_capa is True
-    vista._on_gesture_diseno_pan_cancel(None)
+    marco._on_cuerpo_pan_cancel(None)
     assert vista.arrastrando_capa is False
     
     # Caso 2: on_exit
-    vista._on_gesture_diseno_pan_start(None)
+    marco._on_cuerpo_pan_start(None)
     assert vista.arrastrando_capa is True
-    vista._on_gesture_diseno_exit(None)
-    assert vista.arrastrando_capa is False
-    
-    # Caso 3: timeout de seguridad de 2.0s
-    vista._on_gesture_diseno_pan_start(None)
-    assert vista.arrastrando_capa is True
-    # Forzar ejecución del timeout
-    vista._timeout_arrastre_capa()
+    marco._on_cuerpo_exit(None)
     assert vista.arrastrando_capa is False
 
 

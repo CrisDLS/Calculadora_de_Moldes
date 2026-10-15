@@ -245,7 +245,7 @@ class VisorDisenoGestor:
             self.telemetria_eventos_por_segundo = self.marco_edicion.telemetria_eventos_sec
             self._actualizar_debug_diseno()
 
-        # 2. Al soltar: confirmar en el controlador y recomponer SVG en segundo plano
+        # 2. Al soltar: confirmar en el controlador; en modo editar NO se recompone
         if finalizado:
             self.controlador.actualizar_geometria_capa_seleccionada(
                 x=capa.x,
@@ -255,7 +255,8 @@ class VisorDisenoGestor:
                 rotacion=capa.rotacion,
                 actualizar_svg=False,
             )
-            self._programar_recomposicion_debounced()
+            if self.modo_interaccion_diseno != "editar":
+                self._programar_recomposicion_debounced()
 
     def _programar_recomposicion_debounced(self) -> None:
         """Programa la recomposición en segundo plano con debounce de 100 ms."""

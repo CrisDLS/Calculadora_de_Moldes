@@ -198,6 +198,25 @@ Cada pico es una pirámide de base cuadrada armada con 4 triángulos del molde d
         - Registro rotativo en `logs/globos.log` (1 MB × 3 archivos, UTF-8), nivel INFO, capturas no controladas mediante `sys.excepthook`, `threading.excepthook`, `asyncio.get_event_loop().set_exception_handler` y `page.on_error`.
         - Activación de telemetría en pantalla mediante variable de entorno `GLOBOS_DEBUG=1` (`python main.py` o en PowerShell `$env:GLOBOS_DEBUG="1"; python main.py`).
       - Etiquetado en git con `fix-arrastre-capa`.
+    - Manipulación interactiva de capas y modos Navegar / Editar (`logic/diseno/gestos_lienzo.py`, `app_flet/vistas/componentes/marco_edicion.py`):
+      - Regla fundamental: En modo editar el lienzo muestra base + capas fantasma sin recortar; la composición completa ocurre solo en modo navegar y al exportar.
+      - Modos excluyentes:
+        - `navegar` (por defecto): Pan y zoom del visor SVG activos; capas compuestas y recortadas en el SVG; marco de edición oculto.
+        - `editar`: Pan por arrastre del visor desactivado (`gestos_habilitados=False`), zoom por rueda del ratón (`on_gesture_scroll`) siempre activo. El fondo muestra el abanico base ligero (modo fantasma) y sobre él se superpone el marco de edición (`MarcoEdicion`).
+      - Geometría analítica pura (`logic/diseno/gestos_lienzo.py`):
+        - `Conversion`: Regla de encaje `preserveAspectRatio meet` con centrado y bandas vacías; métodos `plano_a_px`, `px_a_plano`, `delta_px_a_plano` (con signo invertido $y$ hacia arriba hacia el arco del abanico) y `px_por_cm`.
+        - Geometría de manipulación: `mover`, `estirar` (8 tiradores con invarianza exacta de la esquina/borde opuesto para cualquier ángulo de rotación $\theta$, sin voltear y con límite `minimo_cm=1.0`), y `rotar`.
+      - Componente Flet `MarcoEdicion`:
+        - `ft.Stack` con posicionamiento absoluto (`left`, `top`, `width`, `height`, `rotate`).
+        - 1 detector para el cuerpo del marco (`caja_marco`, `mouse_cursor=ft.MouseCursor.MOVE`) para mover la capa.
+        - 8 tiradores de redimensionamiento con zona táctil de 18 px (`TAM_TIRADOR_PX=18.0`), caja visual de 10 px y cursores de ratón específicos (`RESIZE_UP_LEFT_DOWN_RIGHT`, `RESIZE_UP_RIGHT_DOWN_LEFT`, `RESIZE_UP_DOWN`, `RESIZE_LEFT_RIGHT`).
+        - 1 tirador de rotación superior (`cont_rot`, `mouse_cursor=ft.MouseCursor.PRECISE`).
+        - Capas bloqueadas: muestran el contorno del marco pero ocultan los 8 tiradores y el de rotación, impidiendo cualquier arrastre.
+      - Flujo de eventos continuo y rendimiento a 60 fps:
+        - En cada micro-arrastre (`on_pan_update`), throttle a $\le 60$ Hz (16 ms): se convierte el delta a coordenadas de plano con `Conversion`, se actualiza la geometría en memoria y se llama únicamente a `control.update()` sobre los contenedores afectados del marco (`caja_marco`, tiradores). NUNCA se llama a `page.update()` ni se recompone el SVG.
+        - Al soltar (`on_pan_end`, `on_pan_cancel`, `on_exit`): se confirma la geometría en el controlador y los campos numéricos del inspector (`actualizar_campos_geometria` con guarda programática). En modo editar NO se dispara recomposición; la composición completa se realiza únicamente al alternar a modo `navegar` o al exportar.
+      - Demo interactiva: `python scripts/demo_marco.py` para probar la sensación y respuesta del marco sin levantar la app completa.
+      - Etiquetado en git con `fix-edicion-capa`.
   - F6b: Vectorización y procesado avanzado de plantillas (calcos monocromáticos, plantillas de corte e instrucciones de ensamble).
   - F7: Mapeo de motivos y texturas sobre la malla 3D interactiva en Three.js y exportación de planos de corte multicapa.
 
