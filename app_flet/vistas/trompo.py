@@ -9,6 +9,7 @@ import flet as ft
 from app_flet.controlador import ControladorTrompo, ViewModelTrompo
 from app_flet import tema
 from app_flet.vistas.tabla_molde import TablaMoldePersonalizada
+from app_flet.vistas.componentes.visor_svg import VisorSvg
 from logic.exportacion.estilos import PANTALLA_OSCURO, PANTALLA_CLARO
 from logic.exportacion.vista_svg import (
     VistaSvg,
@@ -305,74 +306,21 @@ class VistaTrompo(ft.Container):
             visible=True,
         )
 
-        # Dimensiones de la zona medida del visor (excluyendo padding y borde)
-        self.zona_ancho: float = 600.0
-        self.zona_alto: float = 500.0
-        self._padding_container: float = 10.0
-        self._border_width: float = 1.0
-
-        self.img_svg = ft.Image(src="", fit=ft.BoxFit.CONTAIN, width=self.zona_ancho, height=self.zona_alto)
-
-        self.detector_gestos = ft.GestureDetector(
-            content=self.img_svg,
-            expand=True,
-            on_scroll=self._on_gesture_scroll,
-            on_pan_update=self._on_gesture_pan_update,
-            on_double_tap=self._on_gesture_double_tap,
-        )
-
-        self.container_viewer_svg = ft.Container(
-            content=self.detector_gestos,
-            border=ft.Border.all(self._border_width, ft.Colors.OUTLINE),
-            border_radius=8,
-            expand=True,
-            padding=self._padding_container,
-            clip_behavior=ft.ClipBehavior.HARD_EDGE,
-            alignment=ft.Alignment(0, 0),
-            on_size_change=self._on_container_size_change,
-        )
-
-        # Controles de zoom
-        self.btn_zoom_out = ft.IconButton(
-            icon=ft.Icons.REMOVE,
-            tooltip="Alejar",
-            icon_size=18,
-            on_click=self._on_btn_zoom_out,
-        )
-        self.lbl_zoom_porcentaje = ft.Text(
-            "100 %",
-            size=12,
-            color=ft.Colors.ON_SURFACE_VARIANT,
-            weight=ft.FontWeight.W_500,
-        )
-        self.btn_zoom_in = ft.IconButton(
-            icon=ft.Icons.ADD,
-            tooltip="Acercar",
-            icon_size=18,
-            on_click=self._on_btn_zoom_in,
-        )
-        self.btn_ajustar = ft.TextButton(
-            "Ajustar",
-            icon=ft.Icons.FIT_SCREEN,
-            on_click=self._on_btn_ajustar,
-        )
-        self.barra_zoom = ft.Row(
-            controls=[
-                self.btn_zoom_out,
-                self.lbl_zoom_porcentaje,
-                self.btn_zoom_in,
-                self.btn_ajustar,
-            ],
-            alignment=ft.MainAxisAlignment.CENTER,
-            spacing=4,
-        )
-
-        self.lbl_instruccion_zoom = ft.Text(
-            "Rueda: zoom al cursor · Arrastrar: mover · Doble clic: ajustar",
-            size=11,
-            color=ft.Colors.ON_SURFACE_VARIANT,
-            text_align=ft.TextAlign.CENTER,
-        )
+        # Visor de Moldes 2D (compartido)
+        self.visor_moldes = VisorSvg(papel_blanco=False, margen_ajuste=0.04)
+        self.container_viewer_svg = self.visor_moldes.container_viewer_svg
+        self.img_svg = self.visor_moldes.img_svg
+        self.detector_gestos = self.visor_moldes.detector_gestos
+        self.barra_zoom = self.visor_moldes.barra_zoom
+        self.lbl_zoom_porcentaje = self.visor_moldes.lbl_zoom_porcentaje
+        self.btn_zoom_in = self.visor_moldes.btn_zoom_in
+        self.btn_zoom_out = self.visor_moldes.btn_zoom_out
+        self.btn_ajustar = self.visor_moldes.btn_ajustar
+        self.lbl_instruccion_zoom = self.visor_moldes.lbl_instruccion_zoom
+        self.lbl_debug = self.visor_moldes.lbl_debug
+        self.debug_mode = self.visor_moldes.debug_mode
+        self._padding_container = self.visor_moldes._padding_container
+        self._border_width = self.visor_moldes._border_width
         self.lbl_pie_moldes = ft.Text(
             "La escala y la hoja de trazo en Carta llegarán en F3.",
             size=12,
@@ -583,66 +531,19 @@ class VistaTrompo(ft.Container):
         )
         self.col_resumen_esquema = ft.Column(spacing=2)
 
-        # Visor de la hoja (papel blanco con sombra suave)
-        self.zona_ancho_hoja: float = 600.0
-        self.zona_alto_hoja: float = 500.0
-        self.vista_svg_hoja: Optional[VistaSvg] = None
-        self.vista_base_svg_hoja: Optional[VistaSvg] = None
-        self._svg_hoja_raw: str = ""
-
-        self.img_svg_hoja = ft.Image(src="", fit=ft.BoxFit.CONTAIN, width=self.zona_ancho_hoja, height=self.zona_alto_hoja)
-        self.detector_gestos_hoja = ft.GestureDetector(
-            content=self.img_svg_hoja,
-            expand=True,
-            on_scroll=self._on_gesture_hoja_scroll,
-            on_pan_update=self._on_gesture_hoja_pan_update,
-            on_double_tap=self._on_gesture_hoja_double_tap,
-        )
-        self.container_viewer_hoja = ft.Container(
-            content=self.detector_gestos_hoja,
-            bgcolor=ft.Colors.WHITE,
-            border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
-            border_radius=4,
-            shadow=ft.BoxShadow(spread_radius=1, blur_radius=8, color="#00000022"),
-            expand=True,
-            padding=self._padding_container,
-            clip_behavior=ft.ClipBehavior.HARD_EDGE,
-            alignment=ft.Alignment(0, 0),
-            on_size_change=self._on_container_hoja_size_change,
-        )
-        self.btn_zoom_out_hoja = ft.IconButton(
-            icon=ft.Icons.REMOVE,
-            tooltip="Alejar",
-            icon_size=18,
-            on_click=self._on_btn_zoom_out_hoja,
-        )
-        self.lbl_zoom_hoja_porcentaje = ft.Text(
-            "100 %",
-            size=12,
-            color=ft.Colors.ON_SURFACE_VARIANT,
-            weight=ft.FontWeight.W_500,
-        )
-        self.btn_zoom_in_hoja = ft.IconButton(
-            icon=ft.Icons.ADD,
-            tooltip="Acercar",
-            icon_size=18,
-            on_click=self._on_btn_zoom_in_hoja,
-        )
-        self.btn_ajustar_hoja = ft.TextButton(
-            "Ajustar",
-            icon=ft.Icons.FIT_SCREEN,
-            on_click=self._on_btn_ajustar_hoja,
-        )
-        self.barra_zoom_hoja = ft.Row(
-            controls=[
-                self.btn_zoom_out_hoja,
-                self.lbl_zoom_hoja_porcentaje,
-                self.btn_zoom_in_hoja,
-                self.btn_ajustar_hoja,
-            ],
-            alignment=ft.MainAxisAlignment.CENTER,
-            spacing=4,
-        )
+        # Visor de la hoja (papel blanco con sombra suave, compartido)
+        self.visor_hoja = VisorSvg(papel_blanco=True, margen_ajuste=0.02)
+        self.container_viewer_hoja = self.visor_hoja.container_viewer_svg
+        self.img_svg_hoja = self.visor_hoja.img_svg
+        self.detector_gestos_hoja = self.visor_hoja.detector_gestos
+        self.barra_zoom_hoja = self.visor_hoja.barra_zoom
+        self.lbl_zoom_hoja_porcentaje = self.visor_hoja.lbl_zoom_porcentaje
+        self.btn_zoom_in_hoja = self.visor_hoja.btn_zoom_in
+        self.btn_zoom_out_hoja = self.visor_hoja.btn_zoom_out
+        self.btn_ajustar_hoja = self.visor_hoja.btn_ajustar
+        self.lbl_instruccion_zoom_hoja = self.visor_hoja.lbl_instruccion_zoom
+        self.lbl_debug_hoja = self.visor_hoja.lbl_debug
+        self._svg_hoja_raw = ""
         self.lbl_vacio_hoja = ft.Container(
             content=ft.Text("Calcula para ver la hoja de trazo", size=16, color=ft.Colors.ON_SURFACE_VARIANT),
             alignment=ft.Alignment(0, 0),
@@ -1077,61 +978,28 @@ class VistaTrompo(ft.Container):
             on_change=self.on_cambio_lienzo_diseno,
         )
 
-        # Visor interactivo del diseño
-        self.zona_ancho_diseno: float = 600.0
-        self.zona_alto_diseno: float = 500.0
-        self.vista_svg_diseno: Optional[VistaSvg] = None
-        self.vista_base_svg_diseno: Optional[VistaSvg] = None
+        # Visor interactivo del diseño (compartido)
+        self.visor_diseno = VisorSvg(
+            papel_blanco=True,
+            drag_interval=35,
+            margen_ajuste=0.04,
+            on_custom_pan_start=self._on_gesture_diseno_pan_start,
+            on_custom_pan_update=self._on_gesture_diseno_pan_update,
+            on_custom_pan_end=self._on_gesture_diseno_pan_end,
+            on_custom_pan_cancel=self._on_gesture_diseno_pan_cancel,
+            on_custom_exit=self._on_gesture_diseno_exit,
+        )
+        self.container_viewer_diseno = self.visor_diseno.container_viewer_svg
+        self.img_svg_diseno = self.visor_diseno.img_svg
+        self.detector_gestos_diseno = self.visor_diseno.detector_gestos
+        self.btn_zoom_in_diseno = self.visor_diseno.btn_zoom_in
+        self.btn_zoom_out_diseno = self.visor_diseno.btn_zoom_out
+        self.btn_ajustar_diseno = self.visor_diseno.btn_ajustar
+        self.lbl_zoom_diseno_porcentaje = self.visor_diseno.lbl_zoom_porcentaje
+        self.lbl_instruccion_zoom_diseno = self.visor_diseno.lbl_instruccion_zoom
+        self.lbl_debug_diseno = self.visor_diseno.lbl_debug
         self._svg_diseno_raw: str = ""
 
-        self.img_svg_diseno = ft.Image(src="", fit=ft.BoxFit.CONTAIN, width=self.zona_ancho_diseno, height=self.zona_alto_diseno)
-        self.detector_gestos_diseno = ft.GestureDetector(
-            content=self.img_svg_diseno,
-            expand=True,
-            drag_interval=35,
-            on_scroll=self._on_gesture_diseno_scroll,
-            on_pan_start=self._on_gesture_diseno_pan_start,
-            on_pan_update=self._on_gesture_diseno_pan_update,
-            on_pan_end=self._on_gesture_diseno_pan_end,
-            on_pan_cancel=self._on_gesture_diseno_pan_cancel,
-            on_exit=self._on_gesture_diseno_exit,
-            on_double_tap=self._on_gesture_diseno_double_tap,
-        )
-        self.container_viewer_diseno = ft.Container(
-            content=self.detector_gestos_diseno,
-            bgcolor=ft.Colors.WHITE,
-            border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
-            border_radius=4,
-            shadow=ft.BoxShadow(spread_radius=1, blur_radius=8, color="#00000022"),
-            expand=True,
-            padding=self._padding_container,
-            clip_behavior=ft.ClipBehavior.HARD_EDGE,
-            alignment=ft.Alignment(0, 0),
-            on_size_change=self._on_container_diseno_size_change,
-        )
-        self.btn_zoom_out_diseno = ft.IconButton(
-            icon=ft.Icons.REMOVE,
-            tooltip="Alejar",
-            icon_size=18,
-            on_click=self._on_btn_zoom_out_diseno,
-        )
-        self.lbl_zoom_diseno_porcentaje = ft.Text(
-            "100 %",
-            size=12,
-            color=ft.Colors.ON_SURFACE_VARIANT,
-            weight=ft.FontWeight.W_500,
-        )
-        self.btn_zoom_in_diseno = ft.IconButton(
-            icon=ft.Icons.ADD,
-            tooltip="Acercar",
-            icon_size=18,
-            on_click=self._on_btn_zoom_in_diseno,
-        )
-        self.btn_ajustar_diseno = ft.TextButton(
-            "Ajustar",
-            icon=ft.Icons.FIT_SCREEN,
-            on_click=self._on_btn_ajustar_diseno,
-        )
         self.lbl_estado_diseno = ft.Text(
             "",
             size=11,
@@ -1590,44 +1458,120 @@ class VistaTrompo(ft.Container):
             return 100.0
         return (self.vista_base_svg.ancho / self.vista_svg.ancho) * 100.0
 
+    # Propiedades delegadas al componente VisorSvg
+    @property
+    def vista_svg(self) -> Optional[VistaSvg]:
+        return self.visor_moldes.vista_svg if hasattr(self, "visor_moldes") else None
+
+    @vista_svg.setter
+    def vista_svg(self, val: Optional[VistaSvg]) -> None:
+        if hasattr(self, "visor_moldes"):
+            self.visor_moldes.vista_svg = val
+
+    @property
+    def vista_base_svg(self) -> Optional[VistaSvg]:
+        return self.visor_moldes.vista_base_svg if hasattr(self, "visor_moldes") else None
+
+    @vista_base_svg.setter
+    def vista_base_svg(self, val: Optional[VistaSvg]) -> None:
+        if hasattr(self, "visor_moldes"):
+            self.visor_moldes.vista_base_svg = val
+
+    @property
+    def zona_ancho(self) -> float:
+        return self.visor_moldes.zona_ancho if hasattr(self, "visor_moldes") else 600.0
+
+    @zona_ancho.setter
+    def zona_ancho(self, val: float) -> None:
+        if hasattr(self, "visor_moldes"):
+            self.visor_moldes.zona_ancho = val
+
+    @property
+    def zona_alto(self) -> float:
+        return self.visor_moldes.zona_alto if hasattr(self, "visor_moldes") else 500.0
+
+    @zona_alto.setter
+    def zona_alto(self, val: float) -> None:
+        if hasattr(self, "visor_moldes"):
+            self.visor_moldes.zona_alto = val
+
+    @property
+    def vista_svg_hoja(self) -> Optional[VistaSvg]:
+        return self.visor_hoja.vista_svg if hasattr(self, "visor_hoja") else None
+
+    @vista_svg_hoja.setter
+    def vista_svg_hoja(self, val: Optional[VistaSvg]) -> None:
+        if hasattr(self, "visor_hoja"):
+            self.visor_hoja.vista_svg = val
+
+    @property
+    def vista_base_svg_hoja(self) -> Optional[VistaSvg]:
+        return self.visor_hoja.vista_base_svg if hasattr(self, "visor_hoja") else None
+
+    @vista_base_svg_hoja.setter
+    def vista_base_svg_hoja(self, val: Optional[VistaSvg]) -> None:
+        if hasattr(self, "visor_hoja"):
+            self.visor_hoja.vista_base_svg = val
+
+    @property
+    def zona_ancho_hoja(self) -> float:
+        return self.visor_hoja.zona_ancho if hasattr(self, "visor_hoja") else 600.0
+
+    @zona_ancho_hoja.setter
+    def zona_ancho_hoja(self, val: float) -> None:
+        if hasattr(self, "visor_hoja"):
+            self.visor_hoja.zona_ancho = val
+
+    @property
+    def zona_alto_hoja(self) -> float:
+        return self.visor_hoja.zona_alto if hasattr(self, "visor_hoja") else 500.0
+
+    @zona_alto_hoja.setter
+    def zona_alto_hoja(self, val: float) -> None:
+        if hasattr(self, "visor_hoja"):
+            self.visor_hoja.zona_alto = val
+
+    @property
+    def vista_svg_diseno(self) -> Optional[VistaSvg]:
+        return self.visor_diseno.vista_svg if hasattr(self, "visor_diseno") else None
+
+    @vista_svg_diseno.setter
+    def vista_svg_diseno(self, val: Optional[VistaSvg]) -> None:
+        if hasattr(self, "visor_diseno"):
+            self.visor_diseno.vista_svg = val
+
+    @property
+    def vista_base_svg_diseno(self) -> Optional[VistaSvg]:
+        return self.visor_diseno.vista_base_svg if hasattr(self, "visor_diseno") else None
+
+    @vista_base_svg_diseno.setter
+    def vista_base_svg_diseno(self, val: Optional[VistaSvg]) -> None:
+        if hasattr(self, "visor_diseno"):
+            self.visor_diseno.vista_base_svg = val
+
+    @property
+    def zona_ancho_diseno(self) -> float:
+        return self.visor_diseno.zona_ancho if hasattr(self, "visor_diseno") else 600.0
+
+    @zona_ancho_diseno.setter
+    def zona_ancho_diseno(self, val: float) -> None:
+        if hasattr(self, "visor_diseno"):
+            self.visor_diseno.zona_ancho = val
+
+    @property
+    def zona_alto_diseno(self) -> float:
+        return self.visor_diseno.zona_alto if hasattr(self, "visor_diseno") else 500.0
+
+    @zona_alto_diseno.setter
+    def zona_alto_diseno(self, val: float) -> None:
+        if hasattr(self, "visor_diseno"):
+            self.visor_diseno.zona_alto = val
+
     def _limites_zoom(self) -> Tuple[float, float]:
-        if not self.vista_base_svg:
-            return (1.0, 1000.0)
-        # Máximo 40x de acercamiento, mínimo que encaje la vista base
-        ancho_min = self.vista_base_svg.ancho / 40.0
-        ancho_max = self.vista_base_svg.ancho * 1.5
-        return (ancho_min, ancho_max)
+        return self.visor_moldes.limites_zoom()
 
     def _on_container_size_change(self, e):
-        # Medir tamaño real del contenedor descontando padding y borde
-        w_raw = getattr(e, "width", 0.0) or 0.0
-        h_raw = getattr(e, "height", 0.0) or 0.0
-        if w_raw <= 0 or h_raw <= 0:
-            return
-
-        descuento_w = 2.0 * (self._padding_container + self._border_width)
-        descuento_h = 2.0 * (self._padding_container + self._border_width)
-        w_util = max(50.0, w_raw - descuento_w)
-        h_util = max(50.0, h_raw - descuento_h)
-
-        if abs(w_util - self.zona_ancho) < 0.5 and abs(h_util - self.zona_alto) < 0.5:
-            return
-
-        self.zona_ancho = w_util
-        self.zona_alto = h_util
-        self.img_svg.width = self.zona_ancho
-        self.img_svg.height = self.zona_alto
-
-        aspecto_zona = self.zona_ancho / self.zona_alto
-
-        if self._svg_actual_raw:
-            w_nat, h_nat = extraer_dimensiones_svg(self._svg_actual_raw)
-            self.vista_base_svg = ajustar(w_nat, h_nat, aspecto_zona=aspecto_zona, margen=0.04)
-            if self.vista_svg:
-                self.vista_svg = adaptar_aspecto(self.vista_svg, aspecto_zona)
-            else:
-                self.vista_svg = self.vista_base_svg
-            self._actualizar_imagen_zoom(force=True)
+        self.visor_moldes.on_container_size_change(e)
 
     def _renderizar_molde_seleccionado(self, reset_vista: bool = False):
         vm = self.controlador.get_view_model()
@@ -1645,144 +1589,37 @@ class VistaTrompo(ft.Container):
             svg_str = vm.svg_perfil
 
         self._svg_actual_raw = svg_str
-
-        if not svg_str:
-            self.img_svg.src = ""
-            return
-
-        aspecto_zona = self.zona_ancho / self.zona_alto if self.zona_alto > 0 else 1.0
-        w_nat, h_nat = extraer_dimensiones_svg(svg_str)
-        if reset_vista or not self.vista_svg or not self.vista_base_svg:
-            self.vista_base_svg = ajustar(w_nat, h_nat, aspecto_zona=aspecto_zona, margen=0.04)
-            self.vista_svg = self.vista_base_svg
-
-        svg_con_viewbox = aplicar_viewbox(svg_str, self.vista_svg)
-        self.img_svg.src = svg_con_viewbox.encode("utf-8")
-        self.lbl_zoom_porcentaje.value = f"{self._porcentaje_zoom():.0f} %"
-        self._actualizar_debug()
+        self.visor_moldes.cargar_svg(svg_str, reset_vista=reset_vista)
 
     def _actualizar_debug(self):
-        if not self.debug_mode or not self.vista_svg:
-            return
-        z_str = f"zona {self.zona_ancho:.0f}×{self.zona_alto:.0f} px"
-        img_str = f"imagen {self.img_svg.width:.0f}×{self.img_svg.height:.0f}"
-        v_str = f"vista {self.vista_svg.x:.1f},{self.vista_svg.y:.1f},{self.vista_svg.ancho:.1f},{self.vista_svg.alto:.1f}"
-        zoom_str = f"zoom {self._porcentaje_zoom():.0f} %"
-
-        media_ms = (sum(self._tiempos_actualizacion) / len(self._tiempos_actualizacion)) if self._tiempos_actualizacion else 0.0
-        now = time.perf_counter()
-        # Actualizaciones en el último segundo
-        recientes = [t for t in self._timestamps_actualizacion if now - t <= 1.0]
-        fps = len(recientes)
-        telem_str = f"{media_ms:.1f} ms/act (media 20) · {fps} act/s"
-
-        self.lbl_debug.value = f"{z_str} · {img_str} · {v_str} · {zoom_str} · {telem_str}"
-        try:
-            self.lbl_debug.update()
-        except Exception:
-            pass
+        self.visor_moldes.actualizar_debug()
 
     def _actualizar_imagen_zoom(self, force: bool = False, t_inicio_evento: Optional[float] = None):
-        if not self._svg_actual_raw or not self.vista_svg:
-            return
-        now = time.perf_counter()
-        if not force and (now - self._ultimo_render_time < (1.0 / 30.0)):
-            return
-        self._ultimo_render_time = now
-
-        svg_con_viewbox = aplicar_viewbox(self._svg_actual_raw, self.vista_svg)
-        self.img_svg.src = svg_con_viewbox.encode("utf-8")
-        self.lbl_zoom_porcentaje.value = f"{self._porcentaje_zoom():.0f} %"
-
-        # Registrar telemetría si se pasó t_inicio_evento o medir el coste del renderizado
-        t_ref = t_inicio_evento if t_inicio_evento is not None else now
-        try:
-            self.img_svg.update()
-            self.lbl_zoom_porcentaje.update()
-        except Exception:
-            pass
-
-        t_fin = time.perf_counter()
-        dt_ms = (t_fin - t_ref) * 1000.0
-        self._tiempos_actualizacion.append(dt_ms)
-        if len(self._tiempos_actualizacion) > 20:
-            self._tiempos_actualizacion.pop(0)
-        self._timestamps_actualizacion.append(t_fin)
-        if len(self._timestamps_actualizacion) > 50:
-            self._timestamps_actualizacion.pop(0)
-
-        self._actualizar_debug()
+        self.visor_moldes.actualizar_imagen_zoom(force=force, t_inicio_evento=t_inicio_evento)
 
     def _on_gesture_scroll(self, e: ft.ScrollEvent):
-        t_inicio = time.perf_counter()
-        if not self.vista_svg:
-            return
-        # Rueda del ratón: scroll_delta.y < 0 acerca (zoom in), > 0 aleja (zoom out)
-        delta_y = getattr(e, "scroll_delta", None)
-        factor = 1.15
-        if delta_y and hasattr(delta_y, "y"):
-            if delta_y.y > 0:
-                factor = 1.0 / 1.15
-            elif delta_y.y < 0:
-                factor = 1.15
-
-        fx = 0.5
-        fy = 0.5
-        local_pos = getattr(e, "local_position", None)
-        if local_pos and hasattr(local_pos, "x") and hasattr(local_pos, "y"):
-            if self.zona_ancho > 0 and self.zona_alto > 0:
-                fx = max(0.01, min(0.99, local_pos.x / self.zona_ancho))
-                fy = max(0.01, min(0.99, local_pos.y / self.zona_alto))
-
-        self.vista_svg = zoom(
-            self.vista_svg,
-            factor=factor,
-            fx=fx,
-            fy=fy,
-            limites=self._limites_zoom()
-        )
-        self._actualizar_imagen_zoom(t_inicio_evento=t_inicio)
+        self.visor_moldes.on_gesture_scroll(e)
 
     def _on_gesture_pan_update(self, e: ft.DragUpdateEvent):
-        t_inicio = time.perf_counter()
-        if not self.vista_svg or not self.vista_base_svg:
-            return
-        delta = getattr(e, "local_delta", None) or getattr(e, "global_delta", None)
-        if delta and hasattr(delta, "x") and hasattr(delta, "y"):
-            w_control = max(50.0, self.zona_ancho)
-            h_control = max(50.0, self.zona_alto)
-            dx = delta.x * (self.vista_svg.ancho / w_control)
-            dy = delta.y * (self.vista_svg.alto / h_control)
-            limites_cont = (self.vista_base_svg.ancho, self.vista_base_svg.alto)
-            self.vista_svg = desplazar(self.vista_svg, dx=dx, dy=dy, limites_contenido=limites_cont)
-            self._actualizar_imagen_zoom(t_inicio_evento=t_inicio)
+        self.visor_moldes.on_gesture_pan_update(e)
 
     def _on_gesture_double_tap(self, e):
-        self._ajustar_vista()
+        self.visor_moldes.ajustar_vista()
 
     def _on_btn_zoom_in(self, e):
-        if not self.vista_svg:
-            return
-        self.vista_svg = zoom(self.vista_svg, factor=1.25, fx=0.5, fy=0.5, limites=self._limites_zoom())
-        self._actualizar_imagen_zoom(force=True)
+        self.visor_moldes.zoom_in()
 
     def _on_btn_zoom_out(self, e):
-        if not self.vista_svg:
-            return
-        self.vista_svg = zoom(self.vista_svg, factor=1.0 / 1.25, fx=0.5, fy=0.5, limites=self._limites_zoom())
-        self._actualizar_imagen_zoom(force=True)
+        self.visor_moldes.zoom_out()
 
     def _on_btn_ajustar(self, e):
-        self._ajustar_vista()
+        self.visor_moldes.ajustar_vista()
 
     def _ajustar_vista(self):
-        if not self._svg_actual_raw:
-            return
-        w_nat, h_nat = extraer_dimensiones_svg(self._svg_actual_raw)
-        aspecto_zona = self.zona_ancho / self.zona_alto if self.zona_alto > 0 else 1.0
-        self.vista_base_svg = ajustar(w_nat, h_nat, aspecto_zona=aspecto_zona, margen=0.04)
-        self.vista_svg = self.vista_base_svg
-        self._actualizar_imagen_zoom(force=True)
+        self.visor_moldes.ajustar_vista()
+
+    def _porcentaje_zoom(self) -> float:
+        return self.visor_moldes.porcentaje_zoom()
 
     def _sync_controlador_a_vista(self, vm: ViewModelTrompo, diferir_update: bool = False, reset_zoom: bool = False):
         # 1. Error
