@@ -12,16 +12,11 @@ RAIZ = Path(__file__).resolve().parent.parent
 # El refactor modularizará app_flet/ y logic/ para vaciar estas listas.
 EXCEPCIONES_ARCHIVOS: Dict[str, str] = {
     "app_flet/vistas/trompo.py": "Monolito original de vista UI; se dividirá en compositor y pestañas en Parte 4",
-    "app_flet/controlador.py": "Monolito original de controlador; se dividirá en paquete fachada en Parte 4",
 }
 
 # Excepciones temporales justificadas de funciones > 90 líneas.
 # En Parte 4 se eliminarán todas las de app_flet/, y en Parte 5 las de logic/exportacion.
 EXCEPCIONES_FUNCIONES: Dict[Tuple[str, str], str] = {
-    ("app_flet/controlador.py", "__init__"): "Inicialización monolítica del controlador con todos los subestados",
-    ("app_flet/controlador.py", "get_view_model"): "Construcción monolítica del view-model para la vista",
-    ("app_flet/controlador.py", "guardar_proyecto"): "Serialización completa del proyecto a diccionario",
-    ("app_flet/controlador.py", "cargar_proyecto"): "Deserialización y validación del proyecto cargado",
     ("app_flet/vistas/trompo.py", "__init__"): "Constructor del monolito original con montaje completo de UI",
     ("app_flet/vistas/trompo.py", "_crear_tab_resumen"): "Construcción de controles de la pestaña resumen",
     ("app_flet/vistas/trompo.py", "_crear_tab_tablas"): "Construcción de controles de la pestaña tablas",
@@ -131,10 +126,14 @@ def test_sin_importaciones_circulares_en_app_flet():
     for mod_nombre, arch in modulo_a_ruta.items():
         arbol = _obtener_arbol_ast(arch)
         for imp in _extraer_imports(arbol):
-            for otro_mod in modulo_a_ruta:
-                if imp == otro_mod or imp.startswith(otro_mod + "."):
-                    if otro_mod != mod_nombre:
-                        grafo_deps[mod_nombre].add(otro_mod)
+            coincidencias = [
+                otro for otro in modulo_a_ruta
+                if imp == otro or imp.startswith(otro + ".")
+            ]
+            if coincidencias:
+                mejor = max(coincidencias, key=len)
+                if mejor != mod_nombre:
+                    grafo_deps[mod_nombre].add(mejor)
 
     # Detectar ciclos con DFS
     visitado: Set[str] = set()
