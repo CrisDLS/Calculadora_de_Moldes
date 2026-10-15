@@ -12,13 +12,13 @@ import math
 import os
 import time
 from pathlib import Path
-from typing import Callable, Dict, Optional, Tuple, Union
+from typing import Callable, Dict, Optional
 
 import flet as ft
+
 from logic.diseno.gestos_lienzo import (
     Conversion,
     centro_capa,
-    esquinas_capa,
     estirar,
     mover,
     rotar,
@@ -68,9 +68,9 @@ class MarcoEdicion:
         ids_tiradores = ["tl", "tr", "br", "bl", "t", "b", "r", "l"]
         self.stack = ft.Stack(
             controls=[
-                self.detector_cuerpo,
-                *[self.detectores_tiradores[tid] for tid in ids_tiradores],
-                self.detector_rot,
+                self.caja_marco,
+                *[self.tiradores_controles[tid] for tid in ids_tiradores],
+                self.cont_rot,
             ],
             visible=False,
             expand=True,
@@ -86,15 +86,11 @@ class MarcoEdicion:
             expand=True,
         )
 
-        self.caja_marco = ft.Container(
-            border=ft.Border.all(1.5, ft.Colors.BLUE_ACCENT),
-            bgcolor="#2196F318",
-            visible=False,
-            content=self.img_preview,
-        )
-
         self.detector_cuerpo = ft.GestureDetector(
-            content=self.caja_marco,
+            content=ft.Container(
+                content=self.img_preview,
+                expand=True,
+            ),
             drag_interval=16,
             mouse_cursor=ft.MouseCursor.MOVE,
             on_pan_start=self._on_cuerpo_pan_start,
@@ -102,6 +98,14 @@ class MarcoEdicion:
             on_pan_end=self._on_cuerpo_pan_end,
             on_pan_cancel=self._on_cuerpo_pan_cancel,
             on_exit=self._on_cuerpo_exit,
+            expand=True,
+        )
+
+        self.caja_marco = ft.Container(
+            border=ft.Border.all(1.5, ft.Colors.BLUE_ACCENT),
+            bgcolor="#2196F318",
+            visible=False,
+            content=self.detector_cuerpo,
         )
 
     def _crear_tiradores(self) -> None:
@@ -129,17 +133,14 @@ class MarcoEdicion:
                 border=ft.Border.all(1.5, ft.Colors.BLUE_ACCENT),
                 border_radius=2,
             )
-            cont = ft.Container(
+            caja_hitbox = ft.Container(
                 width=TAM_TIRADOR_PX,
                 height=TAM_TIRADOR_PX,
                 alignment=ft.Alignment.CENTER,
                 content=caja_visual,
-                visible=False,
             )
-            self.tiradores_controles[t_id] = cont
-
             det = ft.GestureDetector(
-                content=cont,
+                content=caja_hitbox,
                 drag_interval=16,
                 mouse_cursor=cursores.get(t_id, ft.MouseCursor.BASIC),
                 on_pan_start=lambda e, tid=t_id: self._on_tirador_pan_start(tid, e),
@@ -150,6 +151,14 @@ class MarcoEdicion:
             )
             self.detectores_tiradores[t_id] = det
 
+            cont = ft.Container(
+                width=TAM_TIRADOR_PX,
+                height=TAM_TIRADOR_PX,
+                content=det,
+                visible=False,
+            )
+            self.tiradores_controles[t_id] = cont
+
         caja_rot_visual = ft.Container(
             width=12,
             height=12,
@@ -157,15 +166,14 @@ class MarcoEdicion:
             bgcolor=ft.Colors.BLUE_ACCENT,
             border=ft.Border.all(1.5, ft.Colors.WHITE),
         )
-        self.cont_rot = ft.Container(
+        caja_rot_hitbox = ft.Container(
             width=TAM_ROT_PX,
             height=TAM_ROT_PX,
             alignment=ft.Alignment.CENTER,
             content=caja_rot_visual,
-            visible=False,
         )
         self.detector_rot = ft.GestureDetector(
-            content=self.cont_rot,
+            content=caja_rot_hitbox,
             drag_interval=16,
             mouse_cursor=ft.MouseCursor.PRECISE,
             on_pan_start=self._on_rot_pan_start,
@@ -173,6 +181,12 @@ class MarcoEdicion:
             on_pan_end=self._on_rot_pan_end,
             on_pan_cancel=self._on_rot_pan_cancel,
             on_exit=self._on_rot_exit,
+        )
+        self.cont_rot = ft.Container(
+            width=TAM_ROT_PX,
+            height=TAM_ROT_PX,
+            content=self.detector_rot,
+            visible=False,
         )
 
     def mostrar(

@@ -9,11 +9,8 @@ sin tener que levantar toda la aplicación:
 - Telemetría en tiempo real del último gesto.
 """
 
-import math
-import os
-import shutil
-import sys
 from pathlib import Path
+import sys
 
 RAIZ = Path(__file__).resolve().parent.parent
 if str(RAIZ) not in sys.path:
@@ -26,7 +23,7 @@ from app_flet.vistas.componentes.visor_svg import VisorSvg
 from logic.calculators.trompo_estrella import TrompoEstrellaCalculator
 from logic.diseno.esquema import EsquemaDiseno
 from logic.diseno.gestos_lienzo import Conversion
-from logic.diseno.lienzo import CapaDiseno, Diseno, cargar_recurso_seguro
+from logic.diseno.lienzo import CapaDiseno, Diseno, importar_recurso
 from logic.exportacion.svg_abanico import (
     calcular_parametros_proyeccion_abanico,
     svg_abanico,
@@ -56,26 +53,14 @@ def main(page: ft.Page) -> None:
     rec_dir = RAIZ / "guardados" / "_demo_recursos"
     rec_dir.mkdir(parents=True, exist_ok=True)
     ej_svg = RAIZ / "docs" / "ejemplos" / "disenos" / "mosaico_geometrico.svg"
-    dest_svg = rec_dir / "mosaico_geometrico.svg"
-    if ej_svg.exists() and not dest_svg.exists():
-        shutil.copy(ej_svg, dest_svg)
 
-    rec_info = cargar_recurso_seguro(dest_svg)
-    capa = CapaDiseno(
-        id="capa-demo",
-        nombre="Mosaico Geométrico",
-        archivo="mosaico_geometrico.svg",
-        tipo="svg",
-        x=0.0,
-        y=150.0,
-        ancho=40.0,
-        alto=40.0,
-        ancho_natural=rec_info.ancho_px,
-        alto_natural=rec_info.alto_px,
-        rotacion=0.0,
-        opacidad=1.0,
-    )
-    diseno = Diseno(capas=[capa])
+    capa = importar_recurso(ej_svg, rec_dir)
+    capa.nombre = "Mosaico Geométrico"
+    capa.x = 0.0
+    capa.y = 150.0
+    capa.ancho = 40.0
+    capa.alto = 40.0
+    diseno = Diseno(seccion="superior", capas=[capa])
 
     # 3. Componentes visuales
     visor = VisorSvg(
@@ -131,16 +116,16 @@ def main(page: ft.Page) -> None:
             hoja="carta",
             escala="auto",
         )
-        w_z = visor.ancho_zona
-        h_z = visor.alto_zona
+        w_z = visor.zona_ancho
+        h_z = visor.zona_alto
         return Conversion(
             vista=visor.vista_svg,
             zona_px=(w_z, h_z),
-            cx_page=geom["cx_page"],
-            cy_page=geom["cy_page"],
-            y_mid_cm=geom["y_mid_cm"],
-            factor_escala=geom["factor"],
             y_arriba=True,
+            factor_escala=geom["factor"],
+            cx_vista=geom["cx_page"],
+            cy_vista=geom["cy_page"],
+            y_mid_plano=geom["y_mid_cm"],
         )
 
     def generar_svg(fantasma: bool) -> str:
@@ -160,8 +145,8 @@ def main(page: ft.Page) -> None:
         raw_svg = generar_svg(fantasma)
         visor.cargar_svg(raw_svg, reset_vista=False)
 
-    def al_cambiar_tamano(e: ft.ContainerResizeEvent) -> None:
-        visor._on_container_size_change(e)
+    def al_cambiar_tamano(e) -> None:
+        visor.on_container_size_change(e)
         if marco.stack.visible and capa:
             conv = obtener_conversion()
             marco.actualizar(capa, conv, rec_dir)
@@ -181,7 +166,10 @@ def main(page: ft.Page) -> None:
             marco.ocultar()
             actualizar_visor(fantasma=False)
             lbl_debug.value = "Modo: NAVEGAR · Arrastra para desplazar el lienzo, rueda para zoom."
-        lbl_debug.update()
+        try:
+            lbl_debug.update()
+        except Exception:
+            pass
 
     sel_modo = ft.SegmentedButton(
         segments=[
@@ -236,4 +224,4 @@ def main(page: ft.Page) -> None:
 
 
 if __name__ == "__main__":
-    ft.app(target=main)
+    ft.run(main)

@@ -3498,19 +3498,27 @@
                                                   "disabled": false,
                                                   "hijos": [
                                                     {
-                                                      "tipo": "GestureDetector",
-                                                      "visible": true,
+                                                      "tipo": "Container",
+                                                      "visible": false,
                                                       "disabled": false,
                                                       "hijos": [
                                                         {
-                                                          "tipo": "Container",
-                                                          "visible": false,
+                                                          "tipo": "GestureDetector",
+                                                          "visible": true,
                                                           "disabled": false,
                                                           "hijos": [
                                                             {
-                                                              "tipo": "Image",
-                                                              "visible": false,
-                                                              "disabled": false
+                                                              "tipo": "Container",
+                                                              "visible": true,
+                                                              "disabled": false,
+                                                              "hijos": [
+                                                                {
+                                                                  "tipo": "Image",
+                                                                  "visible": false,
+                                                                  "disabled": false
+                                                                }
+                                                              ],
+                                                              "num_hijos": 1
                                                             }
                                                           ],
                                                           "num_hijos": 1
@@ -3519,20 +3527,28 @@
                                                       "num_hijos": 1
                                                     },
                                                     {
-                                                      "tipo": "GestureDetector",
-                                                      "visible": true,
+                                                      "tipo": "Container",
+                                                      "visible": false,
                                                       "disabled": false,
                                                       "hijos": [
                                                         {
-                                                          "tipo": "Container",
-                                                          "visible": false,
+                                                          "tipo": "GestureDetector",
+                                                          "visible": true,
                                                           "disabled": false,
-                                                          "alignment": "Alignment(x=0.0, y=0.0)",
                                                           "hijos": [
                                                             {
                                                               "tipo": "Container",
                                                               "visible": true,
-                                                              "disabled": false
+                                                              "disabled": false,
+                                                              "alignment": "Alignment(x=0.0, y=0.0)",
+                                                              "hijos": [
+                                                                {
+                                                                  "tipo": "Container",
+                                                                  "visible": true,
+                                                                  "disabled": false
+                                                                }
+                                                              ],
+                                                              "num_hijos": 1
                                                             }
                                                           ],
                                                           "num_hijos": 1
@@ -3541,20 +3557,28 @@
                                                       "num_hijos": 1
                                                     },
                                                     {
-                                                      "tipo": "GestureDetector",
-                                                      "visible": true,
+                                                      "tipo": "Container",
+                                                      "visible": false,
                                                       "disabled": false,
                                                       "hijos": [
                                                         {
-                                                          "tipo": "Container",
-                                                          "visible": false,
+                                                          "tipo": "GestureDetector",
+                                                          "visible": true,
                                                           "disabled": false,
-                                                          "alignment": "Alignment(x=0.0, y=0.0)",
                                                           "hijos": [
                                                             {
                                                               "tipo": "Container",
                                                               "visible": true,
-                                                              "disabled": false
+                                                              "disabled": false,
+                                                              "alignment": "Alignment(x=0.0, y=0.0)",
+                                                              "hijos": [
+                                                                {
+                                                                  "tipo": "Container",
+                                                                  "visible": true,
+                                                                  "disabled": false
+                                                                }
+                                                              ],
+                                                              "num_hijos": 1
                                                             }
                                                           ],
                                                           "num_hijos": 1
@@ -3563,20 +3587,28 @@
                                                       "num_hijos": 1
                                                     },
                                                     {
-                                                      "tipo": "GestureDetector",
-                                                      "visible": true,
+                                                      "tipo": "Container",
+                                                      "visible": false,
                                                       "disabled": false,
                                                       "hijos": [
                                                         {
-                                                          "tipo": "Container",
-                                                          "visible": false,
+                                                          "tipo": "GestureDetector",
+                                                          "visible": true,
                                                           "disabled": false,
-                                                          "alignment": "Alignment(x=0.0, y=0.0)",
                                                           "hijos": [
                                                             {
                                                               "tipo": "Container",
                                                               "visible": true,
-                                                              "disabled": false
+                                                              "disabled": false,
+                                                              "alignment": "Alignment(x=0.0, y=0.0)",
+                                                              "hijos": [
+                                                                {
+                                                                  "tipo": "Container",
+                                                                  "visible": true,
+                                                                  "disabled": false
+                                                                }
+                                                              ],
+                                                              "num_hijos": 1
                                                             }
                                                           ],
                                                           "num_hijos": 1
@@ -3585,20 +3617,28 @@
                                                       "num_hijos": 1
                                                     },
                                                     {
-                                                      "tipo": "GestureDetector",
-                                                      "visible": true,
+                                                      "tipo": "Container",
+                                                      "visible": false,
                                                       "disabled": false,
                                                       "hijos": [
                                                         {
-                                                          "tipo": "Container",
-                                                          "visible": false,
+                                                          "tipo": "GestureDetector",
+                                                          "visible": true,
                                                           "disabled": false,
-                                                          "alignment": "Alignment(x=0.0, y=0.0)",
                                                           "hijos": [
                                                             {
                                                               "tipo": "Container",
                                                               "visible": true,
-                                                              "disabled": false
+                                                              "disabled": false,
+                                                              "alignment": "Alignment(x=0.0, y=0.0)",
+                                                              "hijos": [
+                                                                {
+                                                                  "tipo": "Container",
+                                                                  "visible": true,
+                                                                  "disabled": false
+                                                                }
+                                                              ],
+                                                              "num_hijos": 1
                                                             }
                                                           ],
                                                           "num_hijos": 1
@@ -3607,20 +3647,28 @@
                                                       "num_hijos": 1
                                                     },
                                                     {
-                                                      "tipo": "GestureDetector",
-                                                      "visible": true,
+                                                      "tipo": "Container",
+                                                      "visible": false,
                                                       "disabled": false,
                                                       "hijos": [
                                                         {
-                                                          "tipo": "Container",
-                                                          "visible": false,
+                                                          "tipo": "GestureDetector",
+                                                          "visible": true,
                                                           "disabled": false,
-                                                          "alignment": "Alignment(x=0.0, y=0.0)",
                                                           "hijos": [
                                                             {
                                                               "tipo": "Container",
                                                               "visible": true,
-                                                              "disabled": false
+                                                              "disabled": false,
+                                                              "alignment": "Alignment(x=0.0, y=0.0)",
+                                                              "hijos": [
+                                                                {
+                                                                  "tipo": "Container",
+                                                                  "visible": true,
+                                                                  "disabled": false
+                                                                }
+                                                              ],
+                                                              "num_hijos": 1
                                                             }
                                                           ],
                                                           "num_hijos": 1
@@ -3629,20 +3677,28 @@
                                                       "num_hijos": 1
                                                     },
                                                     {
-                                                      "tipo": "GestureDetector",
-                                                      "visible": true,
+                                                      "tipo": "Container",
+                                                      "visible": false,
                                                       "disabled": false,
                                                       "hijos": [
                                                         {
-                                                          "tipo": "Container",
-                                                          "visible": false,
+                                                          "tipo": "GestureDetector",
+                                                          "visible": true,
                                                           "disabled": false,
-                                                          "alignment": "Alignment(x=0.0, y=0.0)",
                                                           "hijos": [
                                                             {
                                                               "tipo": "Container",
                                                               "visible": true,
-                                                              "disabled": false
+                                                              "disabled": false,
+                                                              "alignment": "Alignment(x=0.0, y=0.0)",
+                                                              "hijos": [
+                                                                {
+                                                                  "tipo": "Container",
+                                                                  "visible": true,
+                                                                  "disabled": false
+                                                                }
+                                                              ],
+                                                              "num_hijos": 1
                                                             }
                                                           ],
                                                           "num_hijos": 1
@@ -3651,20 +3707,28 @@
                                                       "num_hijos": 1
                                                     },
                                                     {
-                                                      "tipo": "GestureDetector",
-                                                      "visible": true,
+                                                      "tipo": "Container",
+                                                      "visible": false,
                                                       "disabled": false,
                                                       "hijos": [
                                                         {
-                                                          "tipo": "Container",
-                                                          "visible": false,
+                                                          "tipo": "GestureDetector",
+                                                          "visible": true,
                                                           "disabled": false,
-                                                          "alignment": "Alignment(x=0.0, y=0.0)",
                                                           "hijos": [
                                                             {
                                                               "tipo": "Container",
                                                               "visible": true,
-                                                              "disabled": false
+                                                              "disabled": false,
+                                                              "alignment": "Alignment(x=0.0, y=0.0)",
+                                                              "hijos": [
+                                                                {
+                                                                  "tipo": "Container",
+                                                                  "visible": true,
+                                                                  "disabled": false
+                                                                }
+                                                              ],
+                                                              "num_hijos": 1
                                                             }
                                                           ],
                                                           "num_hijos": 1
@@ -3673,20 +3737,28 @@
                                                       "num_hijos": 1
                                                     },
                                                     {
-                                                      "tipo": "GestureDetector",
-                                                      "visible": true,
+                                                      "tipo": "Container",
+                                                      "visible": false,
                                                       "disabled": false,
                                                       "hijos": [
                                                         {
-                                                          "tipo": "Container",
-                                                          "visible": false,
+                                                          "tipo": "GestureDetector",
+                                                          "visible": true,
                                                           "disabled": false,
-                                                          "alignment": "Alignment(x=0.0, y=0.0)",
                                                           "hijos": [
                                                             {
                                                               "tipo": "Container",
                                                               "visible": true,
-                                                              "disabled": false
+                                                              "disabled": false,
+                                                              "alignment": "Alignment(x=0.0, y=0.0)",
+                                                              "hijos": [
+                                                                {
+                                                                  "tipo": "Container",
+                                                                  "visible": true,
+                                                                  "disabled": false
+                                                                }
+                                                              ],
+                                                              "num_hijos": 1
                                                             }
                                                           ],
                                                           "num_hijos": 1
@@ -3695,20 +3767,28 @@
                                                       "num_hijos": 1
                                                     },
                                                     {
-                                                      "tipo": "GestureDetector",
-                                                      "visible": true,
+                                                      "tipo": "Container",
+                                                      "visible": false,
                                                       "disabled": false,
                                                       "hijos": [
                                                         {
-                                                          "tipo": "Container",
-                                                          "visible": false,
+                                                          "tipo": "GestureDetector",
+                                                          "visible": true,
                                                           "disabled": false,
-                                                          "alignment": "Alignment(x=0.0, y=0.0)",
                                                           "hijos": [
                                                             {
                                                               "tipo": "Container",
                                                               "visible": true,
-                                                              "disabled": false
+                                                              "disabled": false,
+                                                              "alignment": "Alignment(x=0.0, y=0.0)",
+                                                              "hijos": [
+                                                                {
+                                                                  "tipo": "Container",
+                                                                  "visible": true,
+                                                                  "disabled": false
+                                                                }
+                                                              ],
+                                                              "num_hijos": 1
                                                             }
                                                           ],
                                                           "num_hijos": 1
