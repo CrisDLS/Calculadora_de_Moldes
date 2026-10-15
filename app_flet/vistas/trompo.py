@@ -14,6 +14,7 @@ from app_flet.vistas.pestanas.resumen import PestanaResumen
 from app_flet.vistas.pestanas.tablas import PestanaTablas
 from app_flet.vistas.pestanas.moldes2d import PestanaMoldes2D
 from app_flet.vistas.pestanas.hoja import PestanaHoja
+from app_flet.vistas.pestanas.vista3d import PestanaVista3D
 from logic.exportacion.estilos import PANTALLA_OSCURO, PANTALLA_CLARO
 from logic.exportacion.vista_svg import (
     VistaSvg,
@@ -302,333 +303,51 @@ class VistaTrompo(ft.Container):
         tab_hoja = self.pestana_hoja.construir()
 
         # 5. Pestaña Vista 3D (F4)
-        self.catalogo_papel = cargar_catalogo()
-        self.filtro_marca_actual = "todas"
-
-        # Controles de Cono Superior
-        self.dd_modo_sup = ft.Dropdown(
-            label="Modo de caras",
-            value="liso",
-            options=[
-                ft.DropdownOption(key="liso", text="Liso (1 color)"),
-                ft.DropdownOption(key="alternado", text="Alternado por gajo"),
-                ft.DropdownOption(key="bloques", text="Bloques de G gajos"),
-            ],
-            on_select=self.on_cambio_patron_ui,
-            dense=True,
-            width=200,
+        self.pestana_vista3d = PestanaVista3D(
+            paleta=self.paleta,
+            controlador=self.controlador,
+            servicio_file_picker=self.file_picker,
+            servicio_clipboard=self.servicio_clipboard,
+            obtener_pagina=lambda: self.obtener_pagina,
+            on_mostrar_snackbar=self._mostrar_snackbar,
+            on_solicitar_sync=lambda: self._sync_controlador_a_vista(self.controlador.get_view_model()),
         )
-        self.txt_tam_bloque_sup = ft.TextField(
-            label="Tamaño bloque (G)",
-            value="5",
-            width=140,
-            dense=True,
-            visible=False,
-            on_change=self.on_cambio_patron_ui,
-        )
-        self.col_colores_sup = ft.Column(spacing=6)
-        self.btn_agregar_color_sup = ft.TextButton("Agregar color al ciclo", icon=ft.Icons.ADD, on_click=self.on_agregar_color_sup)
-
-        # Controles de Cono Inferior
-        self.chk_mismo_esquema_inf = ft.Checkbox(
-            label="Usar el mismo esquema en el cono inferior",
-            value=False,
-            on_change=self.on_cambio_patron_ui,
-        )
-        self.dd_modo_inf = ft.Dropdown(
-            label="Modo de caras",
-            value="liso",
-            options=[
-                ft.DropdownOption(key="liso", text="Liso (1 color)"),
-                ft.DropdownOption(key="alternado", text="Alternado por gajo"),
-                ft.DropdownOption(key="bloques", text="Bloques de G gajos"),
-            ],
-            on_select=self.on_cambio_patron_ui,
-            dense=True,
-            width=200,
-        )
-        self.txt_tam_bloque_inf = ft.TextField(
-            label="Tamaño bloque (G)",
-            value="5",
-            width=140,
-            dense=True,
-            visible=False,
-            on_change=self.on_cambio_patron_ui,
-        )
-        self.col_colores_inf = ft.Column(spacing=6)
-        self.btn_agregar_color_inf = ft.TextButton("Agregar color al ciclo", icon=ft.Icons.ADD, on_click=self.on_agregar_color_inf)
-        self.container_controles_inf = ft.Column(
-            controls=[
-                ft.Row([self.dd_modo_inf, self.txt_tam_bloque_inf], spacing=10),
-                self.col_colores_inf,
-                self.btn_agregar_color_inf,
-            ],
-            spacing=6,
-        )
-
-        # Controles de Picos (Variantes A y B)
-        self.dd_modo_caras_var_a = ft.Dropdown(
-            label="Modo de caras (Variante A)",
-            value="igual",
-            options=[
-                ft.DropdownOption(key="igual", text="Igual en las 4 caras"),
-                ft.DropdownOption(key="alternado", text="Alternando 2 colores"),
-                ft.DropdownOption(key="cuatro", text="4 colores distintos"),
-            ],
-            on_select=self.on_cambio_patron_ui,
-            dense=True,
-            width=220,
-        )
-        self.col_colores_var_a = ft.Row(wrap=True, spacing=10)
-
-        self.chk_usar_var_b = ft.Checkbox(
-            label="Usar Variante B",
-            value=False,
-            on_change=self.on_cambio_patron_ui,
-        )
-        self.dd_repeticion_picos = ft.Dropdown(
-            label="Repetición entre pirámides",
-            value="todas_a",
-            options=[
-                ft.DropdownOption(key="todas_a", text="Todas A"),
-                ft.DropdownOption(key="alternar_gajo", text="Alternar por gajo (A, B)"),
-                ft.DropdownOption(key="alternar_hilera", text="Alternar por hilera (A, B)"),
-                ft.DropdownOption(key="ajedrez", text="Ajedrez (A, B)"),
-            ],
-            on_select=self.on_cambio_patron_ui,
-            dense=True,
-            width=240,
-        )
-        self.dd_modo_caras_var_b = ft.Dropdown(
-            label="Modo de caras (Variante B)",
-            value="igual",
-            options=[
-                ft.DropdownOption(key="igual", text="Igual en las 4 caras"),
-                ft.DropdownOption(key="alternado", text="Alternando 2 colores"),
-                ft.DropdownOption(key="cuatro", text="4 colores distintos"),
-            ],
-            on_select=self.on_cambio_patron_ui,
-            dense=True,
-            width=220,
-        )
-        self.col_colores_var_b = ft.Row(wrap=True, spacing=10)
-        self.panel_variante_b = ft.Column(
-            visible=False,
-            controls=[
-                self.dd_modo_caras_var_b,
-                self.col_colores_var_b,
-            ],
-            spacing=6,
-        )
-
-        # Filtro de marca y gestión de catálogo CSV
-        self.dd_filtro_marca = ft.Dropdown(
-            label="Filtrar por marca",
-            value="todas",
-            options=[ft.DropdownOption(key="todas", text="Todas las marcas")],
-            on_select=self.on_cambio_filtro_marca,
-            dense=True,
-            width=180,
-        )
-        self.btn_agregar_color_catalogo = ft.OutlinedButton(
-            "Nuevo color…",
-            icon=ft.Icons.COLOR_LENS,
-            on_click=self.on_dialogo_agregar_color,
-        )
-        self.btn_importar_csv = ft.OutlinedButton(
-            "Importar CSV…",
-            icon=ft.Icons.FILE_UPLOAD_OUTLINED,
-            on_click=self.on_importar_catalogo_csv,
-        )
-        self.btn_exportar_csv = ft.OutlinedButton(
-            "Exportar CSV…",
-            icon=ft.Icons.FILE_DOWNLOAD_OUTLINED,
-            on_click=self.on_exportar_catalogo_csv,
-        )
-
-        # Vista previa interactiva de patrones (2D canvas/stripes)
-        self.fila_previa_sup = ft.Row(scroll=ft.ScrollMode.AUTO, spacing=2)
-        self.col_previa_picos = ft.Column(spacing=2)
-        self.fila_previa_inf = ft.Row(scroll=ft.ScrollMode.AUTO, spacing=2)
-
-        # Sliders y configuración de compra
-        self.txt_pliego_ancho = ft.TextField(
-            label="Ancho pliego (cm)",
-            value="50",
-            width=140,
-            dense=True,
-            on_change=self.on_cambio_tam_pliego,
-        )
-        self.txt_pliego_alto = ft.TextField(
-            label="Alto pliego (cm)",
-            value="70",
-            width=140,
-            dense=True,
-            on_change=self.on_cambio_tam_pliego,
-        )
-        self.txt_pliegos_paquete = ft.TextField(
-            label="Pliegos por paquete",
-            value="100",
-            width=160,
-            dense=True,
-            on_change=self.on_cambio_pliegos_paquete,
-        )
-        self.lbl_aviso_colores = ft.Text(
-            "Colores en pantalla aproximados: compara con tu pliego",
-            size=11,
-            color=ft.Colors.ON_SURFACE_VARIANT,
-            italic=True,
-        )
-
-        self.btn_abrir_visor_3d = ft.FilledButton(
-            "Abrir visor 3D en navegador",
-            icon=ft.Icons.OPEN_IN_BROWSER,
-            on_click=self.on_abrir_visor_3d,
-        )
-        self.btn_exportar_visor_3d = ft.OutlinedButton(
-            "Exportar visor 3D (.html)…",
-            icon=ft.Icons.FILE_DOWNLOAD_OUTLINED,
-            on_click=self.on_exportar_visor_3d,
-        )
-        self.btn_copiar_compra = ft.FilledButton(
-            "Copiar lista de compra",
-            icon=ft.Icons.COPY,
-            on_click=self.on_copiar_lista_compra,
-        )
-
-        self.tabla_compra = ft.DataTable(
-            columns=[
-                ft.DataColumn(ft.Text("Color", weight=ft.FontWeight.BOLD)),
-                ft.DataColumn(ft.Text("Superior", weight=ft.FontWeight.BOLD), numeric=True),
-                ft.DataColumn(ft.Text("Pico", weight=ft.FontWeight.BOLD), numeric=True),
-                ft.DataColumn(ft.Text("Inferior", weight=ft.FontWeight.BOLD), numeric=True),
-                ft.DataColumn(ft.Text("Total piezas", weight=ft.FontWeight.BOLD), numeric=True),
-                ft.DataColumn(ft.Text("Área (m²)", weight=ft.FontWeight.BOLD), numeric=True),
-                ft.DataColumn(ft.Text("Pliegos", weight=ft.FontWeight.BOLD), numeric=True),
-                ft.DataColumn(ft.Text("Paquetes", weight=ft.FontWeight.BOLD), numeric=True),
-            ],
-            rows=[],
-            heading_row_height=36,
-            data_row_min_height=32,
-            data_row_max_height=36,
-            column_spacing=16,
-        )
-
-        self.lbl_vacio_3d = ft.Container(
-            content=ft.Text("Calcula para ver la vista 3D y lista de compra", size=16, color=ft.Colors.ON_SURFACE_VARIANT),
-            alignment=ft.Alignment(0, 0),
-            expand=True,
-            visible=True,
-        )
-
-        self.panel_contenido_3d = ft.Column(
-            expand=True,
-            visible=False,
-            scroll=ft.ScrollMode.AUTO,
-            controls=[
-                ft.Row(
-                    controls=[
-                        ft.Text("Patrones y colores del globo", size=16, weight=ft.FontWeight.BOLD),
-                        ft.Row(
-                            controls=[
-                                self.dd_filtro_marca,
-                                self.btn_agregar_color_catalogo,
-                                self.btn_importar_csv,
-                                self.btn_exportar_csv,
-                            ],
-                            spacing=6,
-                        ),
-                    ],
-                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                    wrap=True,
-                ),
-                self.lbl_aviso_colores,
-                ft.Divider(color=ft.Colors.OUTLINE),
-
-                # Sección Cono Superior
-                ft.Text("1. Cono Superior", size=14, weight=ft.FontWeight.BOLD),
-                ft.Row([self.dd_modo_sup, self.txt_tam_bloque_sup], spacing=10),
-                self.col_colores_sup,
-                self.btn_agregar_color_sup,
-                ft.Divider(color=ft.Colors.OUTLINE),
-
-                # Sección Cono Inferior
-                ft.Text("2. Cono Inferior", size=14, weight=ft.FontWeight.BOLD),
-                self.chk_mismo_esquema_inf,
-                self.container_controles_inf,
-                ft.Divider(color=ft.Colors.OUTLINE),
-
-                # Sección Picos
-                ft.Text("3. Picos (Pirámides)", size=14, weight=ft.FontWeight.BOLD),
-                ft.Row([self.dd_repeticion_picos, self.chk_usar_var_b], spacing=10),
-                ft.Text("Variante A:", weight=ft.FontWeight.BOLD, size=12),
-                self.dd_modo_caras_var_a,
-                self.col_colores_var_a,
-                self.panel_variante_b,
-                ft.Divider(color=ft.Colors.OUTLINE),
-
-                # Vista Previa 2D
-                ft.Text("Vista previa del patrón desplegado (por gajo)", size=14, weight=ft.FontWeight.BOLD),
-                ft.Text("Cono Superior:", size=12, color=ft.Colors.ON_SURFACE_VARIANT),
-                ft.Container(content=self.fila_previa_sup, padding=4, bgcolor=ft.Colors.SURFACE_CONTAINER, border_radius=6),
-                ft.Text("Hileras de Picos:", size=12, color=ft.Colors.ON_SURFACE_VARIANT),
-                ft.Container(content=self.col_previa_picos, padding=4, bgcolor=ft.Colors.SURFACE_CONTAINER, border_radius=6),
-                ft.Text("Cono Inferior:", size=12, color=ft.Colors.ON_SURFACE_VARIANT),
-                ft.Container(content=self.fila_previa_inf, padding=4, bgcolor=ft.Colors.SURFACE_CONTAINER, border_radius=6),
-                ft.Divider(color=ft.Colors.OUTLINE),
-
-                # Lanzadores 3D
-                ft.Text("Visor 3D interactivo (three.js)", size=14, weight=ft.FontWeight.BOLD),
-                ft.Text("Abre el modelo 3D en tu navegador local con luces realistas, rotación orbital, azimut/elevación y modos día/noche.", size=12, color=ft.Colors.ON_SURFACE_VARIANT),
-                ft.Row(
-                    controls=[self.btn_abrir_visor_3d, self.btn_exportar_visor_3d],
-                    spacing=10,
-                ),
-                ft.Divider(color=ft.Colors.OUTLINE),
-
-                # Lista de Compra
-                ft.Row(
-                    controls=[
-                        ft.Column(
-                            controls=[
-                                ft.Text("Lista de compra de papel china", size=14, weight=ft.FontWeight.BOLD),
-                                ft.Row(
-                                    controls=[
-                                        self.txt_pliego_ancho,
-                                        self.txt_pliego_alto,
-                                        self.txt_pliegos_paquete,
-                                    ],
-                                    spacing=10,
-                                ),
-                                self.lbl_aviso_colores,
-                            ],
-                            spacing=4,
-                        ),
-                        self.btn_copiar_compra,
-                    ],
-                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                ),
-                ft.Container(
-                    content=self.tabla_compra,
-                    bgcolor=ft.Colors.SURFACE_CONTAINER,
-                    border_radius=8,
-                    padding=8,
-                ),
-            ],
-            spacing=8,
-        )
-
-        tab_3d = ft.Container(
-            padding=15,
-            expand=True,
-            content=ft.Column(
-                expand=True,
-                controls=[
-                    self.lbl_vacio_3d,
-                    self.panel_contenido_3d,
-                ],
-            ),
-        )
+        self.catalogo_papel = self.pestana_vista3d.catalogo_papel
+        self.dd_modo_sup = self.pestana_vista3d.dd_modo_sup
+        self.txt_tam_bloque_sup = self.pestana_vista3d.txt_tam_bloque_sup
+        self.col_colores_sup = self.pestana_vista3d.col_colores_sup
+        self.btn_agregar_color_sup = self.pestana_vista3d.btn_agregar_color_sup
+        self.chk_mismo_esquema_inf = self.pestana_vista3d.chk_mismo_esquema_inf
+        self.dd_modo_inf = self.pestana_vista3d.dd_modo_inf
+        self.txt_tam_bloque_inf = self.pestana_vista3d.txt_tam_bloque_inf
+        self.col_colores_inf = self.pestana_vista3d.col_colores_inf
+        self.btn_agregar_color_inf = self.pestana_vista3d.btn_agregar_color_inf
+        self.container_controles_inf = self.pestana_vista3d.container_controles_inf
+        self.dd_modo_caras_var_a = self.pestana_vista3d.dd_modo_caras_var_a
+        self.col_colores_var_a = self.pestana_vista3d.col_colores_var_a
+        self.chk_usar_var_b = self.pestana_vista3d.chk_usar_var_b
+        self.dd_repeticion_picos = self.pestana_vista3d.dd_repeticion_picos
+        self.dd_modo_caras_var_b = self.pestana_vista3d.dd_modo_caras_var_b
+        self.col_colores_var_b = self.pestana_vista3d.col_colores_var_b
+        self.panel_variante_b = self.pestana_vista3d.panel_variante_b
+        self.dd_filtro_marca = self.pestana_vista3d.dd_filtro_marca
+        self.btn_agregar_color_catalogo = self.pestana_vista3d.btn_agregar_color_catalogo
+        self.btn_importar_csv = self.pestana_vista3d.btn_importar_csv
+        self.btn_exportar_csv = self.pestana_vista3d.btn_exportar_csv
+        self.fila_previa_sup = self.pestana_vista3d.fila_previa_sup
+        self.col_previa_picos = self.pestana_vista3d.col_previa_picos
+        self.fila_previa_inf = self.pestana_vista3d.fila_previa_inf
+        self.txt_pliego_ancho = self.pestana_vista3d.txt_pliego_ancho
+        self.txt_pliego_alto = self.pestana_vista3d.txt_pliego_alto
+        self.txt_pliegos_paquete = self.pestana_vista3d.txt_pliegos_paquete
+        self.lbl_aviso_colores = self.pestana_vista3d.lbl_aviso_colores
+        self.btn_abrir_visor_3d = self.pestana_vista3d.btn_abrir_visor_3d
+        self.btn_exportar_visor_3d = self.pestana_vista3d.btn_exportar_visor_3d
+        self.btn_copiar_compra = self.pestana_vista3d.btn_copiar_compra
+        self.tabla_compra = self.pestana_vista3d.tabla_compra
+        self.lbl_vacio_3d = self.pestana_vista3d.lbl_vacio_3d
+        self.panel_contenido_3d = self.pestana_vista3d.panel_contenido_3d
+        tab_3d = self.pestana_vista3d.construir()
 
         # --- 5. PESTAÑA DISEÑO (F6a) ---
         self.selector_seccion_diseno = ft.SegmentedButton(
@@ -1273,36 +992,7 @@ class VistaTrompo(ft.Container):
         self.selector_lienzo_diseno.selected = [vm.diseno_lienzo_modo]
 
         # 8. Vista 3D y lista de compra (F4)
-        if vm.items_compra and not vm.desactualizado:
-            self.lbl_vacio_3d.visible = False
-            self.panel_contenido_3d.visible = True
-            self.txt_pliegos_paquete.value = str(self.controlador.pliegos_por_paquete)
-            self._actualizar_dropdowns_patrones()
-
-            # Actualizar filas de tabla de compra
-            self.tabla_compra.rows.clear()
-            for it in vm.items_compra:
-                nombre_txt = it.color.nombre
-                if it.color.marca or it.color.codigo:
-                    extra = f"{it.color.marca} {it.color.codigo}".strip()
-                    nombre_txt = f"{it.color.nombre} [{extra}]"
-                self.tabla_compra.rows.append(
-                    ft.DataRow(
-                        cells=[
-                            ft.DataCell(ft.Text(nombre_txt)),
-                            ft.DataCell(ft.Text(str(it.piezas_superior))),
-                            ft.DataCell(ft.Text(str(it.piezas_pico))),
-                            ft.DataCell(ft.Text(str(it.piezas_inferior))),
-                            ft.DataCell(ft.Text(str(it.piezas_totales), weight=ft.FontWeight.BOLD)),
-                            ft.DataCell(ft.Text(f"{it.area_m2:.2f}")),
-                            ft.DataCell(ft.Text(str(it.pliegos), weight=ft.FontWeight.BOLD)),
-                            ft.DataCell(ft.Text(str(it.paquetes), weight=ft.FontWeight.BOLD)),
-                        ]
-                    )
-                )
-        else:
-            self.lbl_vacio_3d.visible = True
-            self.panel_contenido_3d.visible = False
+        self.pestana_vista3d.actualizar(vm)
 
         # 9. Pestaña Diseño (F6a)
         self.chk_ver_cuadricula.value = vm.diseno_ver_cuadricula
@@ -1466,446 +1156,74 @@ class VistaTrompo(ft.Container):
     async def on_exportar_paquete(self, e):
         await self.pestana_hoja.on_exportar_paquete(e)
 
+    @property
+    def filtro_marca_actual(self) -> str:
+        return self.pestana_vista3d.filtro_marca_actual if hasattr(self, "pestana_vista3d") else "todas"
+
+    @filtro_marca_actual.setter
+    def filtro_marca_actual(self, val: str) -> None:
+        if hasattr(self, "pestana_vista3d"):
+            self.pestana_vista3d.filtro_marca_actual = val
+
     def _opciones_colores_filtradas(self) -> list:
-        marca = self.filtro_marca_actual
-        cols = self.catalogo_papel
-        if marca != "todas":
-            cols = [c for c in cols if (c.marca or "").strip().lower() == marca.lower()]
-        
-        opciones = []
-        for c in cols:
-            texto = c.nombre
-            if c.marca or c.codigo:
-                extra = f"{c.marca} {c.codigo}".strip()
-                texto = f"{c.nombre} [{extra}]"
-            opciones.append(ft.DropdownOption(key=c.id, text=texto))
-        return opciones
+        return self.pestana_vista3d._opciones_colores_filtradas()
 
     def _actualizar_dropdowns_patrones(self):
-        opciones = self._opciones_colores_filtradas()
-        p = self.controlador.pintura
-
-        # 1. Cono superior
-        self.dd_modo_sup.value = p.modo_superior
-        self.txt_tam_bloque_sup.visible = (p.modo_superior == "bloques")
-        self.txt_tam_bloque_sup.value = str(p.tam_bloque_superior)
-        
-        self.col_colores_sup.controls.clear()
-        for idx, cid in enumerate(p.colores_superior):
-            def make_change_sup(i):
-                return lambda e: self.on_cambio_color_ciclo_sup(i, e.control.value)
-            def make_del_sup(i):
-                return lambda e: self.on_eliminar_color_ciclo_sup(i)
-
-            c_obj = color_por_id(cid, self.catalogo_papel)
-            row = ft.Row(
-                controls=[
-                    ft.Container(width=22, height=22, bgcolor=c_obj.hex, border_radius=4, border=ft.Border.all(1, ft.Colors.OUTLINE)),
-                    ft.Dropdown(
-                        options=opciones,
-                        value=cid if any(o.key == cid for o in opciones) else (opciones[0].key if opciones else cid),
-                        dense=True,
-                        width=220,
-                        on_select=make_change_sup(idx),
-                    ),
-                    ft.IconButton(icon=ft.Icons.DELETE_OUTLINE, icon_size=18, tooltip="Quitar color", on_click=make_del_sup(idx)) if len(p.colores_superior) > 1 else ft.Container(),
-                ],
-                spacing=8,
-            )
-            self.col_colores_sup.controls.append(row)
-        self.btn_agregar_color_sup.visible = (len(p.colores_superior) < 6 and p.modo_superior != "liso")
-
-        # 2. Cono inferior
-        self.chk_mismo_esquema_inf.value = p.mismo_esquema_inferior
-        self.container_controles_inf.visible = not p.mismo_esquema_inferior
-        self.dd_modo_inf.value = p.modo_inferior
-        self.txt_tam_bloque_inf.visible = (p.modo_inferior == "bloques")
-        self.txt_tam_bloque_inf.value = str(p.tam_bloque_inferior)
-
-        self.col_colores_inf.controls.clear()
-        for idx, cid in enumerate(p.colores_inferior):
-            def make_change_inf(i):
-                return lambda e: self.on_cambio_color_ciclo_inf(i, e.control.value)
-            def make_del_inf(i):
-                return lambda e: self.on_eliminar_color_ciclo_inf(i)
-
-            c_obj = color_por_id(cid, self.catalogo_papel)
-            row = ft.Row(
-                controls=[
-                    ft.Container(width=22, height=22, bgcolor=c_obj.hex, border_radius=4, border=ft.Border.all(1, ft.Colors.OUTLINE)),
-                    ft.Dropdown(
-                        options=opciones,
-                        value=cid if any(o.key == cid for o in opciones) else (opciones[0].key if opciones else cid),
-                        dense=True,
-                        width=220,
-                        on_select=make_change_inf(idx),
-                    ),
-                    ft.IconButton(icon=ft.Icons.DELETE_OUTLINE, icon_size=18, tooltip="Quitar color", on_click=make_del_inf(idx)) if len(p.colores_inferior) > 1 else ft.Container(),
-                ],
-                spacing=8,
-            )
-            self.col_colores_inf.controls.append(row)
-        self.btn_agregar_color_inf.visible = (len(p.colores_inferior) < 6 and p.modo_inferior != "liso")
-
-        # 3. Picos
-        self.dd_repeticion_picos.value = p.repeticion_picos
-        self.chk_usar_var_b.value = p.usar_variante_b
-        self.panel_variante_b.visible = p.usar_variante_b
-
-        # Variante A
-        self.dd_modo_caras_var_a.value = p.variante_a.modo_caras
-        self._construir_controles_variante(self.col_colores_var_a, p.variante_a, "A", opciones)
-
-        # Variante B
-        self.dd_modo_caras_var_b.value = p.variante_b.modo_caras
-        self._construir_controles_variante(self.col_colores_var_b, p.variante_b, "B", opciones)
-
-        # 4. Actualizar vista previa 2D
-        self._actualizar_vista_previa_2d()
-
-    def _construir_controles_variante(self, container_row: ft.Row, variante: VariantePico, nombre_var: str, opciones: list):
-        container_row.controls.clear()
-        modo = variante.modo_caras
-
-        def make_change(cara_idx):
-            return lambda e: self.on_cambio_color_variante(nombre_var, cara_idx, e.control.value)
-
-        if modo == "igual":
-            c_obj = color_por_id(variante.color_0, self.catalogo_papel)
-            container_row.controls.append(
-                ft.Row([
-                    ft.Container(width=20, height=20, bgcolor=c_obj.hex, border_radius=4, border=ft.Border.all(1, ft.Colors.OUTLINE)),
-                    ft.Dropdown(label="Color (4 caras)", options=opciones, value=variante.color_0, dense=True, width=220, on_select=make_change(0))
-                ], spacing=6)
-            )
-        elif modo == "alternado":
-            c0 = color_por_id(variante.color_0, self.catalogo_papel)
-            c1 = color_por_id(variante.color_1, self.catalogo_papel)
-            container_row.controls.extend([
-                ft.Row([
-                    ft.Container(width=20, height=20, bgcolor=c0.hex, border_radius=4, border=ft.Border.all(1, ft.Colors.OUTLINE)),
-                    ft.Dropdown(label="Caras 0 y 2", options=opciones, value=variante.color_0, dense=True, width=180, on_select=make_change(0))
-                ], spacing=6),
-                ft.Row([
-                    ft.Container(width=20, height=20, bgcolor=c1.hex, border_radius=4, border=ft.Border.all(1, ft.Colors.OUTLINE)),
-                    ft.Dropdown(label="Caras 1 y 3", options=opciones, value=variante.color_1, dense=True, width=180, on_select=make_change(1))
-                ], spacing=6),
-            ])
-        elif modo == "cuatro":
-            colores_var = [variante.color_0, variante.color_1, variante.color_2, variante.color_3]
-            for idx, c_val in enumerate(colores_var):
-                c_obj = color_por_id(c_val, self.catalogo_papel)
-                container_row.controls.append(
-                    ft.Row([
-                        ft.Container(width=20, height=20, bgcolor=c_obj.hex, border_radius=4, border=ft.Border.all(1, ft.Colors.OUTLINE)),
-                        ft.Dropdown(label=f"Cara {idx}", options=opciones, value=c_val, dense=True, width=150, on_select=make_change(idx))
-                    ], spacing=6)
-                )
+        self.pestana_vista3d._actualizar_dropdowns_patrones()
 
     def _actualizar_vista_previa_2d(self):
-        p = self.controlador.pintura
-        N = int(self.controlador.gajos or 30)
-        hileras = int(self.controlador.hileras or 2)
-
-        self.fila_previa_sup.controls.clear()
-        self.fila_previa_inf.controls.clear()
-        self.col_previa_picos.controls.clear()
-
-        # Cono superior e inferior
-        for k in range(N):
-            cara_s = Cara([], "superior", k, None, None, [0, 0, 1], [])
-            col_id_s = color_de_cara(p, cara_s, None, N)
-            col_hex_s = color_por_id(col_id_s, self.catalogo_papel).hex
-
-            self.fila_previa_sup.controls.append(
-                ft.Container(width=22, height=22, bgcolor=col_hex_s, border_radius=3, tooltip=f"Gajo {k+1}: {col_id_s}", border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT))
-            )
-
-            cara_i = Cara([], "inferior", k, None, None, [0, 0, -1], [])
-            col_id_i = color_de_cara(p, cara_i, None, N)
-            col_hex_i = color_por_id(col_id_i, self.catalogo_papel).hex
-
-            self.fila_previa_inf.controls.append(
-                ft.Container(width=22, height=22, bgcolor=col_hex_i, border_radius=3, tooltip=f"Gajo {k+1}: {col_id_i}", border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT))
-            )
-
-        # Picos (cuadrícula de hileras × gajos)
-        for j in range(hileras):
-            fila_p = ft.Row(scroll=ft.ScrollMode.AUTO, spacing=2)
-            for k in range(N):
-                # Usar color de cara 0 como representativo de la pirámide
-                cara_p = Cara([], "pico", k, j, 0, [1, 0, 0], [])
-                col_id_p = color_de_cara(p, cara_p, None, N)
-                col_hex_p = color_por_id(col_id_p, self.catalogo_papel).hex
-                fila_p.controls.append(
-                    ft.Container(width=22, height=22, bgcolor=col_hex_p, border_radius=3, tooltip=f"H{j+1} G{k+1}: {col_id_p}", border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT))
-                )
-            self.col_previa_picos.controls.append(fila_p)
+        self.pestana_vista3d._actualizar_vista_previa_2d()
 
     def on_cambio_patron_ui(self, e):
-        p = self.controlador.pintura
-        p.modo_superior = self.dd_modo_sup.value or "liso"
-        try:
-            p.tam_bloque_superior = max(1, int(self.txt_tam_bloque_sup.value or 5))
-        except ValueError:
-            p.tam_bloque_superior = 5
-
-        p.mismo_esquema_inferior = bool(self.chk_mismo_esquema_inf.value)
-        p.modo_inferior = self.dd_modo_inf.value or "liso"
-        try:
-            p.tam_bloque_inferior = max(1, int(self.txt_tam_bloque_inf.value or 5))
-        except ValueError:
-            p.tam_bloque_inferior = 5
-
-        p.repeticion_picos = self.dd_repeticion_picos.value or "todas_a"
-        p.usar_variante_b = bool(self.chk_usar_var_b.value)
-
-        p.variante_a.modo_caras = self.dd_modo_caras_var_a.value or "igual"
-        p.variante_b.modo_caras = self.dd_modo_caras_var_b.value or "igual"
-
-        self.controlador.actualizar_pintura(pintura_completa=p)
-        self._sync_controlador_a_vista(self.controlador.get_view_model())
+        self.pestana_vista3d.on_cambio_patron_ui(e)
 
     def on_cambio_color_ciclo_sup(self, idx: int, cid: str):
-        p = self.controlador.pintura
-        if idx < len(p.colores_superior):
-            p.colores_superior[idx] = cid
-            p.color_superior = p.colores_superior[0]
-            self.controlador.actualizar_pintura(pintura_completa=p)
-            self._sync_controlador_a_vista(self.controlador.get_view_model())
+        self.pestana_vista3d.on_cambio_color_ciclo_sup(idx, cid)
 
     def on_agregar_color_sup(self, e):
-        p = self.controlador.pintura
-        if len(p.colores_superior) < 6:
-            p.colores_superior.append("blanco")
-            self.controlador.actualizar_pintura(pintura_completa=p)
-            self._sync_controlador_a_vista(self.controlador.get_view_model())
+        self.pestana_vista3d.on_agregar_color_sup(e)
 
     def on_eliminar_color_ciclo_sup(self, idx: int):
-        p = self.controlador.pintura
-        if len(p.colores_superior) > 1 and idx < len(p.colores_superior):
-            p.colores_superior.pop(idx)
-            p.color_superior = p.colores_superior[0]
-            self.controlador.actualizar_pintura(pintura_completa=p)
-            self._sync_controlador_a_vista(self.controlador.get_view_model())
+        self.pestana_vista3d.on_eliminar_color_ciclo_sup(idx)
 
     def on_cambio_color_ciclo_inf(self, idx: int, cid: str):
-        p = self.controlador.pintura
-        if idx < len(p.colores_inferior):
-            p.colores_inferior[idx] = cid
-            p.color_inferior = p.colores_inferior[0]
-            self.controlador.actualizar_pintura(pintura_completa=p)
-            self._sync_controlador_a_vista(self.controlador.get_view_model())
+        self.pestana_vista3d.on_cambio_color_ciclo_inf(idx, cid)
 
     def on_agregar_color_inf(self, e):
-        p = self.controlador.pintura
-        if len(p.colores_inferior) < 6:
-            p.colores_inferior.append("blanco")
-            self.controlador.actualizar_pintura(pintura_completa=p)
-            self._sync_controlador_a_vista(self.controlador.get_view_model())
+        self.pestana_vista3d.on_agregar_color_inf(e)
 
     def on_eliminar_color_ciclo_inf(self, idx: int):
-        p = self.controlador.pintura
-        if len(p.colores_inferior) > 1 and idx < len(p.colores_inferior):
-            p.colores_inferior.pop(idx)
-            p.color_inferior = p.colores_inferior[0]
-            self.controlador.actualizar_pintura(pintura_completa=p)
-            self._sync_controlador_a_vista(self.controlador.get_view_model())
+        self.pestana_vista3d.on_eliminar_color_ciclo_inf(idx)
 
     def on_cambio_color_variante(self, nombre_var: str, cara_idx: int, cid: str):
-        p = self.controlador.pintura
-        var = p.variante_a if nombre_var == "A" else p.variante_b
-        if cara_idx == 0: var.color_0 = cid
-        elif cara_idx == 1: var.color_1 = cid
-        elif cara_idx == 2: var.color_2 = cid
-        elif cara_idx == 3: var.color_3 = cid
-
-        if nombre_var == "A":
-            p.color_pico = var.color_0
-
-        self.controlador.actualizar_pintura(pintura_completa=p)
-        self._sync_controlador_a_vista(self.controlador.get_view_model())
+        self.pestana_vista3d.on_cambio_color_variante(nombre_var, cara_idx, cid)
 
     def on_cambio_filtro_marca(self, e):
-        self.filtro_marca_actual = self.dd_filtro_marca.value or "todas"
-        self._actualizar_dropdowns_patrones()
-        self.update()
+        self.pestana_vista3d.on_cambio_filtro_marca(e)
 
     def on_cambio_pliegos_paquete(self, e):
-        try:
-            val = max(1, int(self.txt_pliegos_paquete.value or 100))
-        except ValueError:
-            val = 100
-        self.controlador.pliegos_por_paquete = val
-        self.controlador.sin_guardar = True
-        self._sync_controlador_a_vista(self.controlador.get_view_model())
+        self.pestana_vista3d.on_cambio_pliegos_paquete(e)
 
     def on_cambio_tam_pliego(self, e):
-        try:
-            ancho = float(self.txt_pliego_ancho.value or 50)
-            alto = float(self.txt_pliego_alto.value or 70)
-        except ValueError:
-            return
-        if ancho > 0 and alto > 0:
-            self.controlador.pliego_ancho = ancho
-            self.controlador.pliego_alto = alto
-            self.controlador.sin_guardar = True
-            self._sync_controlador_a_vista(self.controlador.get_view_model())
+        self.pestana_vista3d.on_cambio_tam_pliego(e)
 
     async def on_dialogo_agregar_color(self, e):
-        txt_nom = ft.TextField(label="Nombre del color", dense=True)
-        txt_marca = ft.TextField(label="Marca (opcional)", dense=True)
-        txt_codigo = ft.TextField(label="Código de fábrica (opcional)", dense=True)
-        txt_hex = ft.TextField(label="HEX (ej. #e91e63)", dense=True)
-        txt_notas = ft.TextField(label="Notas", dense=True)
-        chk_calib = ft.Checkbox(label="Calibrado (exacto)", value=False)
-
-        def guardar_nuevo_color(dialog_event):
-            nom = txt_nom.value.strip()
-            hex_val = txt_hex.value.strip()
-            if not nom or not hex_val:
-                self._mostrar_snackbar("Nombre y código HEX son obligatorios.")
-                return
-            if not hex_val.startswith("#"):
-                hex_val = "#" + hex_val
-            try:
-                col = ColorPapel(
-                    id=nom.lower().replace(" ", "_"),
-                    nombre=nom,
-                    hex=hex_val,
-                    aproximado=not chk_calib.value,
-                    marca=txt_marca.value.strip(),
-                    codigo=txt_codigo.value.strip(),
-                    notas=txt_notas.value.strip()
-                )
-                guardar_color_usuario(col)
-                self.catalogo_papel = cargar_catalogo()
-                self._actualizar_marcas_disponibles()
-                self._actualizar_dropdowns_patrones()
-                dialog.open = False
-                self.page.update()
-                self._mostrar_snackbar(f"Color '{nom}' agregado con éxito.")
-            except Exception as err:
-                self._mostrar_snackbar(f"Error al guardar: {err}")
-
-        dialog = ft.AlertDialog(
-            title=ft.Text("Nuevo color de papel"),
-            content=ft.Column([txt_nom, txt_marca, txt_codigo, txt_hex, txt_notas, chk_calib], tight=True, spacing=10),
-            actions=[
-                ft.TextButton("Cancelar", on_click=lambda ev: setattr(dialog, "open", False) or self.page.update()),
-                ft.FilledButton("Guardar", on_click=guardar_nuevo_color),
-            ],
-        )
-        self.page.overlay.append(dialog)
-        dialog.open = True
-        self.page.update()
-
-    def _actualizar_marcas_disponibles(self):
-        marcas = sorted(list(set(c.marca.strip() for c in self.catalogo_papel if c.marca.strip())))
-        opts = [ft.DropdownOption(key="todas", text="Todas las marcas")]
-        for m in marcas:
-            opts.append(ft.DropdownOption(key=m, text=m))
-        self.dd_filtro_marca.options = opts
+        await self.pestana_vista3d.on_dialogo_agregar_color(e)
 
     async def on_importar_catalogo_csv(self, e):
-        archivos = await self.file_picker.pick_files(
-            dialog_title="Importar catálogo de colores CSV",
-            file_type=ft.FilePickerFileType.CUSTOM,
-            allowed_extensions=["csv"],
-            allow_multiple=False,
-        )
-        if archivos and len(archivos) > 0 and archivos[0].path:
-            ruta = archivos[0].path
-            try:
-                importados, errores = importar_csv(ruta)
-                self.catalogo_papel = cargar_catalogo()
-                self._actualizar_marcas_disponibles()
-                self._actualizar_dropdowns_patrones()
-                msg = f"{len(importados)} colores importados."
-                if errores:
-                    msg += f" ({len(errores)} filas omitidas: {errores[0]})"
-                self._mostrar_snackbar(msg)
-                self._sync_controlador_a_vista(self.controlador.get_view_model())
-            except Exception as err:
-                self._mostrar_snackbar(f"Error al importar CSV: {err}")
+        await self.pestana_vista3d.on_importar_catalogo_csv(e)
 
     async def on_exportar_catalogo_csv(self, e):
-        ruta = await self.file_picker.save_file(
-            dialog_title="Exportar catálogo de colores CSV",
-            file_name="catalogo_colores_papel.csv",
-            file_type=ft.FilePickerFileType.CUSTOM,
-            allowed_extensions=["csv"],
-        )
-        if ruta:
-            try:
-                exportar_csv(ruta, self.catalogo_papel)
-                self._mostrar_snackbar(f"Catálogo exportado: {os.path.basename(ruta)}")
-            except Exception as err:
-                self._mostrar_snackbar(f"Error al exportar CSV: {err}")
+        await self.pestana_vista3d.on_exportar_catalogo_csv(e)
 
     def on_abrir_visor_3d(self, e):
-        servidor = self.controlador.obtener_servidor_3d()
-        if servidor and servidor.url:
-            webbrowser.open(servidor.url)
-            self._mostrar_snackbar(f"Abriendo visor 3D en {servidor.url}")
-        else:
-            self._mostrar_snackbar("No se pudo iniciar el servidor 3D local")
+        self.pestana_vista3d.on_abrir_visor_3d(e)
 
     async def on_exportar_visor_3d(self, e):
-        if not (self.controlador.resultado and self.controlador.entrada_actual):
-            self._mostrar_snackbar("Calcula el modelo antes de exportar el visor 3D")
-            return
-        nombre_def = f"{self.controlador.nombre_proyecto}_visor3d.html"
-        ruta = await self.file_picker.save_file(
-            dialog_title="Exportar visor 3D autocontenido",
-            file_name=nombre_def,
-            file_type=ft.FilePickerFileType.CUSTOM,
-            allowed_extensions=["html"],
-        )
-        if ruta:
-            try:
-                self.controlador.exportar_visor_3d(ruta)
-                self._mostrar_snackbar(f"Visor 3D exportado: {os.path.basename(ruta)}")
-            except Exception as err:
-                self._mostrar_snackbar(f"Error al exportar visor 3D: {err}")
+        await self.pestana_vista3d.on_exportar_visor_3d(e)
 
     def on_copiar_lista_compra(self, e):
-        vm = self.controlador.get_view_model()
-        if not vm.items_compra:
-            self._mostrar_snackbar("No hay datos en la lista de compra")
-            return
-
-        lineas = ["Color\tMarca\tCódigo\tSuperior\tPico\tInferior\tTotal piezas\tÁrea (m²)\tPliegos\tPaquetes"]
-        for it in vm.items_compra:
-            m = it.color.marca or "-"
-            c = it.color.codigo or "-"
-            lineas.append(
-                f"{it.color.nombre}\t{m}\t{c}\t{it.piezas_superior}\t{it.piezas_pico}\t{it.piezas_inferior}\t{it.piezas_totales}\t{it.area_m2:.2f}\t{it.pliegos}\t{it.paquetes}"
-            )
-        texto = "\n".join(lineas)
-
-        copia_exitosa = False
-        page = self.obtener_pagina
-        try:
-            if page and isinstance(self.servicio_clipboard, ft.Service):
-                if self.servicio_clipboard not in page.services:
-                    page.services.append(self.servicio_clipboard)
-
-            if hasattr(self.servicio_clipboard, "set"):
-                res = self.servicio_clipboard.set(texto)
-                if asyncio.iscoroutine(res):
-                    if page:
-                        page.run_task(self.servicio_clipboard.set, texto)
-                    else:
-                        asyncio.run(res)
-                copia_exitosa = True
-        except Exception:
-            copia_exitosa = False
-
-        if copia_exitosa:
-            self._mostrar_snackbar("Lista de compra copiada al portapapeles")
-        else:
-            self._mostrar_snackbar("No se pudo copiar la lista")
+        self.pestana_vista3d.on_copiar_lista_compra(e)
 
     def _renderizar_hoja(self, reset_vista: bool = False):
         self.pestana_hoja.renderizar_hoja(reset_vista=reset_vista)
