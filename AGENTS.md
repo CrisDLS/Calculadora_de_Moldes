@@ -61,6 +61,11 @@ que el usuario ponga debe validarse como viable o explicar por qué no.
 - No amplíes trompo_compat.py; el código nuevo usa las APIs nuevas.
 - Informe final corto: qué cambió, evidencia (salidas), qué NO pudiste verificar.
 
+## Flujo de ramas
+- `main`: estable y siempre funcionando (código verificado y funcional).
+- Cada tema nuevo: rama propia (`diseno-edicion`, etc.).
+- Etiquetas de respaldo antes de cambios grandes.
+
 ## Reglas de arquitectura
 - `logic/` NUNCA importa `flet`, y NUNCA imprime ni lee consola:
   `calcular()` devuelve objetos. Nuevos tipos de globo implementan `BalloonCalculator`.
