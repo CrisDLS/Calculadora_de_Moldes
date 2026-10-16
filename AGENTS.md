@@ -62,9 +62,9 @@ que el usuario ponga debe validarse como viable o explicar por qué no.
 - Informe final corto: qué cambió, evidencia (salidas), qué NO pudiste verificar.
 
 ## Flujo de ramas
-- `main`: estable y siempre funcionando (código verificado y funcional).
-- Cada tema nuevo: rama propia (`diseno-edicion`, etc.).
-- Etiquetas de respaldo antes de cambios grandes.
+- `main`: estable y siempre funcionando (código verificado y funcional). Estado actual: incluye edición interactiva de capas, recorte exacto en modo mitad y arrastre fluido del marco.
+- Cada tema nuevo: rama propia (`diseno-edicion`, `textura-3d`, etc.). Rama activa actual: `textura-3d`.
+- Etiquetas de respaldo antes de cambios grandes (`respaldo-main-antes-diseno`, `estable-diseno-edicion`, etc.).
 
 ## Reglas de arquitectura
 - `logic/` NUNCA importa `flet`, y NUNCA imprime ni lee consola:
@@ -238,6 +238,5 @@ Cada pico es una pirámide de base cuadrada armada con 4 triángulos del molde d
 
 ## Problemas conocidos
 - En la pestaña Hoja de trazo, al cambiar de sección (p. ej. de cono superior con "Piezas separadas" a Pico) el selector de lienzo tarda en refrescarse y muestra el valor de la sección anterior; el usuario decidió no corregirlo ahora.
-
-## Deuda técnica
-- `app_flet/vistas/trompo_compat.py`: Capa de proxies creada para compatibilidad con pruebas antiguas; debe eliminarse una vez migradas todas las pruebas a las APIs modulares correspondientes.
+- Avisos de "interfaz sin responder" del latido registrados en `logs/globos.log` (pendiente de investigar).
+- `app_flet/vistas/trompo_compat.py` por eliminar (capa de proxies de compatibilidad pendiente de retirar tras migrar pruebas restantes).
