@@ -143,11 +143,11 @@ class MockPage:
         self.updates += 1
 
 
-def test_toggle_tema_atomico_y_una_sola_actualizacion():
+def test_toggle_tema_atomico_y_una_sola_actualizacion(monkeypatch):
     v = VistaTrompo()
     mock_p = MockPage()
-    # Mockear property obtener_pagina
-    type(v).obtener_pagina = property(lambda self: mock_p)
+    # Mockear property obtener_pagina solo durante este test
+    monkeypatch.setattr(VistaTrompo, "obtener_pagina", property(lambda self: mock_p))
 
     v.on_calcular(None)
     mock_p.updates = 0

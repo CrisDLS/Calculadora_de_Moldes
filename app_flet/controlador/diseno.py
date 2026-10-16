@@ -5,6 +5,11 @@ from logic.diseno.lienzo import Diseno, CapaDiseno, importar_recurso, ajustar_ca
 from logic.exportacion.svg_abanico import svg_abanico
 from logic.exportacion.svg_diseno import exportar_diseno
 from logic.exportacion.estilos import IMPRESION
+from logic.proyecto.modelo import (
+    obtener_archivos_referenciados_por_proyectos,
+    recursos_sin_uso,
+    mover_a_papelera,
+)
 
 
 class ControladorDisenoMixin:
@@ -27,6 +32,32 @@ class ControladorDisenoMixin:
             d = Path("guardados") / "recursos_temp"
         d.mkdir(parents=True, exist_ok=True)
         return d
+
+    def obtener_recursos_sin_uso(self) -> List[Path]:
+        """Obtiene la lista de archivos sin uso en la carpeta de recursos activa respecto a todos los proyectos."""
+        carpeta_rec = self.obtener_carpeta_recursos_activa()
+        proy_actual = self.a_proyecto() if hasattr(self, "a_proyecto") else None
+        carpetas_busqueda = ["guardados"]
+        if self.ruta_proyecto:
+            padre_proy = Path(self.ruta_proyecto).parent
+            if padre_proy.exists() and str(padre_proy) not in carpetas_busqueda:
+                carpetas_busqueda.append(padre_proy)
+
+        referenciados = set()
+        for c_dir in carpetas_busqueda:
+            referenciados.update(obtener_archivos_referenciados_por_proyectos(c_dir, proyecto_actual=proy_actual))
+        return recursos_sin_uso(carpeta_rec, referenciados)
+
+    def limpiar_recursos_sin_uso(self) -> Tuple[int, float, Path]:
+        """Mueve archivos sin uso a la papelera. Retorna (cantidad_archivos, mb_liberados, ruta_papelera)."""
+        carpeta_rec = self.obtener_carpeta_recursos_activa()
+        archivos = self.obtener_recursos_sin_uso()
+        if not archivos:
+            return 0, 0.0, carpeta_rec / "_papelera"
+        total_bytes = sum(f.stat().st_size for f in archivos if f.exists())
+        destino = mover_a_papelera(archivos, carpeta_rec)
+        mb_liberados = total_bytes / (1024 * 1024)
+        return len(archivos), mb_liberados, destino
 
     def ventana_lienzo(self) -> Tuple[float, float, float, float]:
         """Calcula la caja envolvente del lienzo (min_x, min_y, max_x, max_y) en cm."""

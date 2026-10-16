@@ -14,14 +14,20 @@ class PanelCapasInspector:
         file_picker,
         on_solicitar_sync: Callable[..., None],
         on_mostrar_snackbar: Callable[[str], None],
+        obtener_pagina: Optional[Callable[[], Optional[ft.Page]]] = None,
     ):
         self.controlador = controlador
         self.file_picker = file_picker
         self.on_solicitar_sync = on_solicitar_sync
         self.on_mostrar_snackbar = on_mostrar_snackbar
+        self._obtener_pagina = obtener_pagina
         self._actualizando_programatico: bool = False
 
         self._crear_controles()
+
+    @property
+    def pagina(self) -> Optional[ft.Page]:
+        return self._obtener_pagina() if self._obtener_pagina else None
 
     def _crear_controles(self) -> None:
         # Panel lateral de capas
@@ -29,6 +35,12 @@ class PanelCapasInspector:
             "Añadir capa…",
             icon=ft.Icons.ADD_PHOTO_ALTERNATE_OUTLINED,
             on_click=self.on_anadir_capa_click,
+        )
+        self.btn_limpiar_recursos = ft.TextButton(
+            "Limpiar recursos…",
+            icon=ft.Icons.CLEANING_SERVICES_OUTLINED,
+            on_click=self.on_limpiar_recursos_click,
+            tooltip="Mover recursos huérfanos sin uso a la papelera",
         )
         self.col_lista_capas = ft.Column(spacing=4)
 
@@ -239,6 +251,52 @@ class PanelCapasInspector:
                 self.on_mostrar_snackbar(f"Capa añadida: {os.path.basename(ruta)}")
             except Exception as ex:
                 self.on_mostrar_snackbar(f"Error al añadir capa: {ex}")
+
+    async def on_limpiar_recursos_click(self, e) -> None:
+        """Abre diálogo de confirmación informando archivos sin uso y MB a mover a papelera."""
+        sin_uso = self.controlador.obtener_recursos_sin_uso()
+        if not sin_uso:
+            self.on_mostrar_snackbar("No hay recursos sin uso para limpiar.")
+            return
+
+        total_bytes = sum(f.stat().st_size for f in sin_uso if f.exists())
+        total_mb = total_bytes / (1024 * 1024)
+        cant = len(sin_uso)
+
+        page = self.pagina
+        if not page:
+            # Fallback si no hay página disponible (por ejemplo en tests sin UI activa)
+            cant_mov, mb_mov, dest = self.controlador.limpiar_recursos_sin_uso()
+            self.on_mostrar_snackbar(f"Se movieron {cant_mov} archivos ({mb_mov:.2f} MB) a la papelera.")
+            self.on_solicitar_sync()
+            return
+
+        def confirmar_limpieza(ev):
+            dialog.open = False
+            page.update()
+            cant_mov, mb_mov, dest = self.controlador.limpiar_recursos_sin_uso()
+            self.on_mostrar_snackbar(f"Se movieron {cant_mov} archivos ({mb_mov:.2f} MB) a la papelera.")
+            self.on_solicitar_sync()
+
+        def cancelar_limpieza(ev):
+            dialog.open = False
+            page.update()
+
+        dialog = ft.AlertDialog(
+            title=ft.Text("Limpiar recursos sin uso"),
+            content=ft.Text(
+                f"Se encontraron {cant} archivo(s) sin referencia ({total_mb:.2f} MB).\n\n"
+                f"¿Deseas moverlos a la papelera (_papelera/)? Ningún archivo será eliminado permanentemente."
+            ),
+            actions=[
+                ft.TextButton("Cancelar", on_click=cancelar_limpieza),
+                ft.FilledButton("Mover a papelera", icon=ft.Icons.DELETE_SWEEP, on_click=confirmar_limpieza),
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
+        )
+        page.dialog = dialog
+        dialog.open = True
+        page.update()
 
     def _seleccionar_capa(self, cid: str) -> None:
         self.controlador.capa_seleccionada_id = cid

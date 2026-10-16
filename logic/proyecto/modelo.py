@@ -1,8 +1,9 @@
 import json
 import shutil
+from datetime import datetime
 from pathlib import Path
 from dataclasses import dataclass, field, asdict
-from typing import Optional, Dict, List, Any, Union
+from typing import Optional, Dict, List, Any, Union, Set
 from logic.models import BalloonInput, Condiciones
 from logic.diseno.esquema import EsquemaDiseno
 from logic.diseno.pintura import EsquemaPintura, VariantePico
@@ -253,4 +254,79 @@ def cargar_proyecto(ruta: str) -> Proyecto:
                 faltantes.append(capa.archivo)
     proyecto.recursos_faltantes = faltantes
     return proyecto
+
+
+def obtener_archivos_referenciados_por_proyectos(
+    carpeta_proyectos: Union[str, Path],
+    proyecto_actual: Optional[Proyecto] = None,
+) -> Set[str]:
+    """Obtiene el conjunto de nombres de archivo de recursos referenciados por todos los proyectos en disco y en memoria."""
+    referenciados: Set[str] = set()
+
+    # Proyectos guardados en carpeta_proyectos (por ejemplo guardados/)
+    base = Path(carpeta_proyectos)
+    if base.exists():
+        for f in base.rglob("*.json"):
+            # Ignorar archivos en papelera o temporales internos
+            if "_papelera" in f.parts:
+                continue
+            try:
+                data = json.loads(f.read_text(encoding="utf-8"))
+                if not isinstance(data, dict):
+                    continue
+                disenos = data.get("disenos", {})
+                for sec_diseno in disenos.values():
+                    if isinstance(sec_diseno, dict):
+                        for c in sec_diseno.get("capas", []):
+                            arch = c.get("archivo")
+                            if arch:
+                                referenciados.add(arch)
+            except Exception:
+                pass
+
+    # Proyecto actualmente cargado en memoria
+    if proyecto_actual:
+        for diseno in proyecto_actual.disenos.values():
+            for capa in diseno.capas:
+                if capa.archivo:
+                    referenciados.add(capa.archivo)
+
+    return referenciados
+
+
+def recursos_sin_uso(
+    carpeta_recursos: Union[str, Path],
+    archivos_referenciados: Set[str],
+) -> List[Path]:
+    """Retorna la lista de rutas de archivos en carpeta_recursos que no están referenciados por ningún proyecto."""
+    carp = Path(carpeta_recursos)
+    if not carp.exists() or not carp.is_dir():
+        return []
+
+    sin_uso: List[Path] = []
+    for item in carp.iterdir():
+        # Excluir subcarpetas (como _papelera), archivos ocultos y archivos .json de proyecto
+        if item.is_file() and not item.name.startswith(".") and not item.name.endswith(".json"):
+            if item.name not in archivos_referenciados:
+                sin_uso.append(item)
+
+    return sorted(sin_uso, key=lambda p: p.name)
+
+
+def mover_a_papelera(
+    archivos: List[Path],
+    carpeta_recursos: Union[str, Path],
+    subdirectorio_fecha: Optional[str] = None,
+) -> Path:
+    """Mueve archivos sin uso a <carpeta_recursos>/_papelera/<fecha_hora>/ sin borrar nada permanentemente."""
+    carp_base = Path(carpeta_recursos)
+    fecha_str = subdirectorio_fecha or datetime.now().strftime("%Y%m%d_%H%M%S")
+    destino_papelera = carp_base / "_papelera" / fecha_str
+    destino_papelera.mkdir(parents=True, exist_ok=True)
+
+    for arch in archivos:
+        if arch.exists() and arch.is_file():
+            shutil.move(str(arch), str(destino_papelera / arch.name))
+
+    return destino_papelera
 

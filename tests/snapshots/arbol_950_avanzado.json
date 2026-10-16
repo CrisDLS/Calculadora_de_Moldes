@@ -3055,6 +3055,23 @@
                                               "alignment": "start"
                                             },
                                             {
+                                              "tipo": "Row",
+                                              "visible": true,
+                                              "disabled": false,
+                                              "wrap": false,
+                                              "alignment": "end",
+                                              "hijos": [
+                                                {
+                                                  "tipo": "TextButton",
+                                                  "visible": true,
+                                                  "disabled": false,
+                                                  "tooltip": "Mover recursos huérfanos sin uso a la papelera",
+                                                  "icon": 66934
+                                                }
+                                              ],
+                                              "num_hijos": 1
+                                            },
+                                            {
                                               "tipo": "Divider",
                                               "visible": true,
                                               "disabled": false
@@ -3397,7 +3414,7 @@
                                               "icon": 69330
                                             }
                                           ],
-                                          "num_hijos": 14
+                                          "num_hijos": 15
                                         }
                                       ],
                                       "num_hijos": 1
