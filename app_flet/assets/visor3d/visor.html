@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Visor 3D — Globo Trompo Estrella</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      user-select: none;
+      background: #121214;
+      color: #e0e0e0;
+    }
+    #canvas-container {
+      width: 100vw;
+      height: 100vh;
+      display: block;
+    }
+    #ui-panel {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      width: 290px;
+      max-height: calc(100vh - 32px);
+      overflow-y: auto;
+      background: rgba(26, 26, 32, 0.90);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+      font-size: 13px;
+    }
+    .ui-title {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: #ffffff;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .ui-group {
+      margin-bottom: 12px;
+    }
+    .ui-label {
+      font-size: 12px;
+      color: #a0a0ab;
+      margin-bottom: 5px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .ui-slider {
+      width: 100%;
+      accent-color: #6366f1;
+      cursor: pointer;
+    }
+    .ui-row {
+      display: flex;
+      gap: 6px;
+      margin-top: 4px;
+    }
+    .ui-btn {
+      flex: 1;
+      padding: 6px 8px;
+      background: #2a2a36;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 6px;
+      color: #e0e0e0;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 500;
+      text-align: center;
+      transition: all 0.15s ease;
+    }
+    .ui-btn:hover {
+      background: #3a3a4c;
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+    .ui-btn.active {
+      background: #4f46e5;
+      border-color: #6366f1;
+      color: #ffffff;
+    }
+    #status-badge {
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(34, 197, 94, 0.2);
+      color: #4ade80;
+    }
+    #info-card {
+      position: absolute;
+      bottom: 16px;
+      left: 16px;
+      background: rgba(26, 26, 32, 0.85);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 12px;
+      color: #a0a0ab;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <div id="canvas-container"></div>
+
+  <div id="ui-panel">
+    <div class="ui-title">
+      <span>Trompo Estrella 3D</span>
+      <span id="status-badge">Conectado</span>
+    </div>
+
+    <div class="ui-group">
+      <div class="ui-label"><span>Ambiente</span></div>
+      <div class="ui-row">
+        <button id="btn-dia" class="ui-btn">Día</button>
+        <button id="btn-noche" class="ui-btn active">Noche</button>
+      </div>
+    </div>
+
+    <div class="ui-group">
+      <div class="ui-label">
+        <span>Azimut del Sol</span>
+        <span id="val-azimut">45°</span>
+      </div>
+      <input type="range" id="slider-azimut" class="ui-slider" min="0" max="360" step="5" value="45">
+    </div>
+
+    <div class="ui-group">
+      <div class="ui-label">
+        <span>Elevación del Sol</span>
+        <span id="val-elevacion">40°</span>
+      </div>
+      <input type="range" id="slider-elevacion" class="ui-slider" min="5" max="85" step="5" value="40">
+    </div>
+
+    <div class="ui-group">
+      <div class="ui-label">
+        <span>Intensidad Luz Solar</span>
+        <span id="val-sol">0.4</span>
+      </div>
+      <input type="range" id="slider-sol" class="ui-slider" min="0" max="2.5" step="0.1" value="0.4">
+    </div>
+
+    <div class="ui-group">
+      <div class="ui-label">
+        <span>Llama interior</span>
+        <span id="val-llama">1.5</span>
+      </div>
+      <input type="range" id="slider-llama" class="ui-slider" min="0" max="3" step="0.1" value="1.5">
+    </div>
+
+    <div class="ui-group">
+      <div class="ui-label">
+        <span>Exposición</span>
+        <span id="val-exposicion">1.0</span>
+      </div>
+      <input type="range" id="slider-exposicion" class="ui-slider" min="0.2" max="2.5" step="0.1" value="1.0">
+    </div>
+
+    <div class="ui-group">
+      <div class="ui-label"><span>Visualización</span></div>
+      <div class="ui-row">
+        <button id="btn-wireframe" class="ui-btn">Wireframe</button>
+        <button id="btn-costuras" class="ui-btn active">Costuras</button>
+      </div>
+    </div>
+
+    <div class="ui-group">
+      <div class="ui-label"><span>Cámara y Acciones</span></div>
+      <div class="ui-row">
+        <button id="btn-reset" class="ui-btn">Restablecer vista</button>
+        <button id="btn-captura" class="ui-btn">Guardar PNG</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="info-card">
+    <div id="txt-dimensiones">Cargando dimensiones...</div>
+    <div>Arrastra para rotar · Rueda para zoom · Clic derecho para desplazar</div>
+  </div>
+
+  <script src="/vendor/three.min.js"></script>
+  <script src="/vendor/OrbitControls.js"></script>
+  <script src="/visor.js"></script>
+</body>
+</html>

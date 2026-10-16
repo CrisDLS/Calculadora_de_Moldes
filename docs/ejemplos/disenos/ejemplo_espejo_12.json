@@ -1,0 +1,168 @@
+{
+    "version": 2,
+    "nombre": "ejemplo_espejo_12",
+    "entrada": {
+        "altura_cuerpo": 800.0,
+        "num_gajos": 24,
+        "num_hileras_picos": 2,
+        "ancho_costura": 1.0,
+        "usar_parametros_avanzados": false,
+        "diametro_boca": null,
+        "pestana_boca": 4.0,
+        "diametro_mecha": null,
+        "masa_mecha_g": null,
+        "altura_llama": 40.0,
+        "holgura_min": 10.0,
+        "alambre_mm": 2.0,
+        "varillas": 4
+    },
+    "condiciones": {
+        "papel_gm2": 20.0,
+        "extra_pegamento": 0.2,
+        "t_ambiente": 28.0,
+        "t_interior": 70.0,
+        "presion_pa": 101325.0,
+        "desperdicio": 0.15,
+        "pliego_cm": [
+            50.0,
+            70.0
+        ]
+    },
+    "esquema": {
+        "modo": "espejo_total",
+        "tam_grupo": 12,
+        "ciclo": null
+    },
+    "notas": "Ejemplo con 24 gajos en espejo total (G=12) y modo mitad.",
+    "hoja": "carta",
+    "escala": "auto",
+    "pintura": null,
+    "pliegos_por_paquete": 100,
+    "esquema_pico": null,
+    "disenos": {
+        "superior": {
+            "seccion": "superior",
+            "variante": "A",
+            "capas": [
+                {
+                    "id": "04d6a76a",
+                    "nombre": "Mosaico central",
+                    "tipo": "svg",
+                    "archivo": "mosaico_geometrico_04d6a76a.svg",
+                    "ancho_natural": 5.2917,
+                    "alto_natural": 5.2917,
+                    "x": -25.0,
+                    "y": 120.0,
+                    "ancho": 50.0,
+                    "alto": 50.0,
+                    "rotacion": 0.0,
+                    "reflejo_h": false,
+                    "reflejo_v": false,
+                    "opacidad": 1.0,
+                    "visible": true,
+                    "bloqueada": false
+                },
+                {
+                    "id": "d4da864b",
+                    "nombre": "Medallon base",
+                    "tipo": "svg",
+                    "archivo": "medallon_d4da864b.svg",
+                    "ancho_natural": 6.35,
+                    "alto_natural": 6.35,
+                    "x": -20.0,
+                    "y": 50.0,
+                    "ancho": 40.0,
+                    "alto": 40.0,
+                    "rotacion": 0.0,
+                    "reflejo_h": false,
+                    "reflejo_v": false,
+                    "opacidad": 0.9,
+                    "visible": true,
+                    "bloqueada": false
+                }
+            ]
+        },
+        "pico_A": {
+            "seccion": "pico",
+            "variante": "A",
+            "capas": [
+                {
+                    "id": "7c0b5480",
+                    "nombre": "Flor cantoya pico",
+                    "tipo": "raster",
+                    "archivo": "flor_cantoya_7c0b5480.png",
+                    "ancho_natural": 7.9375,
+                    "alto_natural": 7.9375,
+                    "x": -15.0,
+                    "y": 20.0,
+                    "ancho": 30.0,
+                    "alto": 30.0,
+                    "rotacion": 0.0,
+                    "reflejo_h": false,
+                    "reflejo_v": false,
+                    "opacidad": 1.0,
+                    "visible": true,
+                    "bloqueada": false
+                }
+            ]
+        }
+    },
+    "config_secciones": {
+        "superior": {
+            "seccion": "superior",
+            "esquema": {
+                "modo": "espejo_total",
+                "tam_grupo": 12,
+                "ciclo": null
+            },
+            "esquema_pico": null,
+            "dibujar": "completo",
+            "lienzo": "abanico",
+            "escala": "auto"
+        },
+        "inferior": {
+            "seccion": "inferior",
+            "esquema": {
+                "modo": "espejo_total",
+                "tam_grupo": 12,
+                "ciclo": null
+            },
+            "esquema_pico": null,
+            "dibujar": "completo",
+            "lienzo": "abanico",
+            "escala": "auto"
+        },
+        "pico": {
+            "seccion": "pico",
+            "esquema": null,
+            "esquema_pico": {
+                "modo_repeticion": "todas_a",
+                "variante_a": {
+                    "modo_caras": "igual",
+                    "color_0": "amarillo",
+                    "color_1": "amarillo",
+                    "color_2": "amarillo",
+                    "color_3": "amarillo"
+                },
+                "usar_variante_b": false,
+                "variante_b": {
+                    "modo_caras": "igual",
+                    "color_0": "rojo",
+                    "color_1": "rojo",
+                    "color_2": "rojo",
+                    "color_3": "rojo"
+                },
+                "motivos_por_cara": [
+                    0,
+                    1,
+                    2,
+                    3
+                ]
+            },
+            "dibujar": "completo",
+            "lienzo": "abanico",
+            "escala": "auto"
+        }
+    },
+    "recursos_faltantes": []
+}

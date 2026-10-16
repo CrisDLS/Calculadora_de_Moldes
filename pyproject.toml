@@ -1,0 +1,13 @@
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B"]
+ignore = [
+    "E501",  # Line too long (respetar formato actual sin reformateo masivo)
+    "B008",  # Do not perform function call in argument defaults
+]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true

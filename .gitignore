@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+guardados/
+docs/ejemplos/disenos/_prueba_usuario.*
+logs/
+.coverage*

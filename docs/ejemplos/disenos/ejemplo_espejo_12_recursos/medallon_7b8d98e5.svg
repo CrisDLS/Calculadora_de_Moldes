@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="240" height="240">
+  <circle cx="120" cy="120" r="110" fill="#2A9D8F" stroke="#264653" stroke-width="5" />
+  <circle cx="120" cy="120" r="92" fill="#E76F51" stroke="#F4A261" stroke-width="4" stroke-dasharray="6,4" />
+  <circle cx="120" cy="120" r="70" fill="#F4A261" stroke="#E76F51" stroke-width="3" />
+  <!-- Pétalos decorativos -->
+  <g fill="#E9C46A" stroke="#264653" stroke-width="2">
+    <path d="M 120,55 Q 135,80 120,105 Q 105,80 120,55 Z" />
+    <path d="M 120,185 Q 135,160 120,135 Q 105,160 120,185 Z" />
+    <path d="M 55,120 Q 80,135 105,120 Q 80,105 55,120 Z" />
+    <path d="M 185,120 Q 160,135 135,120 Q 160,105 185,120 Z" />
+    <path d="M 74,74 Q 99,92 110,80 Q 92,99 74,74 Z" />
+    <path d="M 166,74 Q 141,92 130,80 Q 148,99 166,74 Z" />
+    <path d="M 74,166 Q 99,148 110,160 Q 92,141 74,166 Z" />
+    <path d="M 166,166 Q 141,148 130,160 Q 148,141 166,166 Z" />
+  </g>
+  <circle cx="120" cy="120" r="22" fill="#264653" />
+  <circle cx="120" cy="120" r="10" fill="#E9C46A" />
+</svg>

@@ -1,0 +1,22 @@
+[
+  {"id": "blanco", "nombre": "Blanco", "hex": "#ffffff", "aproximado": false},
+  {"id": "negro", "nombre": "Negro", "hex": "#1a1a1a", "aproximado": false},
+  {"id": "rojo", "nombre": "Rojo", "hex": "#d32f2f", "aproximado": true},
+  {"id": "amarillo", "nombre": "Amarillo canario", "hex": "#fbc02d", "aproximado": true},
+  {"id": "azul_rey", "nombre": "Azul rey", "hex": "#1976d2", "aproximado": true},
+  {"id": "azul_cielo", "nombre": "Azul cielo", "hex": "#64b5f6", "aproximado": true},
+  {"id": "verde_bandera", "nombre": "Verde bandera", "hex": "#2e7d32", "aproximado": true},
+  {"id": "verde_limon", "nombre": "Verde limón", "hex": "#7cb342", "aproximado": true},
+  {"id": "naranja", "nombre": "Naranja", "hex": "#f57c00", "aproximado": true},
+  {"id": "rosa_mexicano", "nombre": "Rosa mexicano", "hex": "#e91e63", "aproximado": true},
+  {"id": "morado", "nombre": "Morado obispo", "hex": "#7b1fa2", "aproximado": true},
+  {"id": "lila", "nombre": "Lila", "hex": "#ba68c8", "aproximado": true},
+  {"id": "cafe", "nombre": "Café", "hex": "#5d4037", "aproximado": true},
+  {"id": "turquesa", "nombre": "Turquesa", "hex": "#00acc1", "aproximado": true},
+  {"id": "dorado", "nombre": "Dorado metálico", "hex": "#c5a059", "aproximado": true},
+  {"id": "plata", "nombre": "Plata metálico", "hex": "#b0bec5", "aproximado": true},
+  {"id": "vino", "nombre": "Vino tinto", "hex": "#880e4f", "aproximado": true},
+  {"id": "coral", "nombre": "Coral", "hex": "#ff7043", "aproximado": true},
+  {"id": "mandarina", "nombre": "Mandarina", "hex": "#ff9800", "aproximado": true},
+  {"id": "gris_humo", "nombre": "Gris humo", "hex": "#757575", "aproximado": true}
+]
