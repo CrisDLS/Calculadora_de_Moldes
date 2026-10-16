@@ -24,7 +24,8 @@ from logic.diseno.gestos_lienzo import (
     rotar,
     tiradores,
 )
-from logic.diseno.lienzo import CapaDiseno
+from logic.diseno.lienzo import CapaDiseno, obtener_fragmento_capa
+from logic.registro import inicializar_registro
 
 logger = logging.getLogger("globos")
 
@@ -81,15 +82,13 @@ class MarcoEdicion:
         self.img_preview = ft.Image(
             src="",
             fit=ft.BoxFit.FILL,
-            opacity=0.8,
+            opacity=0.85,
             visible=False,
-            expand=True,
         )
 
         self.detector_cuerpo = ft.GestureDetector(
             content=ft.Container(
                 content=self.img_preview,
-                expand=True,
             ),
             drag_interval=16,
             mouse_cursor=ft.MouseCursor.MOVE,
@@ -98,7 +97,6 @@ class MarcoEdicion:
             on_pan_end=self._on_cuerpo_pan_end,
             on_pan_cancel=self._on_cuerpo_pan_cancel,
             on_exit=self._on_cuerpo_exit,
-            expand=True,
         )
 
         self.caja_marco = ft.Container(
@@ -205,6 +203,12 @@ class MarcoEdicion:
 
         self._actualizar_previsualizacion_imagen()
         self._posicionar_marco_y_tiradores()
+        self._registrar_estado_fantasma("entrar_editar")
+        try:
+            self.stack.update()
+        except Exception:
+            pass
+        self.actualizar_controles_locales()
 
     def ocultar(self) -> None:
         """Oculta el marco y desactiva la interacción."""
@@ -213,9 +217,15 @@ class MarcoEdicion:
         self.capa_activa = None
         self.stack.visible = False
         self.caja_marco.visible = False
+        self.img_preview.visible = False
         for c in self.tiradores_controles.values():
             c.visible = False
         self.cont_rot.visible = False
+        try:
+            self.stack.update()
+        except Exception:
+            pass
+        self.actualizar_controles_locales()
 
     def actualizar(
         self,
@@ -233,20 +243,65 @@ class MarcoEdicion:
             self.mantener_proporcion = mantener_proporcion
 
         if self.stack.visible and self.capa_activa and self.conversion:
+            self._actualizar_previsualizacion_imagen()
             self._posicionar_marco_y_tiradores()
+            self._registrar_estado_fantasma("actualizar_capa")
+            self.actualizar_controles_locales()
 
     def _actualizar_previsualizacion_imagen(self) -> None:
-        """Configura la imagen fantasma dentro del marco para previsualización."""
+        """Configura la imagen o SVG autónomo fantasma dentro del marco para previsualización."""
         if not self.capa_activa or not self.carpeta_recursos:
             self.img_preview.visible = False
             return
 
-        ruta_img = self.carpeta_recursos / self.capa_activa.archivo
-        if ruta_img.exists() and self.capa_activa.tipo != "svg":
-            self.img_preview.src = str(ruta_img)
+        c = self.capa_activa
+        ruta_img = self.carpeta_recursos / c.archivo
+        if not ruta_img.exists() or not ruta_img.is_file():
+            self.img_preview.visible = False
+            return
+
+        opac = max(0.15, min(1.0, float(c.opacidad) * 0.85))
+        self.img_preview.opacity = opac
+
+        if c.tipo == "svg":
+            contenido_frag, vb = obtener_fragmento_capa(c, self.carpeta_recursos, vista_previa=True)
+            if not contenido_frag:
+                self.img_preview.visible = False
+                return
+            vx, vy, vw, vh = (
+                vb
+                if (vb and len(vb) == 4 and vb[2] > 0 and vb[3] > 0)
+                else (0.0, 0.0, 100.0, 100.0)
+            )
+            cx_vb = vx + vw / 2.0
+            cy_vb = vy + vh / 2.0
+            transforms_vb = []
+            if c.reflejo_h:
+                transforms_vb.append(
+                    f"translate({cx_vb:.4f} {cy_vb:.4f}) scale(-1 1) translate({-cx_vb:.4f} {-cy_vb:.4f})"
+                )
+            if c.reflejo_v:
+                transforms_vb.append(
+                    f"translate({cx_vb:.4f} {cy_vb:.4f}) scale(1 -1) translate({-cx_vb:.4f} {-cy_vb:.4f})"
+                )
+            cuerpo_svg = (
+                f'<g transform="{" ".join(transforms_vb)}">\n{contenido_frag}\n</g>'
+                if transforms_vb
+                else contenido_frag
+            )
+            svg_autonomo = (
+                f'<svg xmlns="http://www.w3.org/2000/svg" '
+                f'xmlns:xlink="http://www.w3.org/1999/xlink" '
+                f'viewBox="{vx} {vy} {vw} {vh}" '
+                f'preserveAspectRatio="none">\n'
+                f"{cuerpo_svg}\n"
+                f"</svg>"
+            )
+            self.img_preview.src = svg_autonomo.encode("utf-8")
             self.img_preview.visible = True
         else:
-            self.img_preview.visible = False
+            self.img_preview.src = ruta_img.read_bytes()
+            self.img_preview.visible = True
 
     def _posicionar_marco_y_tiradores(self) -> None:
         """Calcula y aplica las coordenadas en píxeles del marco y de los 8 tiradores."""
@@ -261,11 +316,13 @@ class MarcoEdicion:
         w_px = max(1.0, c.ancho * conv.px_por_cm)
         h_px = max(1.0, c.alto * conv.px_por_cm)
 
-        # Contenedor del marco
+        # Contenedor del marco y su vista previa fantasma
         self.caja_marco.left = px_cx - w_px / 2.0
         self.caja_marco.top = py_cy - h_px / 2.0
         self.caja_marco.width = w_px
         self.caja_marco.height = h_px
+        self.img_preview.width = w_px
+        self.img_preview.height = h_px
         # En pantalla antihorario es rotación negativa:
         rad_pantalla = -math.radians(c.rotacion)
         self.caja_marco.rotate = ft.Rotate(angle=rad_pantalla)
@@ -296,9 +353,34 @@ class MarcoEdicion:
         else:
             self.cont_rot.visible = False
 
+    def _registrar_estado_fantasma(self, evento: str) -> None:
+        """Escribe en logs/globos.log (INFO) las métricas de la zona, encuadre, marco y capa fantasma."""
+        try:
+            inicializar_registro()
+            c = self.capa_activa
+            conv = self.conversion
+            v = conv.vista if conv else None
+            zona_str = f"({conv.zona_w:.1f}x{conv.zona_h:.1f})" if conv else "None"
+            enc_str = f"({v.x:.1f},{v.y:.1f},{v.ancho:.1f},{v.alto:.1f})" if v else "None"
+            m = self.caja_marco
+            f = self.img_preview
+            src_val = f.src
+            src_tipo = type(src_val).__name__
+            src_len = len(src_val) if src_val else 0
+            nom = f"{c.nombre} ({c.tipo})" if c else "None"
+            logger.info(
+                f"[{evento}] zona={zona_str} encuadre={enc_str} | capa={nom} | "
+                f"marco: left={m.left} top={m.top} width={m.width} height={m.height} visible={m.visible} | "
+                f"fantasma: left={m.left} top={m.top} width={f.width} height={f.height} "
+                f"opacity={f.opacity} visible={f.visible} src_tipo={src_tipo} src_len={src_len}"
+            )
+        except Exception:
+            pass
+
     def actualizar_controles_locales(self) -> None:
         """Actualiza atómicamente solo los controles del marco en pantalla."""
         try:
+            self.img_preview.update()
             self.caja_marco.update()
             for cont in self.tiradores_controles.values():
                 cont.update()
