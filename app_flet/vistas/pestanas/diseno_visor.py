@@ -210,7 +210,12 @@ class VisorDisenoGestor:
                     capa, conv, carp, mantener_proporcion=self.controlador.mantener_proporcion
                 )
 
-            self.lbl_estado_diseno.value = "Modo Editar: arrastra el marco o sus tiradores"
+            if self.controlador.diseno_lienzo_modo == "mitad":
+                self.lbl_estado_diseno.value = (
+                    "Modo Editar: arrastra el marco o sus tiradores · El reflejo se muestra al volver a Navegar"
+                )
+            else:
+                self.lbl_estado_diseno.value = "Modo Editar: arrastra el marco o sus tiradores"
             try:
                 self.lbl_estado_diseno.update()
             except Exception:
@@ -236,11 +241,11 @@ class VisorDisenoGestor:
 
     def _al_cambiar_geometria_marco(self, capa, finalizado: bool) -> None:
         """Callback invocado por MarcoEdicion ante micro-arrastres o al soltar."""
-        # 1. Actualizar campos del inspector inmediatamente sin recargar SVG
+        # 1. Actualizar valores en memoria durante el arrastre; enviar .update() al inspector solo al soltar
         self.inspector.actualizar_campos_geometria(
-            capa.x, capa.y, capa.ancho, capa.alto, capa.rotacion
+            capa.x, capa.y, capa.ancho, capa.alto, capa.rotacion, actualizar_ui=finalizado
         )
-        if self.debug_mode:
+        if self.debug_mode and finalizado:
             self.telemetria_arrastre_eventos = self.marco_edicion.telemetria_eventos_arrastre
             self.telemetria_eventos_por_segundo = self.marco_edicion.telemetria_eventos_sec
             self._actualizar_debug_diseno()

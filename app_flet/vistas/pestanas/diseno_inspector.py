@@ -182,24 +182,42 @@ class PanelCapasInspector:
         ancho: float,
         alto: float,
         rotacion: Optional[float] = None,
+        actualizar_ui: bool = True,
     ) -> None:
         """Actualiza los campos de texto del inspector sin disparar eventos on_change."""
         self._actualizando_programatico = True
         try:
-            self.txt_pos_x.value = f"{x:.2f}"
-            self.txt_pos_y.value = f"{y:.2f}"
-            self.txt_ancho_capa.value = f"{ancho:.2f}"
-            self.txt_alto_capa.value = f"{alto:.2f}"
+            vx = f"{x:.2f}"
+            vy = f"{y:.2f}"
+            vw = f"{ancho:.2f}"
+            vh = f"{alto:.2f}"
+            c_x = self.txt_pos_x.value != vx
+            c_y = self.txt_pos_y.value != vy
+            c_w = self.txt_ancho_capa.value != vw
+            c_h = self.txt_alto_capa.value != vh
+            self.txt_pos_x.value = vx
+            self.txt_pos_y.value = vy
+            self.txt_ancho_capa.value = vw
+            self.txt_alto_capa.value = vh
+            c_r = False
             if rotacion is not None:
-                self.slider_rotacion.value = float(rotacion)
-                self.lbl_rotacion_val.value = f"{rotacion:.0f}°"
-            self.txt_pos_x.update()
-            self.txt_pos_y.update()
-            self.txt_ancho_capa.update()
-            self.txt_alto_capa.update()
-            if rotacion is not None:
-                self.slider_rotacion.update()
-                self.lbl_rotacion_val.update()
+                vr = float(rotacion)
+                vlr = f"{rotacion:.0f}°"
+                c_r = (self.slider_rotacion.value != vr) or (self.lbl_rotacion_val.value != vlr)
+                self.slider_rotacion.value = vr
+                self.lbl_rotacion_val.value = vlr
+            if actualizar_ui:
+                if c_x:
+                    self.txt_pos_x.update()
+                if c_y:
+                    self.txt_pos_y.update()
+                if c_w:
+                    self.txt_ancho_capa.update()
+                if c_h:
+                    self.txt_alto_capa.update()
+                if c_r:
+                    self.slider_rotacion.update()
+                    self.lbl_rotacion_val.update()
         except Exception:
             pass
         finally:

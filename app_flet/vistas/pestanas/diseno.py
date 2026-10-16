@@ -294,6 +294,8 @@ class PestanaDiseno(PestanaBase):
         if vm.svg_diseno and not vm.desactualizado:
             self.lbl_vacio_diseno.visible = False
             self.panel_contenido_diseno.visible = True
+            if self.gestor_visor.modo_interaccion_diseno == "editar":
+                self.controlador.actualizar_svg_diseno(modo_fantasma=True)
             self.gestor_visor.renderizar_diseno(reset_vista=reset_zoom)
         else:
             self.lbl_vacio_diseno.visible = True
