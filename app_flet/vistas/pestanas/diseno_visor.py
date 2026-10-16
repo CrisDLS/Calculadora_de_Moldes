@@ -210,7 +210,12 @@ class VisorDisenoGestor:
                     capa, conv, carp, mantener_proporcion=self.controlador.mantener_proporcion
                 )
 
-            self.lbl_estado_diseno.value = "Modo Editar: arrastra el marco o sus tiradores"
+            if self.controlador.diseno_lienzo_modo == "mitad":
+                self.lbl_estado_diseno.value = (
+                    "Modo Editar: arrastra el marco o sus tiradores · El reflejo se muestra al volver a Navegar"
+                )
+            else:
+                self.lbl_estado_diseno.value = "Modo Editar: arrastra el marco o sus tiradores"
             try:
                 self.lbl_estado_diseno.update()
             except Exception:

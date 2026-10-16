@@ -337,10 +337,10 @@ def svg_abanico(
                     lines.append(f'      {elem_svg}')
             lines.append('    </g>')
 
-            # Reflejo simétrico atenuado en mitad izquierda
-            if mostrar_reflejo:
+            # Reflejo simétrico atenuado en mitad izquierda (recortado a la mitad izquierda; oculto en modo editar/fantasma)
+            if mostrar_reflejo and not modo_fantasma and d_contorno_ref:
                 todas_capas = construir_grupo(diseno, esquema, modo_lienzo="mitad")
-                lines.append('    <g id="diseno-mitad-reflejo" opacity="0.38">')
+                lines.append('    <g id="diseno-mitad-reflejo" opacity="0.38" clip-path="url(#clip-abanico-reflejo)">')
                 for c in todas_capas:
                     if c.id.endswith("_reflejo"):
                         elem_svg = _renderizar_capa_en_abanico(

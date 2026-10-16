@@ -65,6 +65,7 @@ def svg_gajo(
 
     pts_left_cut: List[Tuple[float, float]] = []
     pts_right_cut: List[Tuple[float, float]] = []
+    pts_center_cut: List[Tuple[float, float]] = []
     pts_left_seam: List[Tuple[float, float]] = []
     pts_right_seam: List[Tuple[float, float]] = []
 
@@ -74,11 +75,16 @@ def svg_gajo(
         w_seam = max(0.0, p.ancho_medio - costura / 2.0) * factor
         pts_left_cut.append((cx - w_cut, y))
         pts_right_cut.append((cx + w_cut, y))
+        pts_center_cut.append((cx, y))
         pts_left_seam.append((cx - w_seam, y))
         pts_right_seam.append((cx + w_seam, y))
 
     path_cut = formatear_path_simetrico(pts_right_cut, pts_left_cut)
     path_seam = formatear_path_simetrico(pts_right_seam, pts_left_seam)
+
+    tam_g = esquema.tam_grupo if esquema else 5
+    k_grupo = idx_en_grupo % tam_g
+    es_central_impar = (dibujar == "mitad") and (tam_g % 2 == 1) and (k_grupo == tam_g // 2)
 
     # SVG XML
     lines = [
@@ -89,8 +95,19 @@ def svg_gajo(
         f'    <clipPath id="clip-gajo-{indice}">',
         f'      <path d="{path_cut}"/>',
         f'    </clipPath>',
-        f'  </defs>',
     ]
+    if es_central_impar:
+        path_cut_der = formatear_path_simetrico(pts_right_cut, pts_center_cut)
+        path_cut_izq = formatear_path_simetrico(pts_center_cut, pts_left_cut)
+        lines.extend([
+            f'    <clipPath id="clip-gajo-{indice}-der">',
+            f'      <path d="{path_cut_der}"/>',
+            f'    </clipPath>',
+            f'    <clipPath id="clip-gajo-{indice}-izq">',
+            f'      <path d="{path_cut_izq}"/>',
+            f'    </clipPath>',
+        ])
+    lines.append('  </defs>')
 
     if estilo.fondo:
         lines.append(f'  <rect width="100%" height="100%" fill="{estilo.fondo}" id="fondo"/>')
@@ -113,80 +130,100 @@ def svg_gajo(
     if diseno and diseno.capas:
         carp_rec = Path(carpeta_recursos) if carpeta_recursos else None
         pieza_plana = pieza_a_geometria_plana(resultado, entrada, seccion)
-        tam_g = esquema.tam_grupo if esquema else 5
         ab = abanico(pieza_plana, n=tam_g, centrado=True)
-        t_gajo = transformacion_a_gajo(ab, idx_en_grupo % ab.n)
+        t_gajo = transformacion_a_gajo(ab, k_grupo)
+        psi = pieza_plana.angulo_abertura_rad
+        theta_i = (k_grupo - (ab.n - 1) / 2.0) * psi
+        theta_deg = math.degrees(theta_i)
+        aplicar_espejo_esquema = es_reflejo and (dibujar != "mitad")
 
-        # Si el diseño fue hecho en mitad, expandir las capas reflejadas para cubrir el grupo
-        capas_a_procesar = construir_grupo(diseno, esquema, modo_lienzo="mitad") if dibujar == "mitad" else list(diseno.capas)
-
-        for capa in capas_a_procesar:
-            if not capa.visible:
-                continue
-
-            # Centro de la capa en cm del abanico
-            cx_capa_cm = capa.x + capa.ancho / 2.0
-            cy_capa_cm = capa.y + capa.alto / 2.0
-
-            # Transformar centro al sistema canónico del gajo
+        def _render_capa_gajo(capa_item, indent: str = "    ") -> Optional[str]:
+            if not capa_item.visible:
+                return None
+            cx_capa_cm = capa_item.x + capa_item.ancho / 2.0
+            cy_capa_cm = capa_item.y + capa_item.alto / 2.0
             cx_canon_cm, cy_canon_cm = t_gajo.transformar_punto((cx_capa_cm, cy_capa_cm))
-
-            # Si este gajo es un motivo en espejo, reflejar horizontalmente
-            if es_reflejo:
+            if aplicar_espejo_esquema:
                 cx_canon_cm = -cx_canon_cm
 
-            # En mm del SVG canónico:
             x_svg_center = cx + cx_canon_cm * factor
             if seccion == "inferior":
                 y_svg_center = margin_y + (L_real - cy_canon_cm) * factor
             else:
                 y_svg_center = margin_y + cy_canon_cm * factor
 
-            w_svg = capa.ancho * factor
-            h_svg = capa.alto * factor
+            w_svg = capa_item.ancho * factor
+            h_svg = capa_item.alto * factor
             x_svg_top_left = x_svg_center - w_svg / 2.0
             y_svg_top_left = y_svg_center - h_svg / 2.0
 
-            # Ángulo de rotación compensado
-            psi = pieza_plana.angulo_abertura_rad
-            theta_i = (idx_en_grupo % ab.n - (ab.n - 1) / 2.0) * psi
-            theta_deg = math.degrees(theta_i)
-            rot_final = capa.rotacion - theta_deg
-            if es_reflejo:
+            rot_final = capa_item.rotacion - theta_deg
+            if aplicar_espejo_esquema:
                 rot_final = -rot_final
-
-            ref_h = (not capa.reflejo_h) if es_reflejo else capa.reflejo_h
+            ref_h = (not capa_item.reflejo_h) if aplicar_espejo_esquema else capa_item.reflejo_h
 
             transforms = []
             if abs(rot_final) > 1e-4:
                 transforms.append(f"rotate({rot_final:.2f} {x_svg_center:.2f} {y_svg_center:.2f})")
             if ref_h:
                 transforms.append(f"translate({x_svg_center:.2f} {y_svg_center:.2f}) scale(-1 1) translate({-x_svg_center:.2f} {-y_svg_center:.2f})")
-            if capa.reflejo_v:
+            if capa_item.reflejo_v:
                 transforms.append(f"translate({x_svg_center:.2f} {y_svg_center:.2f}) scale(1 -1) translate({-x_svg_center:.2f} {-y_svg_center:.2f})")
 
             trans_str = f' transform="{" ".join(transforms)}"' if transforms else ""
+            contenido_frag, vb = obtener_fragmento_capa(capa_item, carp_rec, vista_previa=vista_previa)
 
-            contenido_frag, vb = obtener_fragmento_capa(capa, carp_rec, vista_previa=vista_previa)
-
-            if capa.tipo == "svg" and contenido_frag:
+            if capa_item.tipo == "svg" and contenido_frag:
                 vx, vy, vw, vh = vb
                 if vw > 0 and vh > 0:
                     s = min(w_svg / vw, h_svg / vh)
                     dx = (w_svg - vw * s) / 2.0 - vx * s
                     dy = (h_svg - vh * s) / 2.0 - vy * s
                     t_local = f"translate({x_svg_top_left:.2f} {y_svg_top_left:.2f}) translate({dx:.2f} {dy:.2f}) scale({s:.4f})"
-                    lines.append(
-                        f'    <g id="gajo-capa-{capa.id}" opacity="{capa.opacidad:.2f}"{trans_str}>\n'
-                        f'      <g transform="{t_local}">\n'
+                    return (
+                        f'{indent}<g id="gajo-capa-{capa_item.id}" opacity="{capa_item.opacidad:.2f}"{trans_str}>\n'
+                        f'{indent}  <g transform="{t_local}">\n'
                         f'{contenido_frag}\n'
-                        f'      </g>\n'
-                        f'    </g>'
+                        f'{indent}  </g>\n'
+                        f'{indent}</g>'
                     )
-            elif capa.tipo != "svg" and contenido_frag:
-                lines.append(f'    <image href="{contenido_frag}" x="{x_svg_top_left:.2f}" y="{y_svg_top_left:.2f}" width="{w_svg:.2f}" height="{h_svg:.2f}" opacity="{capa.opacidad:.2f}"{trans_str} id="gajo-capa-{capa.id}"/>')
+            elif capa_item.tipo != "svg" and contenido_frag:
+                return f'{indent}<image href="{contenido_frag}" x="{x_svg_top_left:.2f}" y="{y_svg_top_left:.2f}" width="{w_svg:.2f}" height="{h_svg:.2f}" opacity="{capa_item.opacidad:.2f}"{trans_str} id="gajo-capa-{capa_item.id}"/>'
+            return f'{indent}<rect x="{x_svg_top_left:.2f}" y="{y_svg_top_left:.2f}" width="{w_svg:.2f}" height="{h_svg:.2f}" fill="none" stroke="#888888" stroke-width="0.3"{trans_str} id="gajo-capa-{capa_item.id}"/>'
+
+        if dibujar == "mitad":
+            todas = construir_grupo(diseno, esquema, modo_lienzo="mitad")
+            capas_orig = [c for c in todas if not c.id.endswith("_reflejo")]
+            capas_refl = [c for c in todas if c.id.endswith("_reflejo")]
+
+            if es_central_impar:
+                lines.append(f'    <g id="diseno-gajo-central-der" clip-path="url(#clip-gajo-{indice}-der)">')
+                for c in capas_orig:
+                    el = _render_capa_gajo(c, indent="      ")
+                    if el:
+                        lines.append(el)
+                lines.append('    </g>')
+                lines.append(f'    <g id="diseno-gajo-central-izq" clip-path="url(#clip-gajo-{indice}-izq)">')
+                for c in capas_refl:
+                    el = _render_capa_gajo(c, indent="      ")
+                    if el:
+                        lines.append(el)
+                lines.append('    </g>')
+            elif k_grupo < (tam_g - 1) / 2.0:
+                for c in capas_refl:
+                    el = _render_capa_gajo(c, indent="    ")
+                    if el:
+                        lines.append(el)
             else:
-                lines.append(f'    <rect x="{x_svg_top_left:.2f}" y="{y_svg_top_left:.2f}" width="{w_svg:.2f}" height="{h_svg:.2f}" fill="none" stroke="#888888" stroke-width="0.3"{trans_str} id="gajo-capa-{capa.id}"/>')
+                for c in capas_orig:
+                    el = _render_capa_gajo(c, indent="    ")
+                    if el:
+                        lines.append(el)
+        else:
+            for c in diseno.capas:
+                el = _render_capa_gajo(c, indent="    ")
+                if el:
+                    lines.append(el)
 
     lines.append('  </g>')
 
