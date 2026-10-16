@@ -361,3 +361,151 @@ def test_estres_20000_triangulos_y_png_4k_300_eventos(entorno_edicion, tmp_path)
     dur_total = time.perf_counter() - t_inicio
     assert dur_total < 5.0  # 300 eventos procesados en menos de 5 segundos
     assert marco._arrastrando is False
+
+
+# ------------------------------------------------------------------------------
+# 9. "El último gana", posición absoluta y actualización de un solo control
+# ------------------------------------------------------------------------------
+
+
+class DummyGlobalDragEvent:
+    def __init__(self, gx: float, gy: float, dx: float = 0.0, dy: float = 0.0):
+        self.global_position = DummyPoint(gx, gy)
+        self.local_position = DummyPoint(gx, gy)
+        self.local_delta = DummyPoint(dx, dy)
+        self.global_delta = DummyPoint(dx, dy)
+
+
+def test_ultimo_gana_300_eventos_max_60_aplicaciones_y_posicion_final_exacta(entorno_edicion):
+    vista, pestana, gestor, capa, _ = entorno_edicion
+    marco = gestor.marco_edicion
+    pestana.cambiar_modo_interaccion("editar")
+
+    conv = gestor.obtener_conversion()
+    x_ini, y_ini = marco.capa_activa.x, marco.capa_activa.y
+    dx_total_px, dy_total_px = 150.0, -90.0
+    dx_esp_cm, dy_esp_cm = conv.delta_px_a_plano(dx_total_px, dy_total_px)
+
+    marco._on_cuerpo_pan_start(DummyGlobalDragEvent(100.0, 200.0))
+    for i in range(1, 301):
+        frac = i / 300.0
+        gx = 100.0 + dx_total_px * frac
+        gy = 200.0 + dy_total_px * frac
+        marco._on_cuerpo_pan_update(
+            DummyGlobalDragEvent(gx, gy, dx_total_px / 300.0, dy_total_px / 300.0)
+        )
+    marco._on_cuerpo_pan_end(None)
+
+    assert marco.telemetria_eventos_arrastre == 300
+    assert 1 <= marco.telemetria_aplicaciones <= 60
+    assert abs(marco.capa_activa.x - (x_ini + dx_esp_cm)) < 1e-9
+    assert abs(marco.capa_activa.y - (y_ini + dy_esp_cm)) < 1e-9
+
+
+def test_posicion_absoluta_exacta_saltando_eventos_intermedios(entorno_edicion):
+    vista, pestana, gestor, capa, _ = entorno_edicion
+    marco = gestor.marco_edicion
+    pestana.cambiar_modo_interaccion("editar")
+    conv = gestor.obtener_conversion()
+
+    # Caso A: 60 pasos continuos sin pérdidas
+    capa.x, capa.y, capa.ancho, capa.alto = 0.0, 175.0, 40.0, 40.0
+    marco.actualizar(capa, conv)
+    marco._on_cuerpo_pan_start(DummyGlobalDragEvent(100.0, 300.0))
+    for step in range(1, 61):
+        f = step / 60.0
+        marco._on_cuerpo_pan_update(
+            DummyGlobalDragEvent(100.0 + 120.0 * f, 300.0 - 80.0 * f, 2.0, -80.0 / 60.0)
+        )
+    marco._on_cuerpo_pan_end(None)
+    pos_continua = (marco.capa_activa.x, marco.capa_activa.y)
+
+    # Caso B: se saltan 55 de los 60 eventos intermedios (solo llegan 5 eventos irregulares)
+    capa.x, capa.y, capa.ancho, capa.alto = 0.0, 175.0, 40.0, 40.0
+    marco.actualizar(capa, conv)
+    marco._on_cuerpo_pan_start(DummyGlobalDragEvent(100.0, 300.0))
+    for step in [3, 19, 41, 52, 60]:
+        f = step / 60.0
+        # Incluso si local_delta solo tuviera el último micro-paso, global_position manda
+        marco._on_cuerpo_pan_update(
+            DummyGlobalDragEvent(100.0 + 120.0 * f, 300.0 - 80.0 * f, 2.0, -80.0 / 60.0)
+        )
+    marco._on_cuerpo_pan_end(None)
+    pos_con_saltos = (marco.capa_activa.x, marco.capa_activa.y)
+
+    assert abs(pos_continua[0] - pos_con_saltos[0]) < 1e-9
+    assert abs(pos_continua[1] - pos_con_saltos[1]) < 1e-9
+
+    # Verificar lo mismo en estiramiento con tirador 'br'
+    capa.x, capa.y, capa.ancho, capa.alto = 0.0, 175.0, 40.0, 40.0
+    marco.actualizar(capa, conv)
+    marco._on_tirador_pan_start("br", DummyGlobalDragEvent(200.0, 200.0))
+    for step in range(1, 31):
+        f = step / 30.0
+        marco._on_tirador_pan_update(
+            "br", DummyGlobalDragEvent(200.0 + 60.0 * f, 200.0 + 30.0 * f, 2.0, 1.0)
+        )
+    marco._on_tirador_pan_end("br", None)
+    dim_continua = (
+        marco.capa_activa.x,
+        marco.capa_activa.y,
+        marco.capa_activa.ancho,
+        marco.capa_activa.alto,
+    )
+
+    capa.x, capa.y, capa.ancho, capa.alto = 0.0, 175.0, 40.0, 40.0
+    marco.actualizar(capa, conv)
+    marco._on_tirador_pan_start("br", DummyGlobalDragEvent(200.0, 200.0))
+    for step in [4, 17, 30]:
+        f = step / 30.0
+        marco._on_tirador_pan_update(
+            "br", DummyGlobalDragEvent(200.0 + 60.0 * f, 200.0 + 30.0 * f, 2.0, 1.0)
+        )
+    marco._on_tirador_pan_end("br", None)
+    dim_con_saltos = (
+        marco.capa_activa.x,
+        marco.capa_activa.y,
+        marco.capa_activa.ancho,
+        marco.capa_activa.alto,
+    )
+
+    for a, b in zip(dim_continua, dim_con_saltos):
+        assert abs(a - b) < 1e-9
+
+
+def test_mover_actualiza_un_solo_control_y_tiradores_28px(entorno_edicion, monkeypatch):
+    import flet as ft
+
+    vista, pestana, gestor, capa, _ = entorno_edicion
+    marco = gestor.marco_edicion
+    pestana.cambiar_modo_interaccion("editar")
+
+    # Zona táctil de los 8 tiradores y rotación >= 24 px
+    for tid, cont in marco.tiradores_controles.items():
+        assert cont.width >= 24.0 and cont.height >= 24.0, f"Tirador {tid} < 24 px"
+    assert marco.cont_rot.width >= 24.0 and marco.cont_rot.height >= 24.0
+
+    # Sin animaciones implícitas en el grupo de edición
+    assert getattr(marco.grupo_edicion, "animate_position", None) is None
+    assert getattr(marco.grupo_edicion, "animate", None) is None
+
+    id_src_antes = id(marco.img_preview.src)
+    controles_actualizados = []
+    orig_update = ft.Control.update
+
+    def spy_update(self_ctrl, *args, **kwargs):
+        controles_actualizados.append(self_ctrl)
+        return orig_update(self_ctrl, *args, **kwargs)
+
+    monkeypatch.setattr(ft.Control, "update", spy_update)
+
+    marco._on_cuerpo_pan_start(DummyGlobalDragEvent(100.0, 100.0))
+    marco._on_cuerpo_pan_update(DummyGlobalDragEvent(135.0, 120.0, 35.0, 20.0))
+
+    # Al mover, se actualiza únicamente 1 control: marco.grupo_edicion
+    assert len(controles_actualizados) == 1
+    assert controles_actualizados[0] is marco.grupo_edicion
+    assert id(marco.img_preview.src) == id_src_antes
+
+    marco._on_cuerpo_pan_end(None)
+
