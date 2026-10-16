@@ -69,8 +69,9 @@ def crear_png_180kb(ruta: Path) -> int:
 
 def ejecutar_medicion(etapa: str) -> List[Dict]:
     os.chdir(RAIZ)
-    rec_dir = RAIZ / "guardados" / "recursos_temp"
-    rec_dir.mkdir(parents=True, exist_ok=True)
+    _temp_dir = tempfile.TemporaryDirectory(prefix="globos_bench_")
+    atexit.register(_temp_dir.cleanup)
+    rec_dir = Path(_temp_dir.name)
 
     ruta_png = rec_dir / "_bench_180kb.png"
     bytes_png = crear_png_180kb(ruta_png)

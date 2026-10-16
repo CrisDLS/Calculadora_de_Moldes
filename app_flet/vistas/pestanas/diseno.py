@@ -76,7 +76,6 @@ class PestanaDiseno(PestanaBase):
         self.panel_inspector_capa = self.inspector.panel_inspector_capa
         self.col_lista_capas = self.inspector.col_lista_capas
         self.btn_anadir_capa = self.inspector.btn_anadir_capa
-        self.btn_limpiar_recursos = self.inspector.btn_limpiar_recursos
         self.txt_nombre_capa = self.inspector.txt_nombre_capa
         self.txt_pos_x = self.inspector.txt_pos_x
         self.txt_pos_y = self.inspector.txt_pos_y
@@ -222,7 +221,6 @@ class PestanaDiseno(PestanaBase):
                         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                     ),
                     self.col_lista_capas,
-                    ft.Row([self.btn_limpiar_recursos], alignment=ft.MainAxisAlignment.END),
                     ft.Divider(color=ft.Colors.OUTLINE),
                     self.panel_inspector_capa,
                     ft.Divider(color=ft.Colors.OUTLINE),

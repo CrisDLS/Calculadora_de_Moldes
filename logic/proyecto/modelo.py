@@ -1,3 +1,4 @@
+import os
 import json
 import shutil
 from datetime import datetime
@@ -11,6 +12,13 @@ from logic.diseno.diseno_pico import EsquemaDisenoPico
 from logic.diseno.lienzo import Diseno
 
 from logic.diseno.config_seccion import ConfigSeccion
+
+CARPETA_DATOS_DEFAULT: str = "guardados"
+
+
+def obtener_carpeta_datos() -> Path:
+    """Retorna la carpeta base de datos del usuario (configurable vía GLOBOS_DATOS, por defecto 'guardados')."""
+    return Path(os.environ.get("GLOBOS_DATOS", CARPETA_DATOS_DEFAULT))
 
 @dataclass
 class Proyecto:

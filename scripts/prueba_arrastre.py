@@ -2,6 +2,8 @@ import sys
 import os
 import time
 import math
+import tempfile
+import atexit
 from pathlib import Path
 from PIL import Image
 
@@ -65,8 +67,9 @@ def crear_raster_4000(ruta: Path):
 
 
 def ejecutar_benchmark():
-    tmp_dir = Path("guardados/recursos_temp/benchmark")
-    tmp_dir.mkdir(parents=True, exist_ok=True)
+    _temp_dir = tempfile.TemporaryDirectory(prefix="globos_bench_")
+    atexit.register(_temp_dir.cleanup)
+    tmp_dir = Path(_temp_dir.name)
 
     arch_500 = tmp_dir / "triangulos_500.svg"
     arch_5000 = tmp_dir / "triangulos_5000.svg"

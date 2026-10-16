@@ -59,6 +59,7 @@ que el usuario ponga debe validarse como viable o explicar por qué no.
   el selector de archivos y el portapapeles.
 - Commits con archivos explícitos y mensaje "tipo: descripción". Push solo si la tarea lo autoriza.
 - No amplíes trompo_compat.py; el código nuevo usa las APIs nuevas.
+- No borrar ni mover archivos de guardados/ ni ejecutar Remove-Item sobre carpetas del usuario. Los tests y scripts usan directorios temporales.
 - Informe final corto: qué cambió, evidencia (salidas), qué NO pudiste verificar.
 
 ## Flujo de ramas

@@ -6,6 +6,7 @@ from logic.exportacion.svg_abanico import svg_abanico
 from logic.exportacion.svg_diseno import exportar_diseno
 from logic.exportacion.estilos import IMPRESION
 from logic.proyecto.modelo import (
+    obtener_carpeta_datos,
     obtener_archivos_referenciados_por_proyectos,
     recursos_sin_uso,
     mover_a_papelera,
@@ -25,11 +26,13 @@ class ControladorDisenoMixin:
         return self.disenos[clave]
 
     def obtener_carpeta_recursos_activa(self) -> Path:
+        if hasattr(self, "carpeta_recursos") and self.carpeta_recursos:
+            return Path(self.carpeta_recursos)
         if self.ruta_proyecto:
             p = Path(self.ruta_proyecto)
             d = p.parent / f"{p.stem}_recursos"
         else:
-            d = Path("guardados") / "recursos_temp"
+            d = obtener_carpeta_datos() / "recursos_temp"
         d.mkdir(parents=True, exist_ok=True)
         return d
 
@@ -37,11 +40,11 @@ class ControladorDisenoMixin:
         """Obtiene la lista de archivos sin uso en la carpeta de recursos activa respecto a todos los proyectos."""
         carpeta_rec = self.obtener_carpeta_recursos_activa()
         proy_actual = self.a_proyecto() if hasattr(self, "a_proyecto") else None
-        carpetas_busqueda = ["guardados"]
+        carpetas_busqueda = [str(obtener_carpeta_datos())]
         if self.ruta_proyecto:
             padre_proy = Path(self.ruta_proyecto).parent
             if padre_proy.exists() and str(padre_proy) not in carpetas_busqueda:
-                carpetas_busqueda.append(padre_proy)
+                carpetas_busqueda.append(str(padre_proy))
 
         referenciados = set()
         for c_dir in carpetas_busqueda:
