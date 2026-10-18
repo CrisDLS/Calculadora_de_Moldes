@@ -109,8 +109,8 @@ class ControladorHojaMixin:
                     cfg.espejo = False
                     self.diseno_pico_modo = "una_cara"
                 self.hoja_dibujar = dibujar
-                if getattr(self, "diseno_seccion", None) == "pico":
-                    self.diseno_lienzo_modo = cfg.diseno_modo
+                self.diseno_seccion = "pico"
+                self.diseno_lienzo_modo = cfg.diseno_modo
             else:
                 puede, _ = cfg.puede_usar_mitad()
                 if dibujar == "mitad" and not puede:
@@ -181,8 +181,8 @@ class ControladorHojaMixin:
                 cfg.diseno_modo = "una_cara"
                 cfg.espejo = False
                 self.diseno_pico_modo = "una_cara"
-            if getattr(self, "diseno_seccion", None) == "pico":
-                self.diseno_lienzo_modo = cfg.diseno_modo
+            self.diseno_seccion = "pico"
+            self.diseno_lienzo_modo = cfg.diseno_modo
         else:
             puede, _ = cfg.puede_usar_mitad()
             if dibujar == "mitad" and not puede:

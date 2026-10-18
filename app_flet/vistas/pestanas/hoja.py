@@ -262,7 +262,8 @@ class PestanaHoja(PestanaBase):
         return self.contenedor
 
     def actualizar(self, vm: ViewModelTrompo, reset_zoom: bool = False) -> None:
-        sel_hoja = self.selector_pieza_hoja.selected[0] if self.selector_pieza_hoja.selected else "superior"
+        sel_hoja = self.controlador.hoja_pieza
+        self.selector_pieza_hoja.selected = [sel_hoja]
         self.panel_diseno_pico_hoja.visible = (sel_hoja == "pico")
         self.btn_sincronizar_conos.visible = (sel_hoja != "pico")
         self.txt_tam_grupo.disabled = (sel_hoja == "pico")

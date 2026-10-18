@@ -253,4 +253,61 @@ def test_independencia_grupo_g_secciones_y_deshabilitado_en_pico():
     assert vista.controlador.config_secciones["pico"].esquema.tam_grupo == 7
 
 
+def test_sincronizacion_interruptores_pico_hoja_y_diseno():
+    """Para el pico, el interruptor 'Completo / Mitad (espejo)' de la Hoja de trazo
+    y el de Diseño ('Una cara / Mitad (espejo) / Lienzo completo') deben ser el mismo ajuste:
+    - hoja 'Mitad (espejo)' <-> Diseño 'Mitad (espejo)'
+    - hoja 'Completo' <-> Diseño 'Una cara'
+    - Diseño 'Lienzo completo' es solo una vista y NO cambia la hoja.
+    Cambiar en la hoja debe dejar el interruptor de Diseño en el valor correcto al instante, y viceversa."""
+    picker = MockFilePicker()
+    vista = VistaTrompo(servicio_file_picker=picker)
+    vista.on_calcular(None)
 
+    # 1. En Hoja seleccionamos pico
+    vista.pestana_hoja.selector_pieza_hoja.selected = ["pico"]
+    vista.pestana_hoja.on_cambio_pieza_hoja(None)
+
+    # Cambiar en la hoja a 'mitad'
+    vista.pestana_hoja.selector_modo_dibujo.selected = ["mitad"]
+    vista.pestana_hoja.on_cambio_modo_dibujo(None)
+
+    # El interruptor de Diseño debe actualizarse al instante a 'mitad'
+    assert vista.pestana_diseno.selector_lienzo_diseno.selected == ["mitad"]
+
+    # Cambiar en la hoja a 'completo'
+    vista.pestana_hoja.selector_modo_dibujo.selected = ["completo"]
+    vista.pestana_hoja.on_cambio_modo_dibujo(None)
+
+    # El interruptor de Diseño debe actualizarse al instante a 'una_cara'
+    assert vista.pestana_diseno.selector_lienzo_diseno.selected == ["una_cara"]
+
+    # 2. Y viceversa: cambiar en Diseño debe actualizar el interruptor de la Hoja
+    # En Diseño cambiamos a 'mitad'
+    vista.pestana_diseno.selector_lienzo_diseno.selected = ["mitad"]
+    vista.pestana_diseno.on_cambio_lienzo_diseno(None)
+
+    # El interruptor de la Hoja debe actualizarse al instante a 'mitad'
+    assert vista.pestana_hoja.selector_modo_dibujo.selected == ["mitad"]
+
+    # En Diseño cambiamos a 'una_cara'
+    vista.pestana_diseno.selector_lienzo_diseno.selected = ["una_cara"]
+    vista.pestana_diseno.on_cambio_lienzo_diseno(None)
+
+    # El interruptor de la Hoja debe actualizarse al instante a 'completo'
+    assert vista.pestana_hoja.selector_modo_dibujo.selected == ["completo"]
+
+    # 3. Diseño 'Lienzo completo' NO cambia la hoja
+    # Si la hoja estaba en 'completo' y en Diseño ponemos 'completo':
+    vista.pestana_diseno.selector_lienzo_diseno.selected = ["completo"]
+    vista.pestana_diseno.on_cambio_lienzo_diseno(None)
+    assert vista.pestana_hoja.selector_modo_dibujo.selected == ["completo"]
+
+    # Si la hoja estaba en 'mitad' y en Diseño ponemos 'completo':
+    vista.pestana_hoja.selector_modo_dibujo.selected = ["mitad"]
+    vista.pestana_hoja.on_cambio_modo_dibujo(None)
+    assert vista.pestana_diseno.selector_lienzo_diseno.selected == ["mitad"]
+
+    vista.pestana_diseno.selector_lienzo_diseno.selected = ["completo"]
+    vista.pestana_diseno.on_cambio_lienzo_diseno(None)
+    assert vista.pestana_hoja.selector_modo_dibujo.selected == ["mitad"]

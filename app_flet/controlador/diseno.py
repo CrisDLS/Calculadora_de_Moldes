@@ -298,13 +298,15 @@ class ControladorDisenoMixin:
             if valido == "mitad":
                 cfg.espejo = True
                 cfg.dibujar = "mitad"
+                self.hoja_pieza = "pico"
+                self.hoja_dibujar = "mitad"
             elif valido == "una_cara":
                 cfg.espejo = False
                 cfg.dibujar = "completo"
+                self.hoja_pieza = "pico"
+                self.hoja_dibujar = "completo"
             elif valido == "completo":
-                cfg.dibujar = "mitad" if cfg.espejo else "completo"
-            if self.hoja_pieza == "pico":
-                self.hoja_dibujar = cfg.dibujar
+                pass
         else:
             puede, _ = cfg.puede_usar_mitad()
             cfg.dibujar = modo if (puede or modo == "completo") else "completo"
