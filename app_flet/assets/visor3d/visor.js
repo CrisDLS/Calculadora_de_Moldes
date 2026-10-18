@@ -157,7 +157,8 @@ function crearTexturaDesdeSvg(clave, info, colorFondo) {
       texture.wrapT = THREE.ClampToEdgeWrapping;
       texture.minFilter = THREE.LinearFilter;
       texture.magFilter = THREE.LinearFilter;
-      texture.flipY = false;
+      // Convención UV (textura.py): v=1 arriba (ymax) y v=0 abajo (ymin), por lo que requiere flipY = true.
+      texture.flipY = true;
       texture.needsUpdate = true;
 
       if (textureCache[cacheKey] && textureCache[cacheKey].texture) {

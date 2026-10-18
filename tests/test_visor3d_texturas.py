@@ -231,3 +231,132 @@ def test_zonas_transparentes_color_papel_no_negras(tmp_path):
         servidor.detener()
 
 
+def test_reconstruccion_abanico_conos_asimetrica(tmp_path):
+    """
+    Comprueba que el abanico reconstruido desde la correspondencia 3D y texturas
+    coincida con el abanico exportado de la pestaña Diseño (< 5% de píxeles distintos)
+    tanto en el cono superior como en el cono inferior usando una imagen sintética
+    asimétrica (letra F con esquina superior izquierda roja y franja inferior azul).
+    """
+    import re
+    from PIL import Image, ImageDraw
+    from logic.models import BalloonInput
+    from logic.geometria.malla_trompo import construir_malla
+    from logic.geometria.abanico import pieza_a_geometria_plana, abanico
+    from logic.geometria.textura import mapear_textura
+    from logic.diseno.esquema import EsquemaDiseno
+    from logic.diseno.config_seccion import ConfigSeccion
+    from logic.diseno.lienzo import Diseno, CapaDiseno
+    from scripts.diagnostico_abanico_vs_3d import reconstruir_abanico_seccion
+
+    # Crear imagen PNG asimétrica (letra F + esquina roja + base azul)
+    img_asim = Image.new("RGB", (400, 400), (240, 240, 240))
+    draw = ImageDraw.Draw(img_asim)
+    # Esquina superior izquierda roja
+    draw.rectangle([0, 0, 140, 140], fill=(220, 20, 20))
+    # Base inferior azul
+    draw.rectangle([0, 320, 400, 400], fill=(20, 60, 220))
+    # Letra F grande en verde oscuro en el centro-derecha
+    draw.rectangle([160, 60, 200, 300], fill=(20, 150, 40))   # tallo vertical
+    draw.rectangle([160, 60, 340, 100], fill=(20, 150, 40))   # barra superior
+    draw.rectangle([160, 160, 290, 200], fill=(20, 150, 40))  # barra media
+    ruta_png = tmp_path / "asimetrica_f.png"
+    img_asim.save(ruta_png)
+
+    entrada = BalloonInput(altura_cuerpo=950.0, num_gajos=30, num_hileras_picos=2, ancho_costura=1.0)
+    calc = TrompoEstrellaCalculator()
+    res = calc.calcular(entrada)
+    malla = construir_malla(entrada, res)
+
+    esquema = EsquemaDiseno(modo="repeticion", tam_grupo=5)
+    configs = {
+        "superior": ConfigSeccion(seccion="superior", esquema=esquema, dibujar="completo"),
+        "inferior": ConfigSeccion(seccion="inferior", esquema=esquema, dibujar="completo"),
+    }
+
+    # Ubicar la capa cubriendo la caja de cada abanico
+    pz_sup = pieza_a_geometria_plana(res, entrada, "superior")
+    ab_sup = abanico(pz_sup, n=5, centrado=True)
+    capa_sup = CapaDiseno(
+        id="f_sup",
+        nombre="F Superior",
+        tipo="raster",
+        archivo="asimetrica_f.png",
+        ancho_natural=20.0,
+        alto_natural=20.0,
+        x=ab_sup.caja_min_x,
+        y=ab_sup.caja_min_y,
+        ancho=ab_sup.ancho_total,
+        alto=ab_sup.alto_total,
+    )
+
+    pz_inf = pieza_a_geometria_plana(res, entrada, "inferior")
+    ab_inf = abanico(pz_inf, n=5, centrado=True)
+    capa_inf = CapaDiseno(
+        id="f_inf",
+        nombre="F Inferior",
+        tipo="raster",
+        archivo="asimetrica_f.png",
+        ancho_natural=20.0,
+        alto_natural=20.0,
+        x=ab_inf.caja_min_x,
+        y=ab_inf.caja_min_y,
+        ancho=ab_inf.ancho_total,
+        alto=ab_inf.alto_total,
+    )
+
+    disenos = {
+        "superior": Diseno(seccion="superior", capas=[capa_sup]),
+        "inferior": Diseno(seccion="inferior", capas=[capa_inf]),
+    }
+
+    from logic.models import Condiciones
+
+    proy = Proyecto(
+        version=2,
+        nombre="test_asim",
+        entrada=entrada,
+        condiciones=Condiciones(),
+        esquema=esquema,
+        config_secciones=configs,
+        disenos=disenos,
+    )
+
+    mapa_tex = mapear_textura(
+        entrada=entrada,
+        resultado=res,
+        malla=malla,
+        configuraciones=configs,
+        disenos=disenos,
+        carpeta_recursos=tmp_path,
+        max_px=512,
+    )
+
+    # Leer de visor.js cómo está configurado texture.flipY realmente
+    visor_js = Path("app_flet/assets/visor3d/visor.js").read_text(encoding="utf-8")
+    m_flip = re.search(r"texture\.flipY\s*=\s*(true|false)", visor_js)
+    flip_y_actual = (m_flip.group(1) == "true") if m_flip else True
+
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch(headless=True)
+        page = browser.new_page()
+        page.set_content("<html><body></body></html>")
+
+        rep_sup = reconstruir_abanico_seccion(
+            page, proy, res, malla, mapa_tex, "superior", tmp_path, max_px=512, flip_y_webgl=flip_y_actual
+        )
+        rep_inf = reconstruir_abanico_seccion(
+            page, proy, res, malla, mapa_tex, "inferior", tmp_path, max_px=512, flip_y_webgl=flip_y_actual
+        )
+        browser.close()
+
+    pct_sup = rep_sup["pct_distinto"]
+    pct_inf = rep_inf["pct_distinto"]
+
+    assert pct_sup < 5.0 and pct_inf < 5.0, (
+        f"Diferencia excesiva en reconstrucción 3D vs Diseño 2D (flipY={flip_y_actual}): "
+        f"superior={pct_sup:.2f}% (máx 5%), inferior={pct_inf:.2f}% (máx 5%)"
+    )
+
+
+

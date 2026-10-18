@@ -26,7 +26,7 @@ from logic.calculators.trompo_estrella import TrompoEstrellaCalculator
 from logic.geometria.abanico import pieza_a_geometria_plana, abanico, contorno_abanico
 from logic.geometria.malla_trompo import construir_malla, Cara
 from logic.geometria.textura import mapear_textura, mapear_vertice_a_abanico, _calcular_tam_px
-from logic.diseno.pintura import color_de_cara
+from logic.diseno.pintura import color_de_cara, EsquemaPintura
 from logic.diseno.paleta import cargar_catalogo, color_por_id
 from logic.exportacion.svg_abanico import _renderizar_capa_en_abanico
 from logic.diseno.transformaciones import construir_grupo
@@ -266,6 +266,135 @@ def warpear_triangulo_textura(
     return img_dst, tri_mask
 
 
+def reconstruir_abanico_seccion(
+    page,
+    proy: Proyecto,
+    res,
+    malla,
+    mapa_tex,
+    seccion: str,
+    carpeta_recursos: Path,
+    max_px: int = 1024,
+    umbral_diff: int = 30,
+    flip_y_webgl: bool = False,
+) -> Dict[str, any]:
+    """
+    Rasteriza el abanico de referencia (ref) y reconstruye el abanico desde las caras 3D (rec)
+    para una sección dada, devolviendo los arreglos de imagen, máscara, porcentaje global de
+    diferencia y estadísticas por cara.
+    """
+    catalogo = cargar_catalogo()
+    pintura = proy.pintura or EsquemaPintura()
+    caras_sec = [(idx, c) for idx, c in enumerate(malla.caras) if c.seccion == seccion]
+    id_col_base = color_de_cara(pintura, caras_sec[0][1], proy.esquema, proy.entrada.num_gajos)
+    col_papel_hex = color_por_id(id_col_base, catalogo).hex.lower()
+
+    svg_ref, tam_px, caja_ref, ab_ref = generar_svg_referencia_abanico(
+        proy, res, seccion, carpeta_recursos, col_papel_hex, max_px=max_px
+    )
+    img_ref_pil = rasterizar_svg_con_playwright(page, svg_ref, tam_px, color_fondo="#ffffff")
+    arr_ref = np.array(img_ref_pil)
+
+    px_w, px_h = tam_px
+    xmin, ymin, w_cm, h_cm = caja_ref
+    ymax = ymin + h_cm
+
+    def cm_a_px_ref(x_cm: float, y_cm: float) -> Tuple[float, float]:
+        px = ((x_cm - xmin) / w_cm) * px_w
+        py = ((ymax - y_cm) / h_cm) * px_h
+        return (px, py)
+
+    arr_rec = np.full((px_h, px_w, 3), 255, dtype=np.uint8)
+    mask_abanico = np.zeros((px_h, px_w), dtype=bool)
+
+    if seccion in ("superior", "inferior"):
+        n_grupo = ab_ref.n
+        caras_grupo = [(idx, c) for idx, c in caras_sec if c.gajo < n_grupo]
+    else:
+        caras_grupo = [(idx, c) for idx, c in caras_sec if c.gajo == 0 and c.hilera == 0]
+
+    cache_tex_sec: Dict[Tuple[str, str], np.ndarray] = {}
+    stats_caras_sec = []
+
+    for idx_cara, cara in caras_grupo:
+        clave_tex, uvs_cara = mapa_tex.caras_uv[idx_cara]
+        id_col = color_de_cara(pintura, cara, proy.esquema, proy.entrada.num_gajos)
+        col_hex = color_por_id(id_col, catalogo).hex.lower()
+        col_rgb = _hex_a_rgb(col_hex)
+
+        img_tex_np = None
+        if clave_tex and clave_tex in mapa_tex.texturas:
+            info_t = mapa_tex.texturas[clave_tex]
+            if info_t.svg:
+                par = (clave_tex, col_hex)
+                if par not in cache_tex_sec:
+                    im_t = np.array(rasterizar_svg_con_playwright(page, info_t.svg, info_t.tam_px, color_fondo=col_hex))
+                    if flip_y_webgl:
+                        im_t = im_t[::-1, :, :]
+                    cache_tex_sec[par] = im_t
+                img_tex_np = cache_tex_sec[par]
+
+        i_pos = (cara.sub if seccion == "pico" else cara.gajo) % ab_ref.n
+        pts_2d_cm = [mapear_vertice_a_abanico(pt_uv_cm, ab_ref, i_pos) for pt_uv_cm in cara.uv_cm]
+        pts_2d_px = [cm_a_px_ref(x, y) for x, y in pts_2d_cm]
+
+        if len(pts_2d_px) == 3:
+            tris = [(pts_2d_px, uvs_cara)]
+        else:
+            tris = [
+                ([pts_2d_px[0], pts_2d_px[1], pts_2d_px[2]], [uvs_cara[0], uvs_cara[1], uvs_cara[2]]),
+                ([pts_2d_px[0], pts_2d_px[2], pts_2d_px[3]], [uvs_cara[0], uvs_cara[2], uvs_cara[3]]),
+            ]
+
+        mask_cara_total = np.zeros((px_h, px_w), dtype=bool)
+        for tri_px, tri_uv in tris:
+            arr_rec, m_tri = warpear_triangulo_textura(
+                arr_rec, mask_abanico, tri_px, img_tex_np, tri_uv, col_rgb
+            )
+            mask_cara_total |= m_tri
+
+        n_px_cara = int(np.sum(mask_cara_total))
+        if n_px_cara > 0:
+            diff_cara = np.sum(np.abs(arr_ref[mask_cara_total].astype(int) - arr_rec[mask_cara_total].astype(int)), axis=1)
+            n_dist_cara = int(np.sum(diff_cara > umbral_diff))
+            pct_cara = (n_dist_cara / n_px_cara) * 100.0
+        else:
+            pct_cara = 0.0
+
+        etiqueta_gajo = f"g={cara.gajo}" if seccion != "pico" else f"g={cara.gajo},h={cara.hilera},sub={cara.sub}"
+        stats_caras_sec.append({
+            "seccion": seccion,
+            "gajo": etiqueta_gajo,
+            "clave_tex": str(clave_tex),
+            "pct_distinto": pct_cara,
+            "uv_min_max": (
+                min(u for u, v in uvs_cara), max(u for u, v in uvs_cara),
+                min(v for u, v in uvs_cara), max(v for u, v in uvs_cara),
+            ),
+        })
+
+    diff_abs = np.sum(np.abs(arr_ref.astype(int) - arr_rec.astype(int)), axis=2)
+    es_distinto = (diff_abs > umbral_diff) & mask_abanico
+    arr_dif = np.full((px_h, px_w, 3), 255, dtype=np.uint8)
+    arr_dif[es_distinto] = [220, 30, 30]
+
+    total_px_ab = int(np.sum(mask_abanico))
+    dist_px_ab = int(np.sum(es_distinto))
+    pct_sec = (dist_px_ab / total_px_ab * 100.0) if total_px_ab > 0 else 0.0
+
+    return {
+        "seccion": seccion,
+        "tam_px": f"{px_w}x{px_h}",
+        "px_abanico": total_px_ab,
+        "px_distintos": dist_px_ab,
+        "pct_distinto": pct_sec,
+        "arr_ref": arr_ref,
+        "arr_rec": arr_rec,
+        "arr_dif": arr_dif,
+        "stats_caras": stats_caras_sec,
+    }
+
+
 def _preparar_carpeta_recursos_lectura(ruta_json: Path) -> Tuple[Path, Optional[object]]:
     """
     Si algunos recursos citados por prueba_imagen.json están en Downloads/prueba_imagen_recursos
@@ -328,136 +457,43 @@ def ejecutar_diagnostico():
     resumen_secciones = []
     stats_caras = []
 
+    # Leer de visor.js cómo está configurado texture.flipY realmente
+    import re
+    visor_js = (ROOT / "app_flet" / "assets" / "visor3d" / "visor.js").read_text(encoding="utf-8")
+    m_flip = re.search(r"texture\.flipY\s*=\s*(true|false)", visor_js)
+    flip_y_actual = (m_flip.group(1) == "true") if m_flip else True
+
     with sync_playwright() as pw:
         browser = pw.chromium.launch(headless=True)
         page = browser.new_page()
         page.set_content("<html><body></body></html>")
 
-        # Pre-rasterizar texturas del mapa 3D por (clave, color_papel) igual que visor.js
-        cache_tex_np: Dict[Tuple[str, str], np.ndarray] = {}
-        for i_c, cara in enumerate(malla.caras):
-            clave_tex, _ = mapa_tex.caras_uv[i_c]
-            if clave_tex and clave_tex in mapa_tex.texturas:
-                info_t = mapa_tex.texturas[clave_tex]
-                if info_t.svg:
-                    id_col = color_de_cara(proy.pintura, cara, proy.esquema, proy.entrada.num_gajos)
-                    col_hex = color_por_id(id_col, catalogo).hex.lower()
-                    par = (clave_tex, col_hex)
-                    if par not in cache_tex_np:
-                        img_t = rasterizar_svg_con_playwright(page, info_t.svg, info_t.tam_px, color_fondo=col_hex)
-                        cache_tex_np[par] = np.array(img_t)
-
         for seccion in ["superior", "pico", "inferior"]:
-            # Color de papel base de la primera cara de esta sección
-            caras_sec = [(idx, c) for idx, c in enumerate(malla.caras) if c.seccion == seccion]
-            id_col_base = color_de_cara(proy.pintura, caras_sec[0][1], proy.esquema, proy.entrada.num_gajos)
-            col_papel_hex = color_por_id(id_col_base, catalogo).hex.lower()
-            col_papel_rgb = _hex_a_rgb(col_papel_hex)
-
-            # 1a) Rasterizar referencia (abanico exportado por Diseño)
-            svg_ref, tam_px, caja_ref, ab_ref = generar_svg_referencia_abanico(
-                proy, res, seccion, carpeta_recursos, col_papel_hex, max_px=1024
+            rep = reconstruir_abanico_seccion(
+                page=page,
+                proy=proy,
+                res=res,
+                malla=malla,
+                mapa_tex=mapa_tex,
+                seccion=seccion,
+                carpeta_recursos=carpeta_recursos,
+                max_px=1024,
+                umbral_diff=UMBRAL_DIFF,
+                flip_y_webgl=flip_y_actual,
             )
-            img_ref_pil = rasterizar_svg_con_playwright(page, svg_ref, tam_px, color_fondo="#ffffff")
-            ruta_ref = out_dir / f"ref_{seccion}.png"
-            img_ref_pil.save(ruta_ref)
-            arr_ref = np.array(img_ref_pil)
 
-            px_w, px_h = tam_px
-            xmin, ymin, w_cm, h_cm = caja_ref
-            ymax = ymin + h_cm
-
-            def cm_a_px_ref(x_cm: float, y_cm: float) -> Tuple[float, float]:
-                px = ((x_cm - xmin) / w_cm) * px_w
-                py = ((ymax - y_cm) / h_cm) * px_h
-                return (px, py)
-
-            # 1b) Reconstruir el abanico desde las caras 3D del primer grupo (o primera pirámide en pico)
-            arr_rec = np.full((px_h, px_w, 3), 255, dtype=np.uint8)
-            mask_abanico = np.zeros((px_h, px_w), dtype=bool)
-
-            if seccion in ("superior", "inferior"):
-                n_grupo = ab_ref.n
-                caras_grupo = [(idx, c) for idx, c in caras_sec if c.gajo < n_grupo]
-            else:
-                # Para el pico, el abanico de diseño tiene las 4 caras (sub 0..3) de una pirámide (gajo=0, hilera=0)
-                caras_grupo = [(idx, c) for idx, c in caras_sec if c.gajo == 0 and c.hilera == 0]
-
-            for idx_cara, cara in caras_grupo:
-                clave_tex, uvs_cara = mapa_tex.caras_uv[idx_cara]
-                id_col = color_de_cara(proy.pintura, cara, proy.esquema, proy.entrada.num_gajos)
-                col_hex = color_por_id(id_col, catalogo).hex.lower()
-                col_rgb = _hex_a_rgb(col_hex)
-
-                img_tex_np = cache_tex_np.get((clave_tex, col_hex)) if clave_tex else None
-
-                # Posición 2D que esa cara tiene en el abanico de referencia (n_grupo gajos o 4 caras de pico)
-                i_pos = (cara.sub if seccion == "pico" else cara.gajo) % ab_ref.n
-                pts_2d_cm = [mapear_vertice_a_abanico(pt_uv_cm, ab_ref, i_pos) for pt_uv_cm in cara.uv_cm]
-                pts_2d_px = [cm_a_px_ref(x, y) for x, y in pts_2d_cm]
-
-                # Triangulación idéntica a escena3d.py
-                if len(pts_2d_px) == 3:
-                    tris = [(pts_2d_px, uvs_cara)]
-                else:
-                    tris = [
-                        ([pts_2d_px[0], pts_2d_px[1], pts_2d_px[2]], [uvs_cara[0], uvs_cara[1], uvs_cara[2]]),
-                        ([pts_2d_px[0], pts_2d_px[2], pts_2d_px[3]], [uvs_cara[0], uvs_cara[2], uvs_cara[3]]),
-                    ]
-
-                mask_cara_total = np.zeros((px_h, px_w), dtype=bool)
-                for tri_px, tri_uv in tris:
-                    arr_rec, m_tri = warpear_triangulo_textura(
-                        arr_rec, mask_abanico, tri_px, img_tex_np, tri_uv, col_rgb
-                    )
-                    mask_cara_total |= m_tri
-
-                # Calcular % distinto en esta cara específica
-                n_px_cara = int(np.sum(mask_cara_total))
-                if n_px_cara > 0:
-                    diff_cara = np.sum(np.abs(arr_ref[mask_cara_total].astype(int) - arr_rec[mask_cara_total].astype(int)), axis=1)
-                    n_dist_cara = int(np.sum(diff_cara > UMBRAL_DIFF))
-                    pct_cara = (n_dist_cara / n_px_cara) * 100.0
-                else:
-                    pct_cara = 0.0
-
-                etiqueta_gajo = f"g={cara.gajo}" if seccion != "pico" else f"g={cara.gajo},h={cara.hilera},sub={cara.sub}"
-                stats_caras.append({
-                    "seccion": seccion,
-                    "gajo": etiqueta_gajo,
-                    "clave_tex": str(clave_tex),
-                    "pct_distinto": pct_cara,
-                    "uv_min_max": (
-                        min(u for u, v in uvs_cara), max(u for u, v in uvs_cara),
-                        min(v for u, v in uvs_cara), max(v for u, v in uvs_cara),
-                    ),
-                })
-
-            ruta_rec = out_dir / f"rec_{seccion}.png"
-            Image.fromarray(arr_rec).save(ruta_rec)
-
-            # 1c) Generar mapa de diferencia absoluta (blanco = igual, rojo = distinto)
-            diff_abs = np.sum(np.abs(arr_ref.astype(int) - arr_rec.astype(int)), axis=2)
-            es_distinto = (diff_abs > UMBRAL_DIFF) & mask_abanico
-
-            arr_dif = np.full((px_h, px_w, 3), 255, dtype=np.uint8)
-            # Pintar en rojo proporcional o rojo vivo los píxeles distintos
-            arr_dif[es_distinto] = [220, 30, 30]
-
-            ruta_dif = out_dir / f"dif_{seccion}.png"
-            Image.fromarray(arr_dif).save(ruta_dif)
-
-            total_px_ab = int(np.sum(mask_abanico))
-            dist_px_ab = int(np.sum(es_distinto))
-            pct_sec = (dist_px_ab / total_px_ab * 100.0) if total_px_ab > 0 else 0.0
+            Image.fromarray(rep["arr_ref"]).save(out_dir / f"ref_{seccion}.png")
+            Image.fromarray(rep["arr_rec"]).save(out_dir / f"rec_{seccion}.png")
+            Image.fromarray(rep["arr_dif"]).save(out_dir / f"dif_{seccion}.png")
 
             resumen_secciones.append({
                 "seccion": seccion,
-                "tam_px": f"{px_w}x{px_h}",
-                "px_abanico": total_px_ab,
-                "px_distintos": dist_px_ab,
-                "pct_distinto": pct_sec,
+                "tam_px": rep["tam_px"],
+                "px_abanico": rep["px_abanico"],
+                "px_distintos": rep["px_distintos"],
+                "pct_distinto": rep["pct_distinto"],
             })
+            stats_caras.extend(rep["stats_caras"])
 
         browser.close()
 

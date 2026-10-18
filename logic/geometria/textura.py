@@ -290,7 +290,7 @@ def _renderizar_elemento_svg_textura(
     carpeta_recursos: Optional[Path],
     opacidad_mult: float = 1.0,
 ) -> str:
-    """Renderiza una capa individual en coordenadas puras de cm (+y hacia arriba)."""
+    """Renderiza una capa individual en el espacio SVG del abanico (x_svg = x_cm, y_svg = -y_cm)."""
     if not capa.visible:
         return ""
 
@@ -298,17 +298,22 @@ def _renderizar_elemento_svg_textura(
     cy_cm = capa.y + capa.alto / 2.0
     w_cm = capa.ancho
     h_cm = capa.alto
-    x_cm = cx_cm - w_cm / 2.0
-    y_cm = cy_cm - h_cm / 2.0
+
+    # Convención de textura: el lienzo tiene +y_cm hacia arriba (v=1 en ymax con flipY=true en Three.js),
+    # por lo que en SVG (+y hacia abajo, viewBox desde -ymax) el centro queda en (cx_cm, -cy_cm)
+    # y el borde superior de la capa (cy_cm + h/2) queda en y_svg = -cy_cm - h/2 = -(capa.y + capa.alto).
+    cx_svg = cx_cm
+    cy_svg = -cy_cm
+    x_svg = cx_svg - w_cm / 2.0
+    y_svg = cy_svg - h_cm / 2.0
 
     transforms = []
     if abs(capa.rotacion) > 1e-4:
-        # En coordenadas matemáticas con +y hacia arriba, rotación positiva es antihoraria
-        transforms.append(f"rotate({capa.rotacion:.2f} {cx_cm:.4f} {cy_cm:.4f})")
+        transforms.append(f"rotate({-capa.rotacion:.2f} {cx_svg:.4f} {cy_svg:.4f})")
     if capa.reflejo_h:
-        transforms.append(f"translate({cx_cm:.4f} {cy_cm:.4f}) scale(-1 1) translate({-cx_cm:.4f} {-cy_cm:.4f})")
+        transforms.append(f"translate({cx_svg:.4f} {cy_svg:.4f}) scale(-1 1) translate({-cx_svg:.4f} {-cy_svg:.4f})")
     if capa.reflejo_v:
-        transforms.append(f"translate({cx_cm:.4f} {cy_cm:.4f}) scale(1 -1) translate({-cx_cm:.4f} {-cy_cm:.4f})")
+        transforms.append(f"translate({cx_svg:.4f} {cy_svg:.4f}) scale(1 -1) translate({-cx_svg:.4f} {-cy_svg:.4f})")
 
     trans_str = f' transform="{" ".join(transforms)}"' if transforms else ""
     opac = max(0.0, min(1.0, capa.opacidad * opacidad_mult))
@@ -320,9 +325,8 @@ def _renderizar_elemento_svg_textura(
         if vw > 0 and vh > 0:
             s = min(w_cm / vw, h_cm / vh)
             dx = (w_cm - vw * s) / 2.0 - vx * s
-            # En SVG hijo interno +y va hacia abajo, pero en el lienzo se ubica en [x_cm, y_cm]
             dy = (h_cm - vh * s) / 2.0 - vy * s
-            t_local = f"translate({x_cm:.4f} {y_cm:.4f}) translate({dx:.4f} {dy:.4f}) scale({s:.6f})"
+            t_local = f"translate({x_svg:.4f} {y_svg:.4f}) translate({dx:.4f} {dy:.4f}) scale({s:.6f})"
             return (
                 f'<g id="capa-{capa.id}" opacity="{opac:.2f}"{trans_str}>\n'
                 f'  <g transform="{t_local}">\n'
@@ -332,7 +336,7 @@ def _renderizar_elemento_svg_textura(
             )
     elif capa.tipo != "svg" and contenido_frag:
         return (
-            f'<image href="{contenido_frag}" x="{x_cm:.4f}" y="{y_cm:.4f}" '
+            f'<image href="{contenido_frag}" x="{x_svg:.4f}" y="{y_svg:.4f}" '
             f'width="{w_cm:.4f}" height="{h_cm:.4f}" opacity="{opac:.2f}"{trans_str} id="capa-{capa.id}"/>'
         )
 
@@ -377,15 +381,15 @@ def svg_textura(
     px_w, px_h = _calcular_tam_px(w, h, max_px)
     carp_rec = Path(carpeta_recursos) if carpeta_recursos else None
 
-    # Contornos de recorte
+    # Contornos de recorte en coordenadas SVG (x_svg = x, y_svg = -y)
     pasos_arco = max(8, n * 6)
     pts_contorno = contorno_abanico(pz, n, dibujar=dibujar, pasos_arco=pasos_arco)
-    d_contorno = "M " + " L ".join(f"{x:.4f},{y:.4f}" for x, y in pts_contorno) + " Z"
+    d_contorno = "M " + " L ".join(f"{x:.4f},{-y:.4f}" for x, y in pts_contorno) + " Z"
 
     d_contorno_ref = ""
     if dibujar == "mitad":
         pts_contorno_ref = [(-x, y) for x, y in pts_contorno]
-        d_contorno_ref = "M " + " L ".join(f"{x:.4f},{y:.4f}" for x, y in pts_contorno_ref) + " Z"
+        d_contorno_ref = "M " + " L ".join(f"{x:.4f},{-y:.4f}" for x, y in pts_contorno_ref) + " Z"
 
     lines = [
         '<?xml version="1.0" encoding="UTF-8" standalone="no"?>',
@@ -403,12 +407,10 @@ def svg_textura(
             '    </clipPath>',
         ])
     lines.append('  </defs>')
-    lines.append('  <g transform="scale(1, -1)">')
 
     if diseno and diseno.capas:
         lines.extend(_generar_capas_svg_textura(diseno, esquema, dibujar, d_contorno_ref, carp_rec))
 
-    lines.append('  </g>')
     lines.append('</svg>')
     return "\n".join(lines)
 
