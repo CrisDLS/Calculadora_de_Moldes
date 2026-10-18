@@ -16,7 +16,7 @@ class PestanaHoja(PestanaBase):
         controlador,
         servicio_file_picker=None,
         on_mostrar_snackbar: Optional[Callable[[str], None]] = None,
-        on_solicitar_sync: Optional[Callable[[bool], None]] = None,
+        on_solicitar_sync: Optional[Callable[..., None]] = None,
     ):
         self.paleta = paleta
         self.controlador = controlador
@@ -326,7 +326,7 @@ class PestanaHoja(PestanaBase):
         self.selector_lienzo.selected = [cfg.lienzo]
         self.selector_modo_dibujo.selected = [cfg.dibujar]
         if self.on_solicitar_sync:
-            self.on_solicitar_sync(True)
+            self.on_solicitar_sync(reset_zoom=True)
 
     def on_sincronizar_conos(self, e) -> None:
         origen = self.controlador.hoja_pieza
@@ -340,7 +340,7 @@ class PestanaHoja(PestanaBase):
             if cfg.esquema.ciclo:
                 self.txt_ciclo_personalizado.value = ", ".join(f"{m}{'E' if esp else ''}" for m, esp in cfg.esquema.ciclo)
         if self.on_solicitar_sync:
-            self.on_solicitar_sync(True)
+            self.on_solicitar_sync(reset_zoom=True)
         if self.on_mostrar_snackbar:
             self.on_mostrar_snackbar("Configuración sincronizada en ambos conos")
 
@@ -357,7 +357,7 @@ class PestanaHoja(PestanaBase):
         self.selector_lienzo.selected = [cfg.lienzo]
         self.selector_modo_dibujo.selected = [cfg.dibujar]
         if self.on_solicitar_sync:
-            self.on_solicitar_sync(True)
+            self.on_solicitar_sync(reset_zoom=True)
         if self.on_mostrar_snackbar:
             self.on_mostrar_snackbar(f"Configuración copiada desde {origen}")
 
@@ -365,19 +365,19 @@ class PestanaHoja(PestanaBase):
         sel = self.selector_lienzo.selected[0] if self.selector_lienzo.selected else "abanico"
         self.controlador.actualizar_opciones_hoja(lienzo=sel)
         if self.on_solicitar_sync:
-            self.on_solicitar_sync(True)
+            self.on_solicitar_sync(reset_zoom=True)
 
     def on_cambio_modo_dibujo(self, e) -> None:
         sel = self.selector_modo_dibujo.selected[0] if self.selector_modo_dibujo.selected else "completo"
         self.controlador.actualizar_opciones_hoja(dibujar=sel)
         if self.on_solicitar_sync:
-            self.on_solicitar_sync(True)
+            self.on_solicitar_sync(reset_zoom=True)
 
     def on_cambio_repeticion_pico_hoja(self, e) -> None:
         rep = self.dd_repeticion_pico_hoja.value or "todas_a"
         self.controlador.actualizar_esquema_pico(modo_repeticion=rep)
         if self.on_solicitar_sync:
-            self.on_solicitar_sync(True)
+            self.on_solicitar_sync(reset_zoom=True)
 
     def on_cambio_esquema_opciones(self, e) -> None:
         modo = self.dd_modo_esquema.value or "repeticion"
@@ -391,14 +391,14 @@ class PestanaHoja(PestanaBase):
         ciclo = self.txt_ciclo_personalizado.value or ""
         self.controlador.actualizar_esquema(modo=modo, tam_grupo=tam_g, ciclo_texto=ciclo)
         if self.on_solicitar_sync:
-            self.on_solicitar_sync(True)
+            self.on_solicitar_sync(reset_zoom=True)
 
     def on_cambio_hoja_opciones(self, e) -> None:
         hoja = self.dd_hoja.value or "carta"
         escala = self.dd_escala.value or "auto"
         self.controlador.actualizar_opciones_hoja(tipo=hoja, escala=escala)
         if self.on_solicitar_sync:
-            self.on_solicitar_sync(True)
+            self.on_solicitar_sync(reset_zoom=True)
 
     async def on_exportar_hoja(self, e) -> None:
         if not self.controlador.svg_hoja:

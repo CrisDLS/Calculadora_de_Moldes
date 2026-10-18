@@ -151,3 +151,42 @@ def test_hoja_trazo_pico_una_cara_y_sincronizacion_con_diseno():
     assert vista.pestana_diseno.selector_lienzo_diseno.selected == ["mitad"]
     assert 'id="eje-espejo-recto"' in vista.controlador.svg_hoja
 
+
+def test_reactividad_inmediata_cambio_esquema_hoja():
+    """Verifica que cambiar modo o grupo G en la Hoja de trazo valide y redibuje inmediatamente,
+    despachando la actualización a la vista sin pulsar Calcular."""
+    import unittest.mock as mock
+
+    picker = MockFilePicker()
+    vista = VistaTrompo(servicio_file_picker=picker)
+    vista.on_calcular(None)
+
+    # Simular página de Flet conectada
+    mock_update = mock.MagicMock()
+    vista.update = mock_update
+
+    # 1. Cambiar a modo espejo_total con G=5 (inválido por impar)
+    vista.dd_modo_esquema.value = "espejo_total"
+    vista.txt_tam_grupo.value = "5"
+    vista.on_cambio_esquema_opciones(None)
+
+    # Debe despachar actualización a la vista y mostrar el error al instante
+    assert mock_update.call_count >= 1, "vista.update() debió ser invocado para reflejar el error de inmediato"
+    assert vista.lbl_error_esquema.visible is True
+    assert "par" in vista.lbl_error_esquema.value
+    assert vista.panel_contenido_hoja.visible is False
+    assert vista.lbl_vacio_hoja.visible is True
+
+    # 2. Cambiar G a 6 (válido: par y divisor de 30)
+    mock_update.reset_mock()
+    vista.txt_tam_grupo.value = "6"
+    vista.on_cambio_esquema_opciones(None)
+
+    # Debe despachar actualización a la vista y redibujar el abanico al instante
+    assert mock_update.call_count >= 1, "vista.update() debió ser invocado para redibujar el abanico de inmediato"
+    assert vista.lbl_error_esquema.visible is False
+    assert vista.panel_contenido_hoja.visible is True
+    assert vista.lbl_vacio_hoja.visible is False
+    assert vista.img_svg_hoja.src != ""
+
+
