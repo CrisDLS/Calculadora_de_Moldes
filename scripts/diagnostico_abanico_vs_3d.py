@@ -25,7 +25,7 @@ from logic.proyecto.modelo import Proyecto
 from logic.calculators.trompo_estrella import TrompoEstrellaCalculator
 from logic.geometria.abanico import pieza_a_geometria_plana, abanico, contorno_abanico
 from logic.geometria.malla_trompo import construir_malla, Cara
-from logic.geometria.textura import mapear_textura, mapear_vertice_a_abanico, _calcular_tam_px
+from logic.geometria.textura import mapear_textura, mapear_vertice_a_abanico, _calcular_tam_px, num_caras_lienzo
 from logic.diseno.pintura import color_de_cara, EsquemaPintura
 from logic.diseno.paleta import cargar_catalogo, color_por_id
 from logic.exportacion.svg_abanico import _renderizar_capa_en_abanico
@@ -49,7 +49,7 @@ def generar_svg_referencia_abanico(
 ) -> Tuple[str, Tuple[int, int], Tuple[float, float, float, float], any]:
     """
     Genera el SVG del abanico de la sección usando exactamente la misma geometría,
-    número de gajos (n=4 para pico, tam_grupo para conos) y función de renderizado
+    número de gajos (num_caras_lienzo: 1 para pico, tam_grupo para conos) y función de renderizado
     de capas (_renderizar_capa_en_abanico) que usa la pestaña Diseño en svg_abanico.
     """
     cfg = proy.config_secciones.get(seccion)
@@ -58,7 +58,7 @@ def generar_svg_referencia_abanico(
     clave_dis = "pico_A" if seccion == "pico" else seccion
     diseno = proy.disenos.get(clave_dis)
 
-    n = 4 if seccion == "pico" else (esquema.tam_grupo if esquema else 5)
+    n = num_caras_lienzo(seccion, esquema=esquema, num_gajos=proy.entrada.num_gajos)
     pz = pieza_a_geometria_plana(res, proy.entrada, seccion)
     ab = abanico(pz, n=n, centrado=True)
 
@@ -311,7 +311,7 @@ def reconstruir_abanico_seccion(
         n_grupo = ab_ref.n
         caras_grupo = [(idx, c) for idx, c in caras_sec if c.gajo < n_grupo]
     else:
-        caras_grupo = [(idx, c) for idx, c in caras_sec if c.gajo == 0 and c.hilera == 0]
+        caras_grupo = [(idx, c) for idx, c in caras_sec if c.gajo == 0 and c.hilera == 0 and (c.sub or 0) < ab_ref.n]
 
     cache_tex_sec: Dict[Tuple[str, str], np.ndarray] = {}
     stats_caras_sec = []
@@ -494,6 +494,65 @@ def ejecutar_diagnostico():
                 "pct_distinto": rep["pct_distinto"],
             })
             stats_caras.extend(rep["stats_caras"])
+
+        # Regenerar las 4 capturas del visor 3D (frontal día/noche, pico día/noche)
+        from logic.exportacion.escena3d import escena_a_dict
+        from logic.exportacion.visor3d import ServidorVisor
+        import time
+
+        escena = escena_a_dict(
+            proy.entrada,
+            res,
+            esquema_pintura=proy.pintura,
+            esquema_diseno=proy.esquema,
+            configuraciones=proy.config_secciones,
+            disenos=proy.disenos,
+            carpeta_recursos=carpeta_recursos,
+        )
+        servidor = ServidorVisor(puerto=0)
+        servidor.iniciar()
+        servidor.actualizar_datos_escena(escena)
+        try:
+            page_v = browser.new_page(viewport={"width": 1280, "height": 800})
+            page_v.goto(servidor.url)
+            page_v.wait_for_selector("#canvas-container canvas")
+            time.sleep(2.5)
+
+            # Vista frontal noche (por defecto)
+            page_v.screenshot(path=str(out_dir / "visor_frontal_noche.png"))
+
+            # Vista frontal día
+            page_v.click("#btn-dia")
+            time.sleep(0.5)
+            page_v.screenshot(path=str(out_dir / "visor_frontal_dia.png"))
+
+            # Acercar cámara a la zona de los picos
+            page_v.evaluate("""() => {
+                if (currentMetadata && currentMetadata.bbox) {
+                    const bbox = currentMetadata.bbox;
+                    const c = bbox.centro;
+                    const maxDim = Math.max(
+                        bbox.max[0] - bbox.min[0],
+                        bbox.max[1] - bbox.min[1],
+                        bbox.max[2] - bbox.min[2]
+                    );
+                    const zPico = c[2] + maxDim * 0.08;
+                    controls.target.set(c[0], c[1], zPico);
+                    camera.position.set(c[0], c[1] - maxDim * 0.85, zPico + maxDim * 0.05);
+                    camera.lookAt(c[0], c[1], zPico);
+                    controls.update();
+                    renderer.render(scene, camera);
+                }
+            }""")
+            time.sleep(0.4)
+            page_v.screenshot(path=str(out_dir / "visor_pico_dia.png"))
+
+            page_v.click("#btn-noche")
+            time.sleep(0.4)
+            page_v.screenshot(path=str(out_dir / "visor_pico_noche.png"))
+            page_v.close()
+        finally:
+            servidor.detener()
 
         browser.close()
 

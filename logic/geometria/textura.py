@@ -62,26 +62,36 @@ def _calcular_tam_px(ancho_cm: float, alto_cm: float, max_px: int = 2048) -> Tup
     return (px_w, px_h)
 
 
+def num_caras_lienzo(
+    seccion: str,
+    esquema: Optional[EsquemaDiseno] = None,
+    num_gajos: int = 30,
+    unir_grupos: bool = False,
+) -> int:
+    """Decide el número de caras (o gajos) del lienzo de diseño para una sección.
+    En el pico (Variante A y B) es siempre 1 sola cara; en los conos es el tamaño del grupo.
+    """
+    if seccion == "pico" or seccion.startswith("pico"):
+        return 1
+    if not esquema:
+        tam_g = 5
+    elif esquema.ciclo:
+        tam_g = len(esquema.ciclo)
+    else:
+        tam_g = esquema.tam_grupo or 5
+    unir = unir_grupos and bool(esquema and esquema.modo == "repeticion" and (num_gajos // tam_g >= 2))
+    return min(num_gajos, tam_g * 2) if unir else tam_g
+
+
 def _obtener_n_abanico_cono(esquema: Optional[EsquemaDiseno], num_gajos: int) -> int:
     """Calcula el número de gajos del abanico del grupo para conos."""
-    if not esquema:
-        return 5
-    if esquema.ciclo:
-        return len(esquema.ciclo)
-    return esquema.tam_grupo or 5
+    return num_caras_lienzo("superior", esquema=esquema, num_gajos=num_gajos)
 
 
-def _obtener_n_caras_pico(esquema_pico: Optional[EsquemaDisenoPico], variante: str = "A") -> int:
-    """Determina cuántas caras (1, 2 o 4) tiene el abanico del pico según el modo de caras."""
-    if not esquema_pico:
-        return 4
-    var_obj = esquema_pico.variante_b if (variante == "B" and esquema_pico.usar_variante_b) else esquema_pico.variante_a
-    modo = getattr(var_obj, "modo_caras", "igual")
-    if modo == "igual":
-        return 1
-    if modo == "alternado":
-        return 2
-    return 4
+def _obtener_n_caras_pico(esquema_pico: Optional[EsquemaDisenoPico] = None, variante: str = "A") -> int:
+    """Determina cuántas caras tiene el lienzo de diseño del pico (siempre 1 cara)."""
+    return num_caras_lienzo("pico")
+
 
 
 def mapear_vertice_a_abanico(
@@ -189,23 +199,23 @@ def mapear_textura(
 
     # Esquemas y abanicos de conos
     cfg_sup = configs.get("superior")
-    n_sup = _obtener_n_abanico_cono(cfg_sup.esquema if cfg_sup else None, entrada.num_gajos)
+    n_sup = num_caras_lienzo("superior", cfg_sup.esquema if cfg_sup else None, entrada.num_gajos)
     ab_sup = abanico(pz_sup, n=n_sup, centrado=True)
     caja_sup = (ab_sup.caja_min_x, ab_sup.caja_min_y, ab_sup.ancho_total, ab_sup.alto_total)
 
     cfg_inf = configs.get("inferior")
-    n_inf = _obtener_n_abanico_cono(cfg_inf.esquema if cfg_inf else None, entrada.num_gajos)
+    n_inf = num_caras_lienzo("inferior", cfg_inf.esquema if cfg_inf else None, entrada.num_gajos)
     ab_inf = abanico(pz_inf, n=n_inf, centrado=True)
     caja_inf = (ab_inf.caja_min_x, ab_inf.caja_min_y, ab_inf.ancho_total, ab_inf.alto_total)
 
     # Esquemas y abanicos de picos
     cfg_pic = configs.get("pico")
     esq_pic = cfg_pic.esquema_pico if cfg_pic else None
-    n_pic_a = _obtener_n_caras_pico(esq_pic, "A")
+    n_pic_a = num_caras_lienzo("pico_A")
     ab_pic_a = abanico(pz_pic, n=n_pic_a, centrado=True)
     caja_pic_a = (ab_pic_a.caja_min_x, ab_pic_a.caja_min_y, ab_pic_a.ancho_total, ab_pic_a.alto_total)
 
-    n_pic_b = _obtener_n_caras_pico(esq_pic, "B")
+    n_pic_b = num_caras_lienzo("pico_B")
     ab_pic_b = abanico(pz_pic, n=n_pic_b, centrado=True)
     caja_pic_b = (ab_pic_b.caja_min_x, ab_pic_b.caja_min_y, ab_pic_b.ancho_total, ab_pic_b.alto_total)
 
@@ -366,10 +376,7 @@ def svg_textura(
     dibujar = cfg.dibujar if (cfg and seccion != "pico") else "completo"
 
     pz = pieza_a_geometria_plana(resultado, entrada, seccion)
-    if seccion == "pico":
-        n = _obtener_n_caras_pico(esquema_pico, var_letra)
-    else:
-        n = _obtener_n_abanico_cono(esquema, entrada.num_gajos)
+    n = num_caras_lienzo(seccion, esquema=esquema, num_gajos=entrada.num_gajos)
 
     ab = abanico(pz, n=n, centrado=True)
     xmin = ab.caja_min_x

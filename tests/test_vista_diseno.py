@@ -186,3 +186,169 @@ def test_vista_trompo_pestana_diseno(controlador_calculado, recurso_svg, tmp_pat
     vista.on_reflejo_h_click(None)
     assert sel.reflejo_h is True
 
+
+def _parsear_puntos_path_svg(d: str):
+    import re
+    pares = re.findall(r"([-+]?\d+(?:\.\d+)?),([-+]?\d+(?:\.\d+)?)", d)
+    return [(float(x), float(y)) for x, y in pares]
+
+
+def test_lienzo_pico_una_sola_cara_misma_caja_y_clippath(controlador_calculado):
+    import re
+    import defusedxml.ElementTree as ET
+    from logic.geometria.malla_trompo import construir_malla
+    from logic.geometria.textura import mapear_textura, svg_textura
+    from logic.exportacion.svg_abanico import calcular_parametros_proyeccion_abanico
+
+    c = controlador_calculado
+    malla = construir_malla(c.entrada_actual, c.resultado)
+    mapa = mapear_textura(
+        entrada=c.entrada_actual,
+        resultado=c.resultado,
+        malla=malla,
+        configuraciones=c.config_secciones,
+        disenos=c.disenos,
+    )
+
+    for var in ("A", "B"):
+        clave = f"pico_{var}"
+        c.cambiar_diseno_seccion("pico", var)
+        c.cambiar_diseno_ver_rotulos(True)
+        svg_diseno = c.svg_diseno
+
+        # El lienzo SVG del pico en Diseño debe contener 1 sola cara (1 eje, 0 aristas internas, rótulo Cara 1)
+        caras_rotuladas = re.findall(r"Cara \d+", svg_diseno)
+        ejes_gajo = re.findall(r'id="eje-gajo-\d+"', svg_diseno)
+        aristas_comunes = re.findall(r'id="arista-comun-\d+"', svg_diseno)
+        assert caras_rotuladas == ["Cara 1"], f"Variante {var} esperaba ['Cara 1'], obtuvo {caras_rotuladas}"
+        assert len(ejes_gajo) == 1
+        assert len(aristas_comunes) == 0
+
+        # Misma caja envolvente que svg_textura / mapear_textura
+        vmin_x, vmin_y, vmax_x, vmax_y = c.ventana_lienzo()
+        caja_ventana = (vmin_x, vmin_y, vmax_x - vmin_x, vmax_y - vmin_y)
+        caja_tex = mapa.texturas[clave].caja_cm
+        assert caja_ventana == pytest.approx(caja_tex, abs=1e-6)
+
+        geom = calcular_parametros_proyeccion_abanico(
+            resultado=c.resultado,
+            entrada=c.entrada_actual,
+            seccion="pico",
+            hoja=c.hoja_tipo,
+            dibujar="completo",
+            modo_diseno=True,
+        )
+        assert geom["n"] == 1
+        caja_geom = (geom["min_x_cm"], geom["min_y_cm"], geom["w_cm"], geom["h_cm"])
+        assert caja_geom == pytest.approx(caja_tex, abs=1e-6)
+
+        # Mismo clipPath (en cm) que svg_textura para el pico
+        svg_tex = svg_textura(
+            clave=clave,
+            entrada=c.entrada_actual,
+            resultado=c.resultado,
+            diseno=c.obtener_diseno_activo(),
+            config_seccion=c.obtener_config_seccion("pico"),
+        )
+        root_dis = ET.fromstring(svg_diseno.encode("utf-8"))
+        root_tex = ET.fromstring(svg_tex.encode("utf-8"))
+
+        ns = {"svg": "http://www.w3.org/2000/svg"}
+        path_clip_dis = root_dis.find(".//svg:clipPath[@id='clip-abanico']/svg:path", ns)
+        path_clip_tex = root_tex.find(".//svg:clipPath[@id='clip-textura']/svg:path", ns)
+        assert path_clip_dis is not None and path_clip_tex is not None
+
+        pts_dis_svg = _parsear_puntos_path_svg(path_clip_dis.attrib["d"])
+        pts_tex_svg = _parsear_puntos_path_svg(path_clip_tex.attrib["d"])
+        assert len(pts_dis_svg) == len(pts_tex_svg) == 4
+
+        # Convertir puntos de clip-abanico (mm de página) a cm del lienzo y comparar con clip-textura (cm con y invertido)
+        factor = geom["factor"]
+        cx_page = geom["cx_page"]
+        cy_page = geom["cy_page"]
+        y_mid_cm = geom["y_mid_cm"]
+        pts_dis_cm = [((xs - cx_page) / factor, y_mid_cm - (ys - cy_page) / factor) for xs, ys in pts_dis_svg]
+        pts_tex_cm = [(xt, -yt) for xt, yt in pts_tex_svg]
+
+        for (xd, yd), (xt, yt) in zip(pts_dis_cm, pts_tex_cm):
+            assert xd == pytest.approx(xt, abs=1e-2)
+            assert yd == pytest.approx(yt, abs=1e-2)
+
+    # Verificar que el interruptor "Lienzo completo / Mitad (espejo)" se oculta en pico y es visible en conos
+    vista = VistaTrompo()
+    vista.controlador = c
+    c.cambiar_diseno_seccion("pico", "A")
+    vista._sync_controlador_a_vista(c.get_view_model())
+    assert vista.selector_lienzo_diseno.visible is False
+
+    c.cambiar_diseno_seccion("superior")
+    vista._sync_controlador_a_vista(c.get_view_model())
+    assert vista.selector_lienzo_diseno.visible is True
+
+    c.cambiar_diseno_seccion("inferior")
+    vista._sync_controlador_a_vista(c.get_view_model())
+    assert vista.selector_lienzo_diseno.visible is True
+
+    # Función única que decide el número de caras
+    from logic.geometria.textura import num_caras_lienzo
+    assert num_caras_lienzo("pico") == 1
+    assert num_caras_lienzo("pico_A") == 1
+    assert num_caras_lienzo("pico_B") == 1
+
+
+def test_proyectos_viejos_intactos_al_abrir():
+    import hashlib
+    import json
+
+    raiz = Path(__file__).resolve().parent.parent
+    rutas = [
+        raiz / "guardados" / "recursos_temp" / "prueba_imagen.json",
+        raiz / "docs" / "ejemplos" / "disenos" / "ejemplo_espejo_12.json",
+    ]
+    rutas_existentes = [r for r in rutas if r.exists()]
+    assert len(rutas_existentes) == 2
+
+    for ruta in rutas_existentes:
+        bytes_antes = ruta.read_bytes()
+        sha_antes = hashlib.sha256(bytes_antes).hexdigest()
+        datos_orig = json.loads(bytes_antes.decode("utf-8"))
+        disenos_orig = datos_orig.get("disenos", {})
+
+        c = ControladorTrompo()
+        ok, msg = c.abrir(str(ruta))
+        assert ok is True, f"Error abriendo {ruta.name}: {msg}"
+
+        # Verificar que ninguna capa fue borrada ni movida
+        for clave, d_dict in disenos_orig.items():
+            capas_orig = d_dict.get("capas", [])
+            assert clave in c.disenos
+            capas_cargadas = c.disenos[clave].capas
+            assert len(capas_cargadas) == len(capas_orig)
+            for c_orig, c_carg in zip(capas_orig, capas_cargadas):
+                assert c_carg.id == c_orig["id"]
+                assert c_carg.x == pytest.approx(c_orig["x"], abs=1e-9)
+                assert c_carg.y == pytest.approx(c_orig["y"], abs=1e-9)
+                assert c_carg.ancho == pytest.approx(c_orig["ancho"], abs=1e-9)
+                assert c_carg.alto == pytest.approx(c_orig["alto"], abs=1e-9)
+                assert c_carg.rotacion == pytest.approx(c_orig.get("rotacion", 0.0), abs=1e-9)
+
+        # Cambiar a sección pico A y B y verificar que renderiza sin error y sin tocar coordenadas
+        c.cambiar_diseno_seccion("pico", "A")
+        assert "<svg" in c.svg_diseno
+        c.cambiar_diseno_seccion("pico", "B")
+        assert "<svg" in c.svg_diseno
+
+        for clave, d_dict in disenos_orig.items():
+            for c_orig, c_carg in zip(d_dict.get("capas", []), c.disenos[clave].capas):
+                assert c_carg.x == pytest.approx(c_orig["x"], abs=1e-9)
+                assert c_carg.y == pytest.approx(c_orig["y"], abs=1e-9)
+                assert c_carg.ancho == pytest.approx(c_orig["ancho"], abs=1e-9)
+                assert c_carg.alto == pytest.approx(c_orig["alto"], abs=1e-9)
+
+        # Confirmar que el archivo .json en disco no cambió
+        sha_despues = hashlib.sha256(ruta.read_bytes()).hexdigest()
+        assert sha_despues == sha_antes
+
+
+
+

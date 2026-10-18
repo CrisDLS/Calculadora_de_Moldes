@@ -67,10 +67,11 @@ class ControladorDisenoMixin:
         if not self.resultado or not self.entrada_actual:
             return (-50.0, 0.0, 50.0, 100.0)
         from logic.geometria.abanico import pieza_a_geometria_plana, abanico
+        from logic.geometria.textura import num_caras_lienzo
         sec = self.diseno_seccion
         pz = pieza_a_geometria_plana(self.resultado, self.entrada_actual, sec)
         cfg = self.obtener_config_seccion(sec)
-        tam_g = 4 if sec == "pico" else (cfg.esquema.tam_grupo if cfg.esquema else 5)
+        tam_g = num_caras_lienzo(sec, esquema=cfg.esquema, num_gajos=self.entrada_actual.num_gajos)
         ab = abanico(pz, n=tam_g, centrado=True)
         if cfg.dibujar == "mitad":
             min_x = 0.0
@@ -237,6 +238,7 @@ class ControladorDisenoMixin:
             hoja=self.hoja_tipo,
             dibujar=cfg.dibujar,
             mostrar_reflejo=self.diseno_mostrar_reflejo,
+            modo_diseno=True,
         )
         return Conversion(
             vista=vista_svg,

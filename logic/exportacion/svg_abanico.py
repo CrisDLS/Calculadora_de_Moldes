@@ -101,6 +101,7 @@ def calcular_parametros_proyeccion_abanico(
     dibujar: str = "completo",
     mostrar_reflejo: bool = True,
     unir_grupos: bool = False,
+    modo_diseno: bool = False,
 ) -> Dict[str, Any]:
     """Calcula la geometría plana del abanico y los parámetros afines de proyección a SVG."""
     if hoja not in ["carta", "a4"]:
@@ -108,12 +109,12 @@ def calcular_parametros_proyeccion_abanico(
 
     hoja_w, hoja_h = (215.9, 279.4) if hoja == "carta" else (210.0, 297.0)
 
-    if seccion == "pico":
+    from logic.geometria.textura import num_caras_lienzo
+    if seccion == "pico" and not modo_diseno:
         n = 4
     else:
-        tam_g = esquema.tam_grupo if esquema else 5
-        unir = unir_grupos and bool(esquema and esquema.modo == "repeticion" and (entrada.num_gajos // tam_g >= 2))
-        n = min(entrada.num_gajos, tam_g * 2) if unir else tam_g
+        n = num_caras_lienzo(seccion, esquema=esquema, num_gajos=entrada.num_gajos, unir_grupos=unir_grupos)
+
 
     # 2. Geometría pura (abanico completo centrado)
     pieza = pieza_a_geometria_plana(resultado, entrada, seccion)
@@ -212,6 +213,7 @@ def svg_abanico(
         dibujar=dibujar,
         mostrar_reflejo=mostrar_reflejo,
         unir_grupos=unir_grupos,
+        modo_diseno=(diseno is not None),
     )
 
     factor = geom["factor"]

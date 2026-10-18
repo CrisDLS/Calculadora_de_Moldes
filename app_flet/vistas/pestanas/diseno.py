@@ -291,6 +291,7 @@ class PestanaDiseno(PestanaBase):
         self.selector_seccion_diseno.selected = [sec]
         self.selector_variante_pico_diseno.visible = (sec == "pico")
         self.selector_variante_pico_diseno.selected = [self.controlador.diseno_variante]
+        self.selector_lienzo_diseno.visible = (sec != "pico")
 
         if vm.svg_diseno and not vm.desactualizado:
             self.lbl_vacio_diseno.visible = False
@@ -323,6 +324,7 @@ class PestanaDiseno(PestanaBase):
     def on_cambio_seccion_diseno(self, e) -> None:
         sel = self.selector_seccion_diseno.selected[0] if self.selector_seccion_diseno.selected else "superior"
         self.selector_variante_pico_diseno.visible = (sel == "pico")
+        self.selector_lienzo_diseno.visible = (sel != "pico")
         var = self.selector_variante_pico_diseno.selected[0] if self.selector_variante_pico_diseno.selected else "A"
         self.controlador.cambiar_diseno_seccion(sel, var)
         self.on_solicitar_sync(reset_zoom=True)
