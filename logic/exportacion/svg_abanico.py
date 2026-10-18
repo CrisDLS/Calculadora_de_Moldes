@@ -113,7 +113,7 @@ def calcular_parametros_proyeccion_abanico(
     if seccion == "pico" and not modo_diseno:
         n = 4
     else:
-        n = num_caras_lienzo(seccion, esquema=esquema, num_gajos=entrada.num_gajos, unir_grupos=unir_grupos)
+        n = num_caras_lienzo(seccion, esquema=esquema, num_gajos=entrada.num_gajos, unir_grupos=unir_grupos, dibujar=dibujar)
 
 
     # 2. Geometría pura (abanico completo centrado)
@@ -270,6 +270,13 @@ def svg_abanico(
         lines.append(f'    <clipPath id="clip-abanico-reflejo">')
         lines.append(f'      <path d="{d_contorno_ref}"/>')
         lines.append(f'    </clipPath>')
+    if diseno is not None and seccion == "pico" and n == 4:
+        for idx_c, poli_c in enumerate(ab.poligonos):
+            pts_c_svg = [to_svg(x, y) for x, y in poli_c]
+            d_c = "M " + " L ".join(f"{x:.2f},{y:.2f}" for x, y in pts_c_svg) + " Z"
+            lines.append(f'    <clipPath id="clip-pico-cara-{idx_c}">')
+            lines.append(f'      <path d="{d_c}"/>')
+            lines.append(f'    </clipPath>')
     lines.append('  </defs>')
 
     if estilo.fondo:
@@ -350,6 +357,21 @@ def svg_abanico(
                         )
                         if elem_svg:
                             lines.append(f'      {elem_svg}')
+                lines.append('    </g>')
+        elif seccion == "pico" and n == 4:
+            x_apex, y_apex = to_svg(0.0, 0.0)
+            for idx_c in range(4):
+                theta_i = (idx_c - 1.5) * psi
+                deg = math.degrees(theta_i)
+                lines.append(f'    <g id="diseno-pico-cara-{idx_c}" clip-path="url(#clip-pico-cara-{idx_c})">')
+                lines.append(f'      <g transform="rotate({deg:.4f} {x_apex:.2f} {y_apex:.2f})">')
+                for c in diseno.capas:
+                    elem_svg = _renderizar_capa_en_abanico(
+                        c, to_svg, factor, carp_rec, opacidad_mult=1.0, vista_previa=vista_previa, modo_fantasma=modo_fantasma
+                    )
+                    if elem_svg:
+                        lines.append(f'        {elem_svg}')
+                lines.append('      </g>')
                 lines.append('    </g>')
         else:
             lines.append('    <g id="diseno-completo" clip-path="url(#clip-abanico)">')
@@ -485,7 +507,10 @@ def svg_abanico(
             "inferior": "Cono inferior"
         }
         nombre_sec_str = nombres_sec.get(seccion, seccion.capitalize())
-        modo_str = "Abanico completo" if dibujar == "completo" else "Medio abanico (espejo)"
+        if seccion == "pico" and diseno is not None:
+            modo_str = "Lienzo completo" if dibujar == "completo" else "Una cara"
+        else:
+            modo_str = "Abanico completo" if dibujar == "completo" else "Medio abanico (espejo)"
 
         # Rótulo superior en el margen
         y_text = margen_mm + 5.0

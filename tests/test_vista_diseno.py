@@ -235,7 +235,7 @@ def test_lienzo_pico_una_sola_cara_misma_caja_y_clippath(controlador_calculado):
             entrada=c.entrada_actual,
             seccion="pico",
             hoja=c.hoja_tipo,
-            dibujar="completo",
+            dibujar="una_cara",
             modo_diseno=True,
         )
         assert geom["n"] == 1
@@ -274,26 +274,32 @@ def test_lienzo_pico_una_sola_cara_misma_caja_y_clippath(controlador_calculado):
             assert xd == pytest.approx(xt, abs=1e-2)
             assert yd == pytest.approx(yt, abs=1e-2)
 
-    # Verificar que el interruptor "Lienzo completo / Mitad (espejo)" se oculta en pico y es visible en conos
+    # Verificar que el interruptor es visible en pico (con opciones 'Una cara' | 'Lienzo completo') y en conos
     vista = VistaTrompo()
     vista.controlador = c
     c.cambiar_diseno_seccion("pico", "A")
     vista._sync_controlador_a_vista(c.get_view_model())
-    assert vista.selector_lienzo_diseno.visible is False
+    assert vista.selector_lienzo_diseno.visible is True
+    assert [s.value for s in vista.selector_lienzo_diseno.segments] == ["una_cara", "completo"]
+    assert [s.label.value for s in vista.selector_lienzo_diseno.segments] == ["Una cara", "Lienzo completo"]
 
     c.cambiar_diseno_seccion("superior")
     vista._sync_controlador_a_vista(c.get_view_model())
     assert vista.selector_lienzo_diseno.visible is True
+    assert [s.value for s in vista.selector_lienzo_diseno.segments] == ["completo", "mitad"]
+    assert [s.label.value for s in vista.selector_lienzo_diseno.segments] == ["Lienzo completo", "Mitad (espejo)"]
 
     c.cambiar_diseno_seccion("inferior")
     vista._sync_controlador_a_vista(c.get_view_model())
     assert vista.selector_lienzo_diseno.visible is True
+    assert [s.value for s in vista.selector_lienzo_diseno.segments] == ["completo", "mitad"]
 
     # Función única que decide el número de caras
     from logic.geometria.textura import num_caras_lienzo
-    assert num_caras_lienzo("pico") == 1
-    assert num_caras_lienzo("pico_A") == 1
-    assert num_caras_lienzo("pico_B") == 1
+    assert num_caras_lienzo("pico", dibujar="una_cara") == 1
+    assert num_caras_lienzo("pico", dibujar="completo") == 4
+    assert num_caras_lienzo("pico_A", dibujar="una_cara") == 1
+    assert num_caras_lienzo("pico_B", dibujar="una_cara") == 1
 
 
 def test_proyectos_viejos_intactos_al_abrir():
@@ -348,6 +354,194 @@ def test_proyectos_viejos_intactos_al_abrir():
         # Confirmar que el archivo .json en disco no cambió
         sha_despues = hashlib.sha256(ruta.read_bytes()).hexdigest()
         assert sha_despues == sha_antes
+
+
+def test_lienzo_completo_pico_4_caras_identicas_y_sin_replicas_en_json(tmp_path):
+    """
+    Comprueba que:
+    1. En 'Una cara', el lienzo del pico muestra 1 sola cara.
+    2. En 'Lienzo completo', el pico muestra 4 caras ('Cara 1'..'Cara 4').
+    3. Cada una de las 4 caras en 'Lienzo completo' es idéntica a la cara única
+       tras girarla a la posición vertical (comparación de píxeles < 2% diferencia).
+    4. El proyecto guardado en JSON NO almacena ninguna réplica (solo la capa original).
+    """
+    import io
+    import math
+    import re
+    import numpy as np
+    from PIL import Image
+    from playwright.sync_api import sync_playwright
+    from logic.diseno.lienzo import CapaDiseno
+    from logic.exportacion.svg_abanico import calcular_parametros_proyeccion_abanico
+
+    c = ControladorTrompo()
+    c.altura = "950"
+    c.num_gajos = "30"
+    c.hileras = "2"
+    c.costura = "1"
+    c.calcular()
+
+    c.cambiar_diseno_seccion("pico", "A")
+
+    # Agregar diseño asimétrico sobre la cara del pico
+    capa = CapaDiseno(
+        id="capa_asimetrica_pico",
+        nombre="Capa Asimétrica",
+        tipo="svg",
+        archivo="triangulo.svg",
+        ancho_natural=20.0,
+        alto_natural=30.0,
+        x=2.0,
+        y=20.0,
+        ancho=12.0,
+        alto=16.0,
+        rotacion=10.0,
+    )
+    # Crear archivo SVG temporal para la capa
+    from logic.diseno.lienzo import limpiar_cache_fragmentos
+    limpiar_cache_fragmentos()
+    svg_archivo = tmp_path / "triangulo.svg"
+    svg_archivo.write_text(
+        '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">'
+        '<polygon points="10,10 90,20 40,90" fill="#E91E63"/>'
+        '</svg>',
+        encoding="utf-8",
+    )
+    c.carpeta_recursos_proyecto = str(tmp_path)
+    dis_pico = c.obtener_diseno_activo()
+    dis_pico.capas = [capa]
+    c.cambiar_diseno_ver_rotulos(True)
+
+    # 1. Modo "Una cara": debe tener 1 sola cara
+    c.cambiar_diseno_lienzo_modo("una_cara")
+    svg_una_cara = c.svg_diseno
+    caras_una = re.findall(r'Cara \d+', svg_una_cara)
+    assert caras_una == ["Cara 1"], f"Se esperaba ['Cara 1'], se obtuvo {caras_una}"
+
+    # 2. Modo "Lienzo completo": debe tener 4 caras
+    c.cambiar_diseno_lienzo_modo("completo")
+    svg_completo = c.svg_diseno
+    caras_comp = re.findall(r'Cara \d+', svg_completo)
+    assert caras_comp == ["Cara 1", "Cara 2", "Cara 3", "Cara 4"], (
+        f"Se esperaba ['Cara 1', 'Cara 2', 'Cara 3', 'Cara 4'], se obtuvo {caras_comp}"
+    )
+
+    # 3. Comparación de píxeles tras girar cada una de las 4 caras
+    # Usamos una escala fija para que las dimensiones en mm/página sean idénticas
+    geom_una = calcular_parametros_proyeccion_abanico(
+        resultado=c.resultado,
+        entrada=c.entrada_actual,
+        seccion="pico",
+        hoja="carta",
+        escala=10.0,
+        dibujar="una_cara",
+        modo_diseno=True,
+    )
+    geom_comp = calcular_parametros_proyeccion_abanico(
+        resultado=c.resultado,
+        entrada=c.entrada_actual,
+        seccion="pico",
+        hoja="carta",
+        escala=10.0,
+        dibujar="completo",
+        modo_diseno=True,
+    )
+
+    from logic.exportacion.svg_abanico import svg_abanico
+    svg_u_fixed = svg_abanico(
+        resultado=c.resultado,
+        entrada=c.entrada_actual,
+        seccion="pico",
+        escala=10.0,
+        hoja="carta",
+        dibujar="una_cara",
+        diseno=dis_pico,
+        carpeta_recursos=tmp_path,
+        ver_cuadricula=False,
+        ver_rotulos=False,
+        ver_costuras=False,
+    )
+    svg_c_fixed = svg_abanico(
+        resultado=c.resultado,
+        entrada=c.entrada_actual,
+        seccion="pico",
+        escala=10.0,
+        hoja="carta",
+        dibujar="completo",
+        diseno=dis_pico,
+        carpeta_recursos=tmp_path,
+        ver_cuadricula=False,
+        ver_rotulos=False,
+        ver_costuras=False,
+    )
+
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch(headless=True)
+        page = browser.new_page(viewport={"width": 1200, "height": 1400})
+
+        page.set_content(f'<body style="margin:0;padding:0;background:#ffffff;"><div id="cont_u" style="display:inline-block;">{svg_u_fixed}</div></body>')
+        img_u_bytes = page.locator("#cont_u").screenshot()
+        img_u = Image.open(io.BytesIO(img_u_bytes)).convert("RGB")
+
+        page.set_content(f'<body style="margin:0;padding:0;background:#ffffff;"><div id="cont_c" style="display:inline-block;">{svg_c_fixed}</div></body>')
+        img_c_bytes = page.locator("#cont_c").screenshot()
+        img_c = Image.open(io.BytesIO(img_c_bytes)).convert("RGB")
+
+        browser.close()
+
+    # Apex en coordenadas de imagen (w_page, h_page en Carta)
+    factor_px_u = img_u.width / geom_una["w_page"]
+    apex_u_px = (geom_una["cx_page"] * factor_px_u, (geom_una["cy_page"] + geom_una["y_mid_cm"] * geom_una["factor"]) * factor_px_u)
+
+    factor_px_c = img_c.width / geom_comp["w_page"]
+    apex_c_px = (geom_comp["cx_page"] * factor_px_c, (geom_comp["cy_page"] + geom_comp["y_mid_cm"] * geom_comp["factor"]) * factor_px_c)
+
+    psi = geom_comp["pieza"].angulo_abertura_rad
+    arr_u = np.array(img_u)
+
+    # Mascara de la cara vertical única: píxeles con color del diseño (descartando blanco y líneas monocromáticas)
+    from PIL import ImageFilter
+    arr_u_int = arr_u.astype(int)
+    sat = (
+        np.abs(arr_u_int[:, :, 0] - arr_u_int[:, :, 1])
+        + np.abs(arr_u_int[:, :, 1] - arr_u_int[:, :, 2])
+        + np.abs(arr_u_int[:, :, 2] - arr_u_int[:, :, 0])
+    )
+    mascara_diseno = sat > 30
+    # Erosión morfológica de 3 px para evitar diferencias por suavizado (anti-aliasing) y remuestreo de rotación en los bordes
+    mask_im = Image.fromarray((mascara_diseno * 255).astype(np.uint8)).filter(ImageFilter.MinFilter(7))
+    mascara_cara = np.array(mask_im) > 0
+    assert np.sum(mascara_cara) > 50, "La cara de referencia no contiene diseño visible suficiente"
+
+    # Alineación subpíxel exacta del lienzo completo al ápice de la cara única
+    dx = apex_u_px[0] - apex_c_px[0]
+    dy = apex_u_px[1] - apex_c_px[1]
+    matriz_afine = (1.0, 0.0, -dx, 0.0, 1.0, -dy)
+    img_c_alineado = img_c.transform(img_u.size, Image.AFFINE, matriz_afine, resample=Image.BICUBIC, fillcolor=(255, 255, 255))
+
+    pcts = []
+    for i in range(4):
+        theta_i = (i - 1.5) * psi
+        deg_rot = math.degrees(theta_i)
+
+        # Rotar la cara i para alinearla verticalmente con la cara única
+        img_i_rot = img_c_alineado.rotate(deg_rot, center=apex_u_px, resample=Image.BICUBIC, fillcolor=(255, 255, 255))
+        arr_i = np.array(img_i_rot)
+
+        diff = np.sum(np.abs(arr_u[mascara_cara].astype(int) - arr_i[mascara_cara].astype(int)), axis=1)
+        pct_dist = (np.sum(diff > 30) / len(diff)) * 100.0
+        pcts.append(pct_dist)
+
+    for i, pct in enumerate(pcts):
+        assert pct < 2.0, f"Cara {i+1} difiere {pct:.2f}% de la cara única (máx 2%)"
+
+    # 4. Comprobar que en el JSON no se almacena ninguna réplica
+    from dataclasses import asdict
+    datos_proy = asdict(c.a_proyecto())
+    capas_guardadas = datos_proy["disenos"]["pico_A"]["capas"]
+    assert len(capas_guardadas) == 1
+    assert capas_guardadas[0]["id"] == "capa_asimetrica_pico"
+    assert "reflejo" not in capas_guardadas[0]["id"]
 
 
 

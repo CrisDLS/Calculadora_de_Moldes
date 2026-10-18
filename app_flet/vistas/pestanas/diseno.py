@@ -144,6 +144,8 @@ class PestanaDiseno(PestanaBase):
         )
         self.segmento_completo_diseno = ft.Segment(value="completo", label=ft.Text("Lienzo completo"))
         self.segmento_mitad_diseno = ft.Segment(value="mitad", label=ft.Text("Mitad (espejo)"))
+        self.segmento_una_cara_pico = ft.Segment(value="una_cara", label=ft.Text("Una cara"))
+        self.segmento_completo_pico = ft.Segment(value="completo", label=ft.Text("Lienzo completo"))
         self.selector_lienzo_diseno = ft.SegmentedButton(
             selected=["completo"],
             allow_multiple_selection=False,
@@ -277,8 +279,25 @@ class PestanaDiseno(PestanaBase):
 
     def actualizar(self, vm: ViewModelTrompo, reset_zoom: bool = False) -> None:
         """Actualiza la vista con el estado del ViewModel."""
-        self.segmento_mitad_diseno.disabled = not vm.puede_usar_mitad
-        self.segmento_mitad_diseno.tooltip = vm.motivo_no_mitad if not vm.puede_usar_mitad else "Diseño sobre mitad con reflejo simétrico"
+        sec = self.controlador.diseno_seccion
+        self.selector_seccion_diseno.selected = [sec]
+        self.selector_variante_pico_diseno.visible = (sec == "pico")
+        self.selector_variante_pico_diseno.selected = [self.controlador.diseno_variante]
+        self.selector_lienzo_diseno.visible = True
+
+        if sec == "pico":
+            self.selector_lienzo_diseno.segments = [
+                self.segmento_una_cara_pico,
+                self.segmento_completo_pico,
+            ]
+        else:
+            self.selector_lienzo_diseno.segments = [
+                self.segmento_completo_diseno,
+                self.segmento_mitad_diseno,
+            ]
+            self.segmento_mitad_diseno.disabled = not vm.puede_usar_mitad
+            self.segmento_mitad_diseno.tooltip = vm.motivo_no_mitad if not vm.puede_usar_mitad else "Diseño sobre mitad con reflejo simétrico"
+
         self.selector_lienzo_diseno.selected = [vm.diseno_lienzo_modo]
 
         self.chk_ver_cuadricula.value = vm.diseno_ver_cuadricula
@@ -286,12 +305,6 @@ class PestanaDiseno(PestanaBase):
         self.chk_ver_costuras.value = vm.diseno_ver_costuras
         self.chk_mostrar_reflejo.value = vm.diseno_mostrar_reflejo
         self.chk_mostrar_reflejo.visible = (vm.diseno_lienzo_modo == "mitad")
-
-        sec = self.controlador.diseno_seccion
-        self.selector_seccion_diseno.selected = [sec]
-        self.selector_variante_pico_diseno.visible = (sec == "pico")
-        self.selector_variante_pico_diseno.selected = [self.controlador.diseno_variante]
-        self.selector_lienzo_diseno.visible = (sec != "pico")
 
         if vm.svg_diseno and not vm.desactualizado:
             self.lbl_vacio_diseno.visible = False
@@ -324,7 +337,7 @@ class PestanaDiseno(PestanaBase):
     def on_cambio_seccion_diseno(self, e) -> None:
         sel = self.selector_seccion_diseno.selected[0] if self.selector_seccion_diseno.selected else "superior"
         self.selector_variante_pico_diseno.visible = (sel == "pico")
-        self.selector_lienzo_diseno.visible = (sel != "pico")
+        self.selector_lienzo_diseno.visible = True
         var = self.selector_variante_pico_diseno.selected[0] if self.selector_variante_pico_diseno.selected else "A"
         self.controlador.cambiar_diseno_seccion(sel, var)
         self.on_solicitar_sync(reset_zoom=True)
@@ -336,7 +349,10 @@ class PestanaDiseno(PestanaBase):
         self.on_solicitar_sync(reset_zoom=True)
 
     def on_cambio_lienzo_diseno(self, e) -> None:
-        modo = self.selector_lienzo_diseno.selected[0] if self.selector_lienzo_diseno.selected else "completo"
+        if self.controlador.diseno_seccion == "pico":
+            modo = self.selector_lienzo_diseno.selected[0] if self.selector_lienzo_diseno.selected else "una_cara"
+        else:
+            modo = self.selector_lienzo_diseno.selected[0] if self.selector_lienzo_diseno.selected else "completo"
         self.controlador.cambiar_diseno_lienzo_modo(modo)
         self.on_solicitar_sync(reset_zoom=True)
 

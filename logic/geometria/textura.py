@@ -67,12 +67,14 @@ def num_caras_lienzo(
     esquema: Optional[EsquemaDiseno] = None,
     num_gajos: int = 30,
     unir_grupos: bool = False,
+    dibujar: str = "completo",
 ) -> int:
     """Decide el número de caras (o gajos) del lienzo de diseño para una sección.
-    En el pico (Variante A y B) es siempre 1 sola cara; en los conos es el tamaño del grupo.
+    En el pico: 4 caras en modo 'completo', 1 sola cara en modo 'una_cara' (o 'mitad').
+    En los conos es el tamaño del grupo.
     """
     if seccion == "pico" or seccion.startswith("pico"):
-        return 1
+        return 4 if dibujar == "completo" else 1
     if not esquema:
         tam_g = 5
     elif esquema.ciclo:
@@ -89,8 +91,8 @@ def _obtener_n_abanico_cono(esquema: Optional[EsquemaDiseno], num_gajos: int) ->
 
 
 def _obtener_n_caras_pico(esquema_pico: Optional[EsquemaDisenoPico] = None, variante: str = "A") -> int:
-    """Determina cuántas caras tiene el lienzo de diseño del pico (siempre 1 cara)."""
-    return num_caras_lienzo("pico")
+    """Determina cuántas caras tiene la textura 3D del pico (siempre 1 cara)."""
+    return num_caras_lienzo("pico", dibujar="una_cara")
 
 
 
@@ -211,11 +213,11 @@ def mapear_textura(
     # Esquemas y abanicos de picos
     cfg_pic = configs.get("pico")
     esq_pic = cfg_pic.esquema_pico if cfg_pic else None
-    n_pic_a = num_caras_lienzo("pico_A")
+    n_pic_a = num_caras_lienzo("pico_A", dibujar="una_cara")
     ab_pic_a = abanico(pz_pic, n=n_pic_a, centrado=True)
     caja_pic_a = (ab_pic_a.caja_min_x, ab_pic_a.caja_min_y, ab_pic_a.ancho_total, ab_pic_a.alto_total)
 
-    n_pic_b = num_caras_lienzo("pico_B")
+    n_pic_b = num_caras_lienzo("pico_B", dibujar="una_cara")
     ab_pic_b = abanico(pz_pic, n=n_pic_b, centrado=True)
     caja_pic_b = (ab_pic_b.caja_min_x, ab_pic_b.caja_min_y, ab_pic_b.ancho_total, ab_pic_b.alto_total)
 
@@ -373,10 +375,10 @@ def svg_textura(
     cfg = config_seccion
     esquema = cfg.esquema if (cfg and seccion != "pico") else None
     esquema_pico = cfg.esquema_pico if (cfg and seccion == "pico") else None
-    dibujar = cfg.dibujar if (cfg and seccion != "pico") else "completo"
+    dibujar = cfg.dibujar if (cfg and seccion != "pico") else "una_cara"
 
     pz = pieza_a_geometria_plana(resultado, entrada, seccion)
-    n = num_caras_lienzo(seccion, esquema=esquema, num_gajos=entrada.num_gajos)
+    n = num_caras_lienzo(seccion, esquema=esquema, num_gajos=entrada.num_gajos, dibujar=dibujar)
 
     ab = abanico(pz, n=n, centrado=True)
     xmin = ab.caja_min_x

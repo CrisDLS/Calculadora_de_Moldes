@@ -196,7 +196,7 @@ class ControladorEntradasMixin:
             capa_seleccionada_id=self.capa_seleccionada_id,
             diseno_seccion=self.diseno_seccion,
             diseno_variante=self.diseno_variante,
-            diseno_lienzo_modo=cfg_diseno.dibujar,
+            diseno_lienzo_modo=self.diseno_pico_modo if self.diseno_seccion == "pico" else cfg_diseno.dibujar,
             mantener_proporcion=self.mantener_proporcion,
             recursos_faltantes=list(self.recursos_faltantes),
             diseno_ver_cuadricula=self.diseno_ver_cuadricula,

@@ -56,7 +56,7 @@ class ControladorProyectoMixin:
             "pico": ConfigSeccion(
                 seccion="pico",
                 esquema_pico=EsquemaDisenoPico(),
-                dibujar="completo",
+                dibujar="una_cara",
                 lienzo="abanico",
                 escala="auto",
             ),
@@ -137,6 +137,11 @@ class ControladorProyectoMixin:
                     self.esquema_ciclo_texto = ", ".join(f"{m}{'E' if e else ''}" for m, e in cfg_sup.esquema.ciclo)
                 self.hoja_dibujar = cfg_sup.dibujar
                 self.hoja_lienzo = cfg_sup.lienzo
+            cfg_pico = self.config_secciones.get("pico")
+            if cfg_pico:
+                if cfg_pico.dibujar == "mitad":
+                    self.diseno_pico_modo = "una_cara"
+                    cfg_pico.dibujar = "completo"
         elif proy.esquema:
             self.esquema_modo = proy.esquema.modo
             self.esquema_tam_grupo = proy.esquema.tam_grupo

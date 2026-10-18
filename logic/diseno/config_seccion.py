@@ -13,7 +13,7 @@ class ConfigSeccion:
     seccion: str  # "superior" | "inferior" | "pico"
     esquema: Optional[EsquemaDiseno] = None  # Para conos superior e inferior
     esquema_pico: Optional[EsquemaDisenoPico] = None  # Exclusivo para pico
-    dibujar: str = "completo"  # "completo" | "mitad" (en pico siempre "completo")
+    dibujar: str = "completo"  # "completo" | "mitad" para conos; "una_cara" | "completo" para pico
     lienzo: str = "abanico"    # "abanico" | "separadas"
     escala: Union[str, int, float] = "auto"
 

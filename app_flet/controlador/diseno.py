@@ -71,9 +71,10 @@ class ControladorDisenoMixin:
         sec = self.diseno_seccion
         pz = pieza_a_geometria_plana(self.resultado, self.entrada_actual, sec)
         cfg = self.obtener_config_seccion(sec)
-        tam_g = num_caras_lienzo(sec, esquema=cfg.esquema, num_gajos=self.entrada_actual.num_gajos)
+        modo_dib = self.diseno_pico_modo if sec == "pico" else cfg.dibujar
+        tam_g = num_caras_lienzo(sec, esquema=cfg.esquema, num_gajos=self.entrada_actual.num_gajos, dibujar=modo_dib)
         ab = abanico(pz, n=tam_g, centrado=True)
-        if cfg.dibujar == "mitad":
+        if modo_dib == "mitad":
             min_x = 0.0
             max_x = ab.caja_max_x
         else:
@@ -230,13 +231,14 @@ class ControladorDisenoMixin:
         sec = self.diseno_seccion
         cfg = self.obtener_config_seccion(sec)
         esq = cfg.esquema if (cfg and cfg.esquema) else self._construir_esquema(sec)
+        modo_dib = self.diseno_pico_modo if sec == "pico" else cfg.dibujar
         geom = calcular_parametros_proyeccion_abanico(
             resultado=self.resultado,
             entrada=self.entrada_actual,
             seccion=sec,
             esquema=esq,
             hoja=self.hoja_tipo,
-            dibujar=cfg.dibujar,
+            dibujar=modo_dib,
             mostrar_reflejo=self.diseno_mostrar_reflejo,
             modo_diseno=True,
         )
@@ -273,20 +275,26 @@ class ControladorDisenoMixin:
     def cambiar_diseno_seccion(self, seccion: str, variante: str = "A") -> None:
         self.diseno_seccion = seccion
         self.diseno_variante = variante
-        cfg = self.obtener_config_seccion(seccion)
-        self.diseno_lienzo_modo = cfg.dibujar
+        if seccion == "pico":
+            if self.diseno_pico_modo not in ("una_cara", "completo"):
+                self.diseno_pico_modo = "una_cara"
+            self.diseno_lienzo_modo = self.diseno_pico_modo
+        else:
+            cfg = self.obtener_config_seccion(seccion)
+            self.diseno_lienzo_modo = cfg.dibujar
         dis = self.obtener_diseno_activo()
         self.capa_seleccionada_id = dis.capas[0].id if dis.capas else None
         self._actualizar_svg_diseno()
 
     def cambiar_diseno_lienzo_modo(self, modo: str) -> None:
         cfg = self.obtener_config_seccion(self.diseno_seccion)
-        if cfg.seccion == "pico":
-            cfg.dibujar = "completo"
+        if self.diseno_seccion == "pico":
+            self.diseno_pico_modo = modo if modo in ("una_cara", "completo") else "una_cara"
+            self.diseno_lienzo_modo = self.diseno_pico_modo
         else:
             puede, _ = cfg.puede_usar_mitad()
             cfg.dibujar = modo if (puede or modo == "completo") else "completo"
-        self.diseno_lienzo_modo = cfg.dibujar
+            self.diseno_lienzo_modo = cfg.dibujar
         self.sin_guardar = True
         self._actualizar_svg_diseno()
 
@@ -302,6 +310,7 @@ class ControladorDisenoMixin:
             carp = self.obtener_carpeta_recursos_activa()
             capa_sel = self.obtener_capa_seleccionada()
             overlay = None if modo_fantasma else (capa_sel if (capa_sel and not capa_sel.bloqueada) else None)
+            modo_dib = self.diseno_pico_modo if sec == "pico" else cfg.dibujar
             self.svg_diseno = svg_abanico(
                 resultado=self.resultado,
                 entrada=self.entrada_actual,
@@ -309,7 +318,7 @@ class ControladorDisenoMixin:
                 esquema=esq,
                 estilo=self.estilo_svg,
                 hoja=self.hoja_tipo,
-                dibujar=cfg.dibujar,
+                dibujar=modo_dib,
                 diseno=dis,
                 carpeta_recursos=carp,
                 mostrar_reflejo=self.diseno_mostrar_reflejo,
@@ -331,6 +340,7 @@ class ControladorDisenoMixin:
         esq = cfg.esquema if (cfg and cfg.esquema) else self._construir_esquema(sec)
         dis = self.obtener_diseno_activo()
         carp_rec = self.obtener_carpeta_recursos_activa()
+        modo_dib = self.diseno_pico_modo if sec == "pico" else cfg.dibujar
         return exportar_diseno(
             carpeta=carpeta_destino,
             resultado=self.resultado,
@@ -340,7 +350,7 @@ class ControladorDisenoMixin:
             carpeta_recursos=carp_rec,
             seccion=sec,
             formato_hoja=self.hoja_tipo,
-            dibujar=cfg.dibujar,
+            dibujar=modo_dib,
         )
 
     def exportar_hoja_diseno(self, ruta_destino: str) -> None:
@@ -351,6 +361,7 @@ class ControladorDisenoMixin:
         esq = cfg.esquema if (cfg and cfg.esquema) else self._construir_esquema(sec)
         dis = self.obtener_diseno_activo()
         carp_rec = self.obtener_carpeta_recursos_activa()
+        modo_dib = self.diseno_pico_modo if sec == "pico" else cfg.dibujar
         svg_txt = svg_abanico(
             resultado=self.resultado,
             entrada=self.entrada_actual,
@@ -358,7 +369,7 @@ class ControladorDisenoMixin:
             esquema=esq,
             estilo=IMPRESION,
             hoja=self.hoja_tipo,
-            dibujar=cfg.dibujar,
+            dibujar=modo_dib,
             diseno=dis,
             carpeta_recursos=carp_rec,
             mostrar_reflejo=self.diseno_mostrar_reflejo,

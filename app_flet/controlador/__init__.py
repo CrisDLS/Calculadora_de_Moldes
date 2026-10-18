@@ -107,6 +107,7 @@ class ControladorTrompo(
         self.diseno_seccion: str = "superior"
         self.diseno_variante: str = "A"
         self.diseno_lienzo_modo: str = "completo"
+        self.diseno_pico_modo: str = "una_cara"
         self.capa_seleccionada_id: Optional[str] = None
         self.mantener_proporcion: bool = True
         self.recursos_faltantes: List[str] = []
