@@ -111,10 +111,10 @@ function animate() {
   renderer.render(scene, camera);
 }
 
-// Cache de texturas creadas: clave -> { hashSvg: string, texture: THREE.CanvasTexture }
+// Cache de texturas creadas: "clave|color" -> { svgStr: string, texture: THREE.CanvasTexture }
 const textureCache = {};
 
-function crearTexturaDesdeSvg(clave, info) {
+function crearTexturaDesdeSvg(clave, info, colorFondo) {
   return new Promise((resolve) => {
     if (!info || !info.svg) {
       resolve(null);
@@ -124,9 +124,11 @@ function crearTexturaDesdeSvg(clave, info) {
     const px = info.px || [1024, 1024];
     const w = px[0];
     const h = px[1];
+    const bgCol = (colorFondo || '#ffffff').toLowerCase();
+    const cacheKey = `${clave}|${bgCol}`;
 
-    if (textureCache[clave] && textureCache[clave].svgStr === svgStr) {
-      resolve(textureCache[clave].texture);
+    if (textureCache[cacheKey] && textureCache[cacheKey].svgStr === svgStr) {
+      resolve(textureCache[cacheKey].texture);
       return;
     }
 
@@ -140,6 +142,11 @@ function crearTexturaDesdeSvg(clave, info) {
       canvas.width = w;
       canvas.height = h;
       const ctx = canvas.getContext('2d');
+
+      // Rellenar primero con el color de papel para que las zonas transparentes
+      // del diseño muestren el papel real en lugar de negro.
+      ctx.fillStyle = bgCol;
+      ctx.fillRect(0, 0, w, h);
       ctx.drawImage(img, 0, 0, w, h);
 
       const texture = new THREE.CanvasTexture(canvas);
@@ -153,10 +160,10 @@ function crearTexturaDesdeSvg(clave, info) {
       texture.flipY = false;
       texture.needsUpdate = true;
 
-      if (textureCache[clave] && textureCache[clave].texture) {
-        textureCache[clave].texture.dispose();
+      if (textureCache[cacheKey] && textureCache[cacheKey].texture) {
+        textureCache[cacheKey].texture.dispose();
       }
-      textureCache[clave] = { svgStr: svgStr, texture: texture };
+      textureCache[cacheKey] = { svgStr: svgStr, texture: texture };
       resolve(texture);
     };
 
@@ -179,12 +186,21 @@ async function cargarModelo(data) {
     document.getElementById('txt-dimensiones').innerText = txt;
   }
 
-  // Cargar texturas asíncronamente si existen en data.texturas
+  // Identificar pares únicos (textura, color) presentes en las caras
   const mapaTexturas = {};
   if (data.texturas && Object.keys(data.texturas).length > 0) {
-    const promesas = Object.keys(data.texturas).map(async (k) => {
-      const tex = await crearTexturaDesdeSvg(k, data.texturas[k]);
-      if (tex) mapaTexturas[k] = tex;
+    const paresUnicos = new Set();
+    data.caras.forEach(c => {
+      if (c.textura && data.texturas[c.textura]) {
+        const col = (c.color || '#ffffff').toLowerCase();
+        paresUnicos.add(`${c.textura}|${col}`);
+      }
+    });
+
+    const promesas = Array.from(paresUnicos).map(async (par) => {
+      const [texKey, col] = par.split('|');
+      const tex = await crearTexturaDesdeSvg(texKey, data.texturas[texKey], col);
+      if (tex) mapaTexturas[par] = tex;
     });
     await Promise.all(promesas);
   }
@@ -213,12 +229,13 @@ async function cargarModelo(data) {
   const grupos = {};
   caras.forEach(c => {
     const col = (c.color || '#ffffff').toLowerCase();
-    const texKey = (c.textura && mapaTexturas[c.textura]) ? c.textura : null;
-    const groupKey = texKey ? `tex:${texKey}|${col}` : `col:${col}`;
+    const parKey = c.textura ? `${c.textura}|${col}` : null;
+    const tex = (parKey && mapaTexturas[parKey]) ? mapaTexturas[parKey] : null;
+    const groupKey = tex ? `tex:${parKey}` : `col:${col}`;
     if (!grupos[groupKey]) {
       grupos[groupKey] = {
         color: col,
-        textura: texKey,
+        texturaObj: tex,
         caras: [],
       };
     }
@@ -247,7 +264,7 @@ async function cargarModelo(data) {
       normals.push(n[0], n[1], n[2]);
       normals.push(n[0], n[1], n[2]);
 
-      if (grpInfo.textura && c.uv && c.uv.length >= 3) {
+      if (grpInfo.texturaObj && c.uv && c.uv.length >= 3) {
         const u0 = c.uv[0];
         const u1 = c.uv[1];
         const u2 = c.uv[2];
@@ -260,7 +277,7 @@ async function cargarModelo(data) {
     const geom = new THREE.BufferGeometry();
     geom.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
     geom.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
-    if (grpInfo.textura && uvs.length > 0) {
+    if (grpInfo.texturaObj && uvs.length > 0) {
       geom.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
     }
 
@@ -271,9 +288,11 @@ async function cargarModelo(data) {
       flatShading: true,
     };
 
-    if (grpInfo.textura) {
-      matConfig.color = new THREE.Color(grpInfo.color);
-      matConfig.map = mapaTexturas[grpInfo.textura];
+    if (grpInfo.texturaObj) {
+      // El canvas de la textura ya tiene horneado el color de papel de fondo.
+      // Usar blanco puro en material.color para no multiplicar/oscurecer dos veces el color de papel.
+      matConfig.color = new THREE.Color(0xffffff);
+      matConfig.map = grpInfo.texturaObj;
     } else {
       matConfig.color = new THREE.Color(grpInfo.color);
     }
