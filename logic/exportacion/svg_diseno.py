@@ -82,7 +82,8 @@ def svg_gajo(
     path_cut = formatear_path_simetrico(pts_right_cut, pts_left_cut)
     path_seam = formatear_path_simetrico(pts_right_seam, pts_left_seam)
 
-    tam_g = esquema.tam_grupo if esquema else 5
+    from logic.geometria.textura import num_caras_lienzo
+    tam_g = num_caras_lienzo(seccion, esquema=esquema, num_gajos=entrada.num_gajos)
     k_grupo = idx_en_grupo % tam_g
     es_central_impar = (dibujar == "mitad") and (tam_g % 2 == 1) and (k_grupo == tam_g // 2)
 

@@ -56,7 +56,7 @@ class ControladorProyectoMixin:
             "pico": ConfigSeccion(
                 seccion="pico",
                 esquema_pico=EsquemaDisenoPico(),
-                dibujar="completo",
+                dibujar="una_cara",
                 lienzo="abanico",
                 escala="auto",
             ),
@@ -137,6 +137,13 @@ class ControladorProyectoMixin:
                     self.esquema_ciclo_texto = ", ".join(f"{m}{'E' if e else ''}" for m, e in cfg_sup.esquema.ciclo)
                 self.hoja_dibujar = cfg_sup.dibujar
                 self.hoja_lienzo = cfg_sup.lienzo
+            cfg_pico = self.config_secciones.get("pico")
+            if cfg_pico:
+                if cfg_pico.diseno_modo in ("una_cara", "mitad", "completo"):
+                    self.diseno_pico_modo = cfg_pico.diseno_modo
+                else:
+                    self.diseno_pico_modo = "una_cara"
+                cfg_pico.dibujar = "completo"
         elif proy.esquema:
             self.esquema_modo = proy.esquema.modo
             self.esquema_tam_grupo = proy.esquema.tam_grupo
@@ -176,9 +183,17 @@ class ControladorProyectoMixin:
             nombre = os.path.splitext(os.path.basename(destino))[0]
             self.nombre_proyecto = nombre
             proy = self.a_proyecto()
-            guardar_proyecto(proy, destino)
+            carp_origen = self.obtener_carpeta_recursos_activa() if hasattr(self, "obtener_carpeta_recursos_activa") else None
+            guardar_proyecto(
+                proy,
+                destino,
+                ruta_anterior=self.ruta_proyecto,
+                carpeta_recursos_origen=carp_origen,
+            )
             self.ruta_proyecto = destino
             self.sin_guardar = False
+            if hasattr(self, "_actualizar_svg_diseno"):
+                self._actualizar_svg_diseno()
             return True, destino
         except Exception as e:
             return False, str(e)

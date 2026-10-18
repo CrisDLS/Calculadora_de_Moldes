@@ -209,8 +209,8 @@ def contorno_abanico(
     """
     if n <= 0:
         raise ValueError(f"El número de gajos n debe ser mayor a 0, recibido: {n}")
-    if dibujar not in ["completo", "mitad"]:
-        raise ValueError(f"Modo no reconocido: {dibujar}. Use 'completo' o 'mitad'.")
+    if dibujar not in ["completo", "mitad", "una_cara"]:
+        raise ValueError(f"Modo no reconocido: {dibujar}. Use 'completo', 'mitad' o 'una_cara'.")
 
     psi = pieza.angulo_abertura_rad
     s0 = pieza.distancia_vertice
@@ -220,7 +220,7 @@ def contorno_abanico(
 
     pts: List[Tuple[float, float]] = []
 
-    if dibujar == "completo":
+    if dibujar in ["completo", "una_cara"]:
         ang_min = -ang_max
         if s0 > 1e-6:
             # 1. Lateral izquierdo (s0 a s1 en ang_min)

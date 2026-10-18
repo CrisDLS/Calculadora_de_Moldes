@@ -247,6 +247,7 @@ class VistaTrompo(VistaTrompoCompat, ft.Container):
     def _on_tabs_change(self, e):
         if getattr(self, "arrastrando_capa", False):
             self.pestana_diseno.gestor_visor.finalizar_arrastre_capa()
+        self._sync_controlador_a_vista(self.controlador.get_view_model())
 
     def _cargar_entradas_desde_controlador(self):
         self.panel_entradas.cargar_desde_controlador()

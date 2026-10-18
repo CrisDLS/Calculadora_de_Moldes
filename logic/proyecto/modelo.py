@@ -1,8 +1,10 @@
+import os
 import json
 import shutil
+from datetime import datetime
 from pathlib import Path
 from dataclasses import dataclass, field, asdict
-from typing import Optional, Dict, List, Any, Union
+from typing import Optional, Dict, List, Any, Union, Set
 from logic.models import BalloonInput, Condiciones
 from logic.diseno.esquema import EsquemaDiseno
 from logic.diseno.pintura import EsquemaPintura, VariantePico
@@ -10,6 +12,13 @@ from logic.diseno.diseno_pico import EsquemaDisenoPico
 from logic.diseno.lienzo import Diseno
 
 from logic.diseno.config_seccion import ConfigSeccion
+
+CARPETA_DATOS_DEFAULT: str = "guardados"
+
+
+def obtener_carpeta_datos() -> Path:
+    """Retorna la carpeta base de datos del usuario (configurable vía GLOBOS_DATOS, por defecto 'guardados')."""
+    return Path(os.environ.get("GLOBOS_DATOS", CARPETA_DATOS_DEFAULT))
 
 @dataclass
 class Proyecto:
@@ -230,9 +239,44 @@ def copiar_recursos_proyecto(ruta_origen: Union[str, Path], ruta_destino: Union[
             if item.is_file():
                 shutil.copy2(item, carp_destino / item.name)
 
-def guardar_proyecto(proyecto: Proyecto, ruta: str, ruta_anterior: Optional[str] = None) -> None:
-    if ruta_anterior and Path(ruta_anterior).resolve() != Path(ruta).resolve():
+def guardar_proyecto(
+    proyecto: Proyecto,
+    ruta: str,
+    ruta_anterior: Optional[str] = None,
+    carpeta_recursos_origen: Optional[Union[str, Path]] = None,
+) -> None:
+    p_dest = Path(ruta)
+    carp_destino = obtener_carpeta_recursos(p_dest)
+
+    # 1. Si hay ruta anterior distinta, copiar los recursos preexistentes
+    if ruta_anterior and Path(ruta_anterior).resolve() != p_dest.resolve():
         copiar_recursos_proyecto(ruta_anterior, ruta)
+
+    # 2. Asegurar que todos los recursos referenciados por capas existan en carp_destino
+    archivos_capas: Set[str] = set()
+    for diseno in proyecto.disenos.values():
+        for capa in diseno.capas:
+            if capa.archivo:
+                archivos_capas.add(capa.archivo)
+
+    if archivos_capas:
+        carp_destino.mkdir(parents=True, exist_ok=True)
+        fuentes_busqueda: List[Path] = []
+        if carpeta_recursos_origen:
+            fuentes_busqueda.append(Path(carpeta_recursos_origen))
+        if ruta_anterior:
+            fuentes_busqueda.append(obtener_carpeta_recursos(ruta_anterior))
+        fuentes_busqueda.append(obtener_carpeta_datos() / "recursos_temp")
+
+        for arch_nombre in archivos_capas:
+            dest_file = carp_destino / arch_nombre
+            if not dest_file.exists():
+                for fuente_dir in fuentes_busqueda:
+                    src_file = fuente_dir / arch_nombre
+                    if src_file.exists() and src_file.is_file():
+                        shutil.copy2(src_file, dest_file)
+                        break
+
     with open(ruta, "w", encoding="utf-8") as f:
         json.dump(asdict(proyecto), f, indent=4, ensure_ascii=False)
 
@@ -253,4 +297,79 @@ def cargar_proyecto(ruta: str) -> Proyecto:
                 faltantes.append(capa.archivo)
     proyecto.recursos_faltantes = faltantes
     return proyecto
+
+
+def obtener_archivos_referenciados_por_proyectos(
+    carpeta_proyectos: Union[str, Path],
+    proyecto_actual: Optional[Proyecto] = None,
+) -> Set[str]:
+    """Obtiene el conjunto de nombres de archivo de recursos referenciados por todos los proyectos en disco y en memoria."""
+    referenciados: Set[str] = set()
+
+    # Proyectos guardados en carpeta_proyectos (por ejemplo guardados/)
+    base = Path(carpeta_proyectos)
+    if base.exists():
+        for f in base.rglob("*.json"):
+            # Ignorar archivos en papelera o temporales internos
+            if "_papelera" in f.parts:
+                continue
+            try:
+                data = json.loads(f.read_text(encoding="utf-8"))
+                if not isinstance(data, dict):
+                    continue
+                disenos = data.get("disenos", {})
+                for sec_diseno in disenos.values():
+                    if isinstance(sec_diseno, dict):
+                        for c in sec_diseno.get("capas", []):
+                            arch = c.get("archivo")
+                            if arch:
+                                referenciados.add(arch)
+            except Exception:
+                pass
+
+    # Proyecto actualmente cargado en memoria
+    if proyecto_actual:
+        for diseno in proyecto_actual.disenos.values():
+            for capa in diseno.capas:
+                if capa.archivo:
+                    referenciados.add(capa.archivo)
+
+    return referenciados
+
+
+def recursos_sin_uso(
+    carpeta_recursos: Union[str, Path],
+    archivos_referenciados: Set[str],
+) -> List[Path]:
+    """Retorna la lista de rutas de archivos en carpeta_recursos que no están referenciados por ningún proyecto."""
+    carp = Path(carpeta_recursos)
+    if not carp.exists() or not carp.is_dir():
+        return []
+
+    sin_uso: List[Path] = []
+    for item in carp.iterdir():
+        # Excluir subcarpetas (como _papelera), archivos ocultos y archivos .json de proyecto
+        if item.is_file() and not item.name.startswith(".") and not item.name.endswith(".json"):
+            if item.name not in archivos_referenciados:
+                sin_uso.append(item)
+
+    return sorted(sin_uso, key=lambda p: p.name)
+
+
+def mover_a_papelera(
+    archivos: List[Path],
+    carpeta_recursos: Union[str, Path],
+    subdirectorio_fecha: Optional[str] = None,
+) -> Path:
+    """Mueve archivos sin uso a <carpeta_recursos>/_papelera/<fecha_hora>/ sin borrar nada permanentemente."""
+    carp_base = Path(carpeta_recursos)
+    fecha_str = subdirectorio_fecha or datetime.now().strftime("%Y%m%d_%H%M%S")
+    destino_papelera = carp_base / "_papelera" / fecha_str
+    destino_papelera.mkdir(parents=True, exist_ok=True)
+
+    for arch in archivos:
+        if arch.exists() and arch.is_file():
+            shutil.move(str(arch), str(destino_papelera / arch.name))
+
+    return destino_papelera
 

@@ -107,6 +107,7 @@ class ControladorTrompo(
         self.diseno_seccion: str = "superior"
         self.diseno_variante: str = "A"
         self.diseno_lienzo_modo: str = "completo"
+        self.diseno_pico_modo: str = "una_cara"
         self.capa_seleccionada_id: Optional[str] = None
         self.mantener_proporcion: bool = True
         self.recursos_faltantes: List[str] = []
@@ -124,6 +125,7 @@ class ControladorTrompo(
         self.pliego_ancho: float = 50.0
         self.pliego_alto: float = 70.0
         self.servidor_3d: Optional[ServidorVisor] = None
+        self.mostrar_diseno_3d: bool = True
 
 
 __all__ = [

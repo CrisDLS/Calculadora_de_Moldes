@@ -10,7 +10,9 @@ sin tener que levantar toda la aplicación:
 """
 
 from pathlib import Path
+import atexit
 import sys
+import tempfile
 
 RAIZ = Path(__file__).resolve().parent.parent
 if str(RAIZ) not in sys.path:
@@ -50,8 +52,9 @@ def main(page: ft.Page) -> None:
     esquema = EsquemaDiseno(modo="repeticion", tam_grupo=5)
 
     # 2. Carpeta de recursos temporal y capa de ejemplo
-    rec_dir = RAIZ / "guardados" / "_demo_recursos"
-    rec_dir.mkdir(parents=True, exist_ok=True)
+    _temp_dir = tempfile.TemporaryDirectory(prefix="globos_demo_")
+    atexit.register(_temp_dir.cleanup)
+    rec_dir = Path(_temp_dir.name)
     ej_svg = RAIZ / "docs" / "ejemplos" / "disenos" / "mosaico_geometrico.svg"
 
     capa = importar_recurso(ej_svg, rec_dir)

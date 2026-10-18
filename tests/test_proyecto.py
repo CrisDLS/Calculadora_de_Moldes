@@ -109,3 +109,98 @@ def test_proyecto_falta_entrada(tmp_path):
     
     with pytest.raises(ValueError, match="Falta el campo requerido: entrada"):
         cargar_proyecto(str(ruta))
+
+
+def test_proyecto_guardar_como_con_recursos_persistencia(tmp_path):
+    from PIL import Image
+    from app_flet.controlador import ControladorTrompo
+    import shutil
+
+    # 1. Crear imágenes en una carpeta temporal
+    dir_origen = tmp_path / "archivos_fuente"
+    dir_origen.mkdir()
+    png_path = dir_origen / "foto.png"
+    Image.new("RGB", (80, 80), color="red").save(png_path)
+    svg_path = dir_origen / "logo.svg"
+    svg_path.write_text('<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="blue"/></svg>')
+
+    # 2. Proyecto nuevo sin título, añadir PNG y SVG
+    ctrl = ControladorTrompo()
+    ctrl.calcular()
+    ctrl.cambiar_diseno_seccion("superior")
+    c_png = ctrl.anadir_capa(str(png_path))
+    c_svg = ctrl.anadir_capa(str(svg_path))
+
+    # 3. Guardar como en una carpeta de destino
+    dir_guardado = tmp_path / "guardados_test"
+    dir_guardado.mkdir()
+    ruta_proy = dir_guardado / "mi_proyecto.json"
+
+    ok, msg = ctrl.guardar(str(ruta_proy))
+    assert ok is True
+
+    # Los archivos deben existir junto al .json en <nombre>_recursos
+    rec_dir = dir_guardado / "mi_proyecto_recursos"
+    assert rec_dir.exists(), "La carpeta mi_proyecto_recursos no fue creada"
+    assert (rec_dir / c_png.archivo).exists(), f"El archivo {c_png.archivo} no existe en {rec_dir}"
+    assert (rec_dir / c_svg.archivo).exists(), f"El archivo {c_svg.archivo} no existe en {rec_dir}"
+
+    # 4. Abrir con un controlador nuevo: las capas deben resolver sus archivos sin faltantes
+    ctrl2 = ControladorTrompo()
+    ok_abrir, msg_abrir = ctrl2.abrir(str(ruta_proy))
+    assert ok_abrir is True
+    assert ctrl2.recursos_faltantes == []
+    # El SVG de diseño generado debe contener las imágenes resueltas
+    assert "data:image" in ctrl2.svg_diseno or 'fill="blue"' in ctrl2.svg_diseno
+
+    # 5. Añadir una imagen a un proyecto ya guardado y Guardar directamente
+    svg_extra = dir_origen / "extra.svg"
+    svg_extra.write_text('<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="green"/></svg>')
+    c_extra = ctrl2.anadir_capa(str(svg_extra))
+    ok_g2, msg_g2 = ctrl2.guardar()
+    assert ok_g2 is True
+    assert (rec_dir / c_extra.archivo).exists(), f"La nueva capa {c_extra.archivo} no está en {rec_dir}"
+
+    # 6. Copiar el .json con su carpeta de recursos a otro lugar y abrirlo
+    dir_movido = tmp_path / "otro_lugar"
+    dir_movido.mkdir()
+    ruta_movida = dir_movido / "mi_proyecto.json"
+    shutil.copy2(ruta_proy, ruta_movida)
+    shutil.copytree(rec_dir, dir_movido / "mi_proyecto_recursos")
+
+    ctrl3 = ControladorTrompo()
+    ok_abrir3, msg_abrir3 = ctrl3.abrir(str(ruta_movida))
+    assert ok_abrir3 is True
+    assert ctrl3.recursos_faltantes == []
+    dis_sup3 = ctrl3.disenos["superior"]
+    assert len(dis_sup3.capas) == 3
+
+    # 7. Si al abrir falta una imagen: no se borra la capa y aparece en recursos_faltantes
+    (rec_dir / c_png.archivo).unlink()
+    contenido_antes = ruta_proy.read_text(encoding="utf-8")
+    ctrl4 = ControladorTrompo()
+    ok_abrir4, msg_abrir4 = ctrl4.abrir(str(ruta_proy))
+    assert ok_abrir4 is True
+    assert c_png.archivo in ctrl4.recursos_faltantes
+    assert len(ctrl4.disenos["superior"].capas) == 3  # No se borró la capa
+    # El .json NO se modificó al abrir
+    assert ruta_proy.read_text(encoding="utf-8") == contenido_antes
+
+    # 8. Comprobar que la vista muestra el aviso visible con el nombre del archivo faltante
+    from app_flet.vistas.trompo import VistaTrompo
+    vista = VistaTrompo()
+    vista.controlador = ctrl4
+    vista._sync_controlador_a_vista(ctrl4.get_view_model())
+
+    col_capas = vista.pestana_diseno.inspector.col_lista_capas
+    textos_aviso = []
+    def _extraer_textos(control):
+        if hasattr(control, "value") and control.value:
+            textos_aviso.append(control.value)
+        if hasattr(control, "content") and control.content:
+            _extraer_textos(control.content)
+        if hasattr(control, "controls") and control.controls:
+            for child in control.controls:
+                _extraer_textos(child)
+    _extraer_textos(col_capas)
+    assert any(c_png.archivo in t for t in textos_aviso), f"El archivo faltante {c_png.archivo} no se muestra en la vista: {textos_aviso}"

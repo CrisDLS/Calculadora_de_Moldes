@@ -143,11 +143,11 @@ class MockPage:
         self.updates += 1
 
 
-def test_toggle_tema_atomico_y_una_sola_actualizacion():
+def test_toggle_tema_atomico_y_una_sola_actualizacion(monkeypatch):
     v = VistaTrompo()
     mock_p = MockPage()
-    # Mockear property obtener_pagina
-    type(v).obtener_pagina = property(lambda self: mock_p)
+    # Mockear property obtener_pagina solo durante este test
+    monkeypatch.setattr(VistaTrompo, "obtener_pagina", property(lambda self: mock_p))
 
     v.on_calcular(None)
     mock_p.updates = 0
@@ -321,6 +321,48 @@ def test_seleccion_perfil_armado_en_vista_flet():
     assert "Perfil armado" in v._svg_actual_raw
     assert "Alto total:" in v._svg_actual_raw
     assert v.img_svg.src != b""
+
+
+def test_tamano_minimo_e_inicial_ventana():
+    from app_flet.main import main as app_main
+
+    class MockWindow:
+        def __init__(self):
+            self.min_width = None
+            self.min_height = None
+            self.width = None
+            self.height = None
+
+    class MockPage:
+        def __init__(self):
+            self.window = MockWindow()
+            self.window_min_width = None
+            self.window_min_height = None
+            self.window_width = None
+            self.window_height = None
+            self.title = ""
+            self.theme = None
+            self.theme_mode = None
+            self.padding = None
+            self.controls = []
+
+        def add(self, *controls):
+            self.controls.extend(controls)
+
+    p = MockPage()
+    app_main(p)
+
+    # 1. Ancho y alto mínimos deben ser al menos 1100 x 700 (API page.window en Flet 1.0.4)
+    min_w = p.window.min_width if p.window.min_width is not None else p.window_min_width
+    min_h = p.window.min_height if p.window.min_height is not None else p.window_min_height
+    assert min_w is not None and min_w >= 1100, f"min_width debe ser >= 1100, obtenido {min_w}"
+    assert min_h is not None and min_h >= 700, f"min_height debe ser >= 700, obtenido {min_h}"
+
+    # 2. Tamaño inicial con el que abre debe ser mayor o igual al mínimo (>= 1100 x 700)
+    w_ini = p.window.width if p.window.width is not None else p.window_width
+    h_ini = p.window.height if p.window.height is not None else p.window_height
+    assert w_ini is not None and w_ini >= 1100, f"width inicial debe ser >= 1100, obtenido {w_ini}"
+    assert h_ini is not None and h_ini >= 700, f"height inicial debe ser >= 700, obtenido {h_ini}"
 
 
 

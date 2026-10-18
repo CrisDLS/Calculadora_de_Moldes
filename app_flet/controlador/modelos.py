@@ -65,3 +65,6 @@ class ViewModelTrompo:
     config_secciones: Dict[str, ConfigSeccion] = field(default_factory=dict)
     puede_usar_mitad: bool = True
     motivo_no_mitad: str = ""
+    # Control de visualización de texturas en visor 3D
+    mostrar_diseno_3d: bool = True
+    hay_diseno_visible: bool = False

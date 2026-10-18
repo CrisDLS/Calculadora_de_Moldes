@@ -111,13 +111,99 @@ function animate() {
   renderer.render(scene, camera);
 }
 
-function cargarModelo(data) {
+// Cache de texturas creadas: "clave|color" -> { svgStr: string, texture: THREE.CanvasTexture }
+const textureCache = {};
+
+function crearTexturaDesdeSvg(clave, info, colorFondo) {
+  return new Promise((resolve) => {
+    if (!info || !info.svg) {
+      resolve(null);
+      return;
+    }
+    const svgStr = info.svg;
+    const px = info.px || [1024, 1024];
+    const w = px[0];
+    const h = px[1];
+    const bgCol = (colorFondo || '#ffffff').toLowerCase();
+    const cacheKey = `${clave}|${bgCol}`;
+
+    if (textureCache[cacheKey] && textureCache[cacheKey].svgStr === svgStr) {
+      resolve(textureCache[cacheKey].texture);
+      return;
+    }
+
+    const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+
+      // Rellenar primero con el color de papel para que las zonas transparentes
+      // del diseño muestren el papel real en lugar de negro.
+      ctx.fillStyle = bgCol;
+      ctx.fillRect(0, 0, w, h);
+      ctx.drawImage(img, 0, 0, w, h);
+
+      const texture = new THREE.CanvasTexture(canvas);
+      if (THREE.sRGBEncoding) {
+        texture.encoding = THREE.sRGBEncoding;
+      }
+      texture.wrapS = THREE.ClampToEdgeWrapping;
+      texture.wrapT = THREE.ClampToEdgeWrapping;
+      texture.minFilter = THREE.LinearFilter;
+      texture.magFilter = THREE.LinearFilter;
+      // Convención UV (textura.py): v=1 arriba (ymax) y v=0 abajo (ymin), por lo que requiere flipY = true.
+      texture.flipY = true;
+      texture.needsUpdate = true;
+
+      if (textureCache[cacheKey] && textureCache[cacheKey].texture) {
+        textureCache[cacheKey].texture.dispose();
+      }
+      textureCache[cacheKey] = { svgStr: svgStr, texture: texture };
+      resolve(texture);
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      console.warn('Error cargando textura SVG para:', clave);
+      resolve(null);
+    };
+
+    img.src = url;
+  });
+}
+
+async function cargarModelo(data) {
   if (!data || !data.vertices || !data.caras) return;
   currentMetadata = data.metadata;
 
   if (currentMetadata) {
     const txt = `Altura: ${currentMetadata.altura_total.toFixed(1)} cm · Ancho con picos: ${currentMetadata.ancho_con_picos.toFixed(1)} cm · ${currentMetadata.num_gajos} gajos`;
     document.getElementById('txt-dimensiones').innerText = txt;
+  }
+
+  // Identificar pares únicos (textura, color) presentes en las caras
+  const mapaTexturas = {};
+  if (data.texturas && Object.keys(data.texturas).length > 0) {
+    const paresUnicos = new Set();
+    data.caras.forEach(c => {
+      if (c.textura && data.texturas[c.textura]) {
+        const col = (c.color || '#ffffff').toLowerCase();
+        paresUnicos.add(`${c.textura}|${col}`);
+      }
+    });
+
+    const promesas = Array.from(paresUnicos).map(async (par) => {
+      const [texKey, col] = par.split('|');
+      const tex = await crearTexturaDesdeSvg(texKey, data.texturas[texKey], col);
+      if (tex) mapaTexturas[par] = tex;
+    });
+    await Promise.all(promesas);
   }
 
   // Limpiar grupos anteriores
@@ -139,20 +225,32 @@ function cargarModelo(data) {
   const verts = data.vertices;
   const caras = data.caras;
 
-  // Agrupar triángulos por color
-  const gruposPorColor = {};
+  // Agrupar triángulos por material (textura + color)
+  // Clave del grupo: "tex:<clave_textura>|<color>" o "col:<color>"
+  const grupos = {};
   caras.forEach(c => {
-    const col = c.color.toLowerCase();
-    if (!gruposPorColor[col]) gruposPorColor[col] = [];
-    gruposPorColor[col].push(c);
+    const col = (c.color || '#ffffff').toLowerCase();
+    const parKey = c.textura ? `${c.textura}|${col}` : null;
+    const tex = (parKey && mapaTexturas[parKey]) ? mapaTexturas[parKey] : null;
+    const groupKey = tex ? `tex:${parKey}` : `col:${col}`;
+    if (!grupos[groupKey]) {
+      grupos[groupKey] = {
+        color: col,
+        texturaObj: tex,
+        caras: [],
+      };
+    }
+    grupos[groupKey].caras.push(c);
   });
 
-  Object.keys(gruposPorColor).forEach(hexColor => {
-    const carasColor = gruposPorColor[hexColor];
+  Object.keys(grupos).forEach(key => {
+    const grpInfo = grupos[key];
+    const carasGrupo = grpInfo.caras;
     const positions = [];
     const normals = [];
+    const uvs = [];
 
-    carasColor.forEach(c => {
+    carasGrupo.forEach(c => {
       const idx = c.indices;
       const v0 = verts[idx[0]];
       const v1 = verts[idx[1]];
@@ -166,19 +264,41 @@ function cargarModelo(data) {
       normals.push(n[0], n[1], n[2]);
       normals.push(n[0], n[1], n[2]);
       normals.push(n[0], n[1], n[2]);
+
+      if (grpInfo.texturaObj && c.uv && c.uv.length >= 3) {
+        const u0 = c.uv[0];
+        const u1 = c.uv[1];
+        const u2 = c.uv[2];
+        uvs.push(u0[0], u0[1]);
+        uvs.push(u1[0], u1[1]);
+        uvs.push(u2[0], u2[1]);
+      }
     });
 
     const geom = new THREE.BufferGeometry();
     geom.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
     geom.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+    if (grpInfo.texturaObj && uvs.length > 0) {
+      geom.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+    }
 
-    const mat = new THREE.MeshStandardMaterial({
-      color: new THREE.Color(hexColor),
+    const matConfig = {
       side: THREE.DoubleSide,
       roughness: 0.85,
       metalness: 0.05,
       flatShading: true,
-    });
+    };
+
+    if (grpInfo.texturaObj) {
+      // El canvas de la textura ya tiene horneado el color de papel de fondo.
+      // Usar blanco puro en material.color para no multiplicar/oscurecer dos veces el color de papel.
+      matConfig.color = new THREE.Color(0xffffff);
+      matConfig.map = grpInfo.texturaObj;
+    } else {
+      matConfig.color = new THREE.Color(grpInfo.color);
+    }
+
+    const mat = new THREE.MeshStandardMaterial(matConfig);
 
     const mesh = new THREE.Mesh(geom, mat);
     mesh.castShadow = true;
@@ -190,7 +310,7 @@ function cargarModelo(data) {
     const wireMat = new THREE.LineBasicMaterial({
       color: 0x555566,
       transparent: true,
-      opacity: 0.35
+      opacity: 0.35,
     });
     const wireMesh = new THREE.LineSegments(wireGeom, wireMat);
     wireMesh.visible = showWireframe;
@@ -202,7 +322,7 @@ function cargarModelo(data) {
       color: 0x222228,
       linewidth: 1.5,
       transparent: true,
-      opacity: 0.75
+      opacity: 0.75,
     });
     const seamsMesh = new THREE.LineSegments(edgesGeom, seamsMat);
     seamsMesh.visible = showSeams;
@@ -343,7 +463,8 @@ function startAutoPoll() {
     fetch('/api/escena')
       .then(r => r.json())
       .then(data => {
-        const hash = JSON.stringify(data.metadata || {});
+        const texKeys = data.texturas ? Object.keys(data.texturas).sort().join(',') : '';
+        const hash = JSON.stringify(data.metadata || {}) + `|tex:${texKeys}`;
         if (hash !== ultimoHash) {
           const primerCargue = (ultimoHash === '');
           ultimoHash = hash;

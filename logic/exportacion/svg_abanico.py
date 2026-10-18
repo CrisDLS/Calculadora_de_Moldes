@@ -101,6 +101,7 @@ def calcular_parametros_proyeccion_abanico(
     dibujar: str = "completo",
     mostrar_reflejo: bool = True,
     unir_grupos: bool = False,
+    modo_diseno: bool = False,
 ) -> Dict[str, Any]:
     """Calcula la geometría plana del abanico y los parámetros afines de proyección a SVG."""
     if hoja not in ["carta", "a4"]:
@@ -108,12 +109,12 @@ def calcular_parametros_proyeccion_abanico(
 
     hoja_w, hoja_h = (215.9, 279.4) if hoja == "carta" else (210.0, 297.0)
 
-    if seccion == "pico":
-        n = 4
+    from logic.geometria.textura import num_caras_lienzo
+    if seccion == "pico" and not modo_diseno:
+        n = 1
     else:
-        tam_g = esquema.tam_grupo if esquema else 5
-        unir = unir_grupos and bool(esquema and esquema.modo == "repeticion" and (entrada.num_gajos // tam_g >= 2))
-        n = min(entrada.num_gajos, tam_g * 2) if unir else tam_g
+        n = num_caras_lienzo(seccion, esquema=esquema, num_gajos=entrada.num_gajos, unir_grupos=unir_grupos, dibujar=dibujar)
+
 
     # 2. Geometría pura (abanico completo centrado)
     pieza = pieza_a_geometria_plana(resultado, entrada, seccion)
@@ -199,6 +200,7 @@ def svg_abanico(
     overlay_capa_activa: Optional[CapaDiseno] = None,
     vista_previa: bool = True,
     modo_fantasma: bool = False,
+    espejo: bool = False,
 ) -> str:
     """Genera un SVG con la hoja de trazo en abanico para impresión o Inkscape."""
     geom = calcular_parametros_proyeccion_abanico(
@@ -212,6 +214,7 @@ def svg_abanico(
         dibujar=dibujar,
         mostrar_reflejo=mostrar_reflejo,
         unir_grupos=unir_grupos,
+        modo_diseno=(diseno is not None),
     )
 
     factor = geom["factor"]
@@ -268,6 +271,13 @@ def svg_abanico(
         lines.append(f'    <clipPath id="clip-abanico-reflejo">')
         lines.append(f'      <path d="{d_contorno_ref}"/>')
         lines.append(f'    </clipPath>')
+    if diseno is not None and seccion == "pico" and n == 4:
+        for idx_c, poli_c in enumerate(ab.poligonos):
+            pts_c_svg = [to_svg(x, y) for x, y in poli_c]
+            d_c = "M " + " L ".join(f"{x:.2f},{y:.2f}" for x, y in pts_c_svg) + " Z"
+            lines.append(f'    <clipPath id="clip-pico-cara-{idx_c}">')
+            lines.append(f'      <path d="{d_c}"/>')
+            lines.append(f'    </clipPath>')
     lines.append('  </defs>')
 
     if estilo.fondo:
@@ -348,6 +358,22 @@ def svg_abanico(
                         )
                         if elem_svg:
                             lines.append(f'      {elem_svg}')
+                lines.append('    </g>')
+        elif seccion == "pico" and n == 4:
+            x_apex, y_apex = to_svg(0.0, 0.0)
+            capas_pico = construir_grupo(diseno, None, modo_lienzo="mitad") if espejo else list(diseno.capas)
+            for idx_c in range(4):
+                theta_i = (idx_c - 1.5) * psi
+                deg = math.degrees(theta_i)
+                lines.append(f'    <g id="diseno-pico-cara-{idx_c}" clip-path="url(#clip-pico-cara-{idx_c})">')
+                lines.append(f'      <g transform="rotate({deg:.4f} {x_apex:.2f} {y_apex:.2f})">')
+                for c in capas_pico:
+                    elem_svg = _renderizar_capa_en_abanico(
+                        c, to_svg, factor, carp_rec, opacidad_mult=1.0, vista_previa=vista_previa, modo_fantasma=modo_fantasma
+                    )
+                    if elem_svg:
+                        lines.append(f'        {elem_svg}')
+                lines.append('      </g>')
                 lines.append('    </g>')
         else:
             lines.append('    <g id="diseno-completo" clip-path="url(#clip-abanico)">')
@@ -483,7 +509,15 @@ def svg_abanico(
             "inferior": "Cono inferior"
         }
         nombre_sec_str = nombres_sec.get(seccion, seccion.capitalize())
-        modo_str = "Abanico completo" if dibujar == "completo" else "Medio abanico (espejo)"
+        if seccion == "pico":
+            if dibujar == "mitad":
+                modo_str = "Mitad (espejo)"
+            elif n == 4:
+                modo_str = "Lienzo completo"
+            else:
+                modo_str = "Cara completa"
+        else:
+            modo_str = "Abanico completo" if dibujar == "completo" else "Medio abanico (espejo)"
 
         # Rótulo superior en el margen
         y_text = margen_mm + 5.0

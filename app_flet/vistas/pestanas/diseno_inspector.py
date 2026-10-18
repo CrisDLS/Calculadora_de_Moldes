@@ -14,14 +14,20 @@ class PanelCapasInspector:
         file_picker,
         on_solicitar_sync: Callable[..., None],
         on_mostrar_snackbar: Callable[[str], None],
+        obtener_pagina: Optional[Callable[[], Optional[ft.Page]]] = None,
     ):
         self.controlador = controlador
         self.file_picker = file_picker
         self.on_solicitar_sync = on_solicitar_sync
         self.on_mostrar_snackbar = on_mostrar_snackbar
+        self._obtener_pagina = obtener_pagina
         self._actualizando_programatico: bool = False
 
         self._crear_controles()
+
+    @property
+    def pagina(self) -> Optional[ft.Page]:
+        return self._obtener_pagina() if self._obtener_pagina else None
 
     def _crear_controles(self) -> None:
         # Panel lateral de capas
@@ -100,65 +106,119 @@ class PanelCapasInspector:
         """Actualiza la lista de capas y el inspector con el estado actual."""
         self.col_lista_capas.controls.clear()
         capa_activa = self.controlador.obtener_capa_seleccionada()
+        faltantes = getattr(vm, "recursos_faltantes", []) or []
+
+        if faltantes:
+            self.col_lista_capas.controls.append(
+                ft.Container(
+                    padding=8,
+                    border_radius=6,
+                    bgcolor=ft.Colors.ERROR_CONTAINER,
+                    content=ft.Row(
+                        controls=[
+                            ft.Icon(ft.Icons.WARNING_AMBER_ROUNDED, color=ft.Colors.ERROR, size=18),
+                            ft.Text(
+                                f"Archivos faltantes: {', '.join(faltantes)}",
+                                size=11,
+                                color=ft.Colors.ON_ERROR_CONTAINER,
+                                weight=ft.FontWeight.BOLD,
+                                expand=True,
+                            ),
+                        ],
+                        spacing=6,
+                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                    ),
+                )
+            )
 
         for c in vm.capas_diseno:
             es_sel = (c.id == vm.capa_seleccionada_id)
-            c_id = c.id
+            es_faltante = c.archivo in faltantes
+            self.col_lista_capas.controls.append(self._crear_fila_capa(c, es_sel, es_faltante))
 
-            btn_vis = ft.IconButton(
-                icon=ft.Icons.VISIBILITY if c.visible else ft.Icons.VISIBILITY_OFF,
-                icon_size=16,
-                tooltip="Visibilidad",
-                on_click=lambda e, cid=c_id, v=not c.visible: self._toggle_visibilidad_capa(cid, v),
-            )
-            btn_lock = ft.IconButton(
-                icon=ft.Icons.LOCK if c.bloqueada else ft.Icons.LOCK_OPEN,
-                icon_size=16,
-                tooltip="Bloquear",
-                on_click=lambda e, cid=c_id, l=not c.bloqueada: self._toggle_bloqueo_capa(cid, l),
-            )
-            btn_up = ft.IconButton(
-                icon=ft.Icons.ARROW_UPWARD,
-                icon_size=16,
-                tooltip="Subir orden",
-                on_click=lambda e, cid=c_id: self._mover_capa(cid, -1),
-            )
-            btn_down = ft.IconButton(
-                icon=ft.Icons.ARROW_DOWNWARD,
-                icon_size=16,
-                tooltip="Bajar orden",
-                on_click=lambda e, cid=c_id: self._mover_capa(cid, 1),
-            )
-            btn_del = ft.IconButton(
-                icon=ft.Icons.DELETE_OUTLINE,
-                icon_size=16,
-                icon_color=ft.Colors.ERROR,
-                tooltip="Eliminar",
-                on_click=lambda e, cid=c_id: self._eliminar_capa(cid),
-            )
+        if capa_activa:
+            self.panel_inspector_capa.visible = True
+            self.txt_nombre_capa.value = capa_activa.nombre
+            self.txt_pos_x.value = f"{capa_activa.x:.2f}"
+            self.txt_pos_y.value = f"{capa_activa.y:.2f}"
+            self.txt_ancho_capa.value = f"{capa_activa.ancho:.2f}"
+            self.txt_alto_capa.value = f"{capa_activa.alto:.2f}"
+            self.chk_proporcion.value = self.controlador.mantener_proporcion
+            self.slider_rotacion.value = float(capa_activa.rotacion)
+            self.lbl_rotacion_val.value = f"{capa_activa.rotacion:.0f}°"
+            self.slider_opacidad.value = float(capa_activa.opacidad)
+            self.lbl_opacidad_val.value = f"{int(capa_activa.opacidad * 100)}%"
+        else:
+            self.panel_inspector_capa.visible = False
 
+    def _crear_fila_capa(self, c, es_sel: bool, es_faltante: bool) -> ft.Container:
+        """Crea el contenedor de control para una capa en la lista lateral."""
+        c_id = c.id
+        btn_vis = ft.IconButton(
+            icon=ft.Icons.VISIBILITY if c.visible else ft.Icons.VISIBILITY_OFF,
+            icon_size=16, tooltip="Visibilidad",
+            on_click=lambda e, cid=c_id, v=not c.visible: self._toggle_visibilidad_capa(cid, v),
+        )
+        btn_lock = ft.IconButton(
+            icon=ft.Icons.LOCK if c.bloqueada else ft.Icons.LOCK_OPEN,
+            icon_size=16, tooltip="Bloquear",
+            on_click=lambda e, cid=c_id, l=not c.bloqueada: self._toggle_bloqueo_capa(cid, l),
+        )
+        btn_up = ft.IconButton(
+            icon=ft.Icons.ARROW_UPWARD, icon_size=16, tooltip="Subir orden",
+            on_click=lambda e, cid=c_id: self._mover_capa(cid, -1),
+        )
+        btn_down = ft.IconButton(
+            icon=ft.Icons.ARROW_DOWNWARD, icon_size=16, tooltip="Bajar orden",
+            on_click=lambda e, cid=c_id: self._mover_capa(cid, 1),
+        )
+        btn_del = ft.IconButton(
+            icon=ft.Icons.DELETE_OUTLINE, icon_size=16, icon_color=ft.Colors.ERROR, tooltip="Eliminar",
+            on_click=lambda e, cid=c_id: self._eliminar_capa(cid),
+        )
+
+        if es_faltante:
+            ctrl_icono = ft.Icon(
+                ft.Icons.WARNING_AMBER_ROUNDED,
+                size=18,
+                color=ft.Colors.ERROR,
+                tooltip=f"Archivo faltante: {c.archivo}",
+            )
+            ctrl_texto = ft.Column(
+                [
+                    ft.Text(c.nombre, size=13, weight=ft.FontWeight.BOLD if es_sel else ft.FontWeight.NORMAL, no_wrap=True, overflow=ft.TextOverflow.ELLIPSIS),
+                    ft.Text(f"Falta: {c.archivo}", size=10, color=ft.Colors.ERROR, no_wrap=True, overflow=ft.TextOverflow.ELLIPSIS),
+                ],
+                spacing=1,
+                expand=True,
+            )
+            borde = ft.Border.all(1, ft.Colors.ERROR)
+        else:
             tipo_icono = ft.Icons.DRAW if c.tipo == "svg" else ft.Icons.IMAGE
-            fila_capa = ft.Container(
-                padding=6,
-                border_radius=6,
-                bgcolor=ft.Colors.PRIMARY_CONTAINER if es_sel else ft.Colors.SURFACE_CONTAINER,
-                border=ft.Border.all(1, ft.Colors.PRIMARY if es_sel else ft.Colors.OUTLINE_VARIANT),
-                on_click=lambda e, cid=c_id: self._seleccionar_capa(cid),
-                content=ft.Row(
-                    controls=[
-                        ft.Icon(tipo_icono, size=18),
-                        ft.Text(c.nombre, size=13, weight=ft.FontWeight.BOLD if es_sel else ft.FontWeight.NORMAL, expand=True),
-                        btn_vis,
-                        btn_lock,
-                        btn_up,
-                        btn_down,
-                        btn_del,
-                    ],
-                    spacing=2,
-                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                ),
-            )
-            self.col_lista_capas.controls.append(fila_capa)
+            ctrl_icono = ft.Icon(tipo_icono, size=18)
+            ctrl_texto = ft.Text(c.nombre, size=13, weight=ft.FontWeight.BOLD if es_sel else ft.FontWeight.NORMAL, expand=True)
+            borde = ft.Border.all(1, ft.Colors.PRIMARY if es_sel else ft.Colors.OUTLINE_VARIANT)
+
+        return ft.Container(
+            padding=6,
+            border_radius=6,
+            bgcolor=ft.Colors.PRIMARY_CONTAINER if es_sel else ft.Colors.SURFACE_CONTAINER,
+            border=borde,
+            on_click=lambda e, cid=c_id: self._seleccionar_capa(cid),
+            content=ft.Row(
+                controls=[
+                    ctrl_icono,
+                    ctrl_texto,
+                    btn_vis,
+                    btn_lock,
+                    btn_up,
+                    btn_down,
+                    btn_del,
+                ],
+                spacing=2,
+                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+            ),
+        )
 
         if capa_activa:
             self.panel_inspector_capa.visible = True

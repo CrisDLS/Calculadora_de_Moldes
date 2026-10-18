@@ -229,12 +229,17 @@ def test_accion_cambiar_opciones_hoja_y_abanico():
     c = ControladorTrompo()
     c.calcular()
 
-    # En pico, solo se permite 'completo' (no espejo)
+    # En pico, ahora se permite 'mitad' y 'completo' (cara completa de 1 cara)
     c.actualizar_opciones_hoja(pieza="pico", lienzo="abanico", dibujar="mitad")
     vm_pico = c.get_view_model()
-    assert "Abanico completo" in vm_pico.svg_hoja
+    assert "Mitad (espejo)" in vm_pico.svg_hoja
     assert "Cara 1" in vm_pico.svg_hoja
-    assert "Cara 4" in vm_pico.svg_hoja
+    assert 'id="eje-espejo-recto"' in vm_pico.svg_hoja
+
+    c.actualizar_opciones_hoja(pieza="pico", lienzo="abanico", dibujar="completo")
+    vm_pico_comp = c.get_view_model()
+    assert "Cara completa" in vm_pico_comp.svg_hoja
+    assert "Cara 1" in vm_pico_comp.svg_hoja
 
     # En cono con esquema simétrico (central_espejo), se permite 'mitad'
     c.cambiar_esquema_seccion("inferior", "central_espejo", 5)

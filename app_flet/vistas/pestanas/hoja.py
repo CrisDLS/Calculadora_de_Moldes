@@ -16,7 +16,7 @@ class PestanaHoja(PestanaBase):
         controlador,
         servicio_file_picker=None,
         on_mostrar_snackbar: Optional[Callable[[str], None]] = None,
-        on_solicitar_sync: Optional[Callable[[bool], None]] = None,
+        on_solicitar_sync: Optional[Callable[..., None]] = None,
     ):
         self.paleta = paleta
         self.controlador = controlador
@@ -262,9 +262,13 @@ class PestanaHoja(PestanaBase):
         return self.contenedor
 
     def actualizar(self, vm: ViewModelTrompo, reset_zoom: bool = False) -> None:
-        sel_hoja = self.selector_pieza_hoja.selected[0] if self.selector_pieza_hoja.selected else "superior"
+        sel_hoja = self.controlador.hoja_pieza
+        self.selector_pieza_hoja.selected = [sel_hoja]
         self.panel_diseno_pico_hoja.visible = (sel_hoja == "pico")
         self.btn_sincronizar_conos.visible = (sel_hoja != "pico")
+        self.txt_tam_grupo.disabled = (sel_hoja == "pico")
+        if sel_hoja == "pico":
+            self.txt_tam_grupo.value = "4"
         cfg_hoja = vm.config_secciones.get(sel_hoja)
         if cfg_hoja:
             puede_h, mot_h = cfg_hoja.puede_usar_mitad()
@@ -313,20 +317,27 @@ class PestanaHoja(PestanaBase):
         self.controlador.actualizar_opciones_hoja(pieza=sel)
         self.panel_diseno_pico_hoja.visible = (sel == "pico")
         cfg = self.controlador.obtener_config_seccion(sel)
-        if cfg.esquema:
-            self.dd_modo_esquema.value = cfg.esquema.modo
-            self.txt_tam_grupo.value = str(cfg.esquema.tam_grupo)
-            if cfg.esquema.ciclo:
-                self.txt_ciclo_personalizado.value = ", ".join(f"{m}{'E' if esp else ''}" for m, esp in cfg.esquema.ciclo)
-            else:
-                self.txt_ciclo_personalizado.value = ""
-            self.txt_ciclo_personalizado.visible = (cfg.esquema.modo == "personalizado")
-            self.txt_tam_grupo.visible = (cfg.esquema.modo != "personalizado")
+        if sel == "pico":
+            self.txt_tam_grupo.value = "4"
+            self.txt_tam_grupo.disabled = True
+            self.txt_ciclo_personalizado.visible = False
+            self.txt_tam_grupo.visible = True
+        else:
+            self.txt_tam_grupo.disabled = False
+            if cfg.esquema:
+                self.dd_modo_esquema.value = cfg.esquema.modo
+                self.txt_tam_grupo.value = str(cfg.esquema.tam_grupo)
+                if cfg.esquema.ciclo:
+                    self.txt_ciclo_personalizado.value = ", ".join(f"{m}{'E' if esp else ''}" for m, esp in cfg.esquema.ciclo)
+                else:
+                    self.txt_ciclo_personalizado.value = ""
+                self.txt_ciclo_personalizado.visible = (cfg.esquema.modo == "personalizado")
+                self.txt_tam_grupo.visible = (cfg.esquema.modo != "personalizado")
         self.dd_escala.value = str(cfg.escala)
         self.selector_lienzo.selected = [cfg.lienzo]
         self.selector_modo_dibujo.selected = [cfg.dibujar]
         if self.on_solicitar_sync:
-            self.on_solicitar_sync(True)
+            self.on_solicitar_sync(reset_zoom=True)
 
     def on_sincronizar_conos(self, e) -> None:
         origen = self.controlador.hoja_pieza
@@ -334,13 +345,18 @@ class PestanaHoja(PestanaBase):
             origen = "superior"
         self.controlador.sincronizar_conos(origen)
         cfg = self.controlador.obtener_config_seccion(self.controlador.hoja_pieza)
-        if cfg.esquema:
-            self.dd_modo_esquema.value = cfg.esquema.modo
-            self.txt_tam_grupo.value = str(cfg.esquema.tam_grupo)
-            if cfg.esquema.ciclo:
-                self.txt_ciclo_personalizado.value = ", ".join(f"{m}{'E' if esp else ''}" for m, esp in cfg.esquema.ciclo)
+        if self.controlador.hoja_pieza == "pico":
+            self.txt_tam_grupo.value = "4"
+            self.txt_tam_grupo.disabled = True
+        else:
+            self.txt_tam_grupo.disabled = False
+            if cfg.esquema:
+                self.dd_modo_esquema.value = cfg.esquema.modo
+                self.txt_tam_grupo.value = str(cfg.esquema.tam_grupo)
+                if cfg.esquema.ciclo:
+                    self.txt_ciclo_personalizado.value = ", ".join(f"{m}{'E' if esp else ''}" for m, esp in cfg.esquema.ciclo)
         if self.on_solicitar_sync:
-            self.on_solicitar_sync(True)
+            self.on_solicitar_sync(reset_zoom=True)
         if self.on_mostrar_snackbar:
             self.on_mostrar_snackbar("Configuración sincronizada en ambos conos")
 
@@ -348,16 +364,21 @@ class PestanaHoja(PestanaBase):
         destino = self.controlador.hoja_pieza
         self.controlador.copiar_configuracion_seccion(origen, destino)
         cfg = self.controlador.obtener_config_seccion(destino)
-        if cfg.esquema:
-            self.dd_modo_esquema.value = cfg.esquema.modo
-            self.txt_tam_grupo.value = str(cfg.esquema.tam_grupo)
-            if cfg.esquema.ciclo:
-                self.txt_ciclo_personalizado.value = ", ".join(f"{m}{'E' if esp else ''}" for m, esp in cfg.esquema.ciclo)
+        if destino == "pico":
+            self.txt_tam_grupo.value = "4"
+            self.txt_tam_grupo.disabled = True
+        else:
+            self.txt_tam_grupo.disabled = False
+            if cfg.esquema:
+                self.dd_modo_esquema.value = cfg.esquema.modo
+                self.txt_tam_grupo.value = str(cfg.esquema.tam_grupo)
+                if cfg.esquema.ciclo:
+                    self.txt_ciclo_personalizado.value = ", ".join(f"{m}{'E' if esp else ''}" for m, esp in cfg.esquema.ciclo)
         self.dd_escala.value = str(cfg.escala)
         self.selector_lienzo.selected = [cfg.lienzo]
         self.selector_modo_dibujo.selected = [cfg.dibujar]
         if self.on_solicitar_sync:
-            self.on_solicitar_sync(True)
+            self.on_solicitar_sync(reset_zoom=True)
         if self.on_mostrar_snackbar:
             self.on_mostrar_snackbar(f"Configuración copiada desde {origen}")
 
@@ -365,21 +386,24 @@ class PestanaHoja(PestanaBase):
         sel = self.selector_lienzo.selected[0] if self.selector_lienzo.selected else "abanico"
         self.controlador.actualizar_opciones_hoja(lienzo=sel)
         if self.on_solicitar_sync:
-            self.on_solicitar_sync(True)
+            self.on_solicitar_sync(reset_zoom=True)
 
     def on_cambio_modo_dibujo(self, e) -> None:
         sel = self.selector_modo_dibujo.selected[0] if self.selector_modo_dibujo.selected else "completo"
         self.controlador.actualizar_opciones_hoja(dibujar=sel)
         if self.on_solicitar_sync:
-            self.on_solicitar_sync(True)
+            self.on_solicitar_sync(reset_zoom=True)
 
     def on_cambio_repeticion_pico_hoja(self, e) -> None:
         rep = self.dd_repeticion_pico_hoja.value or "todas_a"
         self.controlador.actualizar_esquema_pico(modo_repeticion=rep)
         if self.on_solicitar_sync:
-            self.on_solicitar_sync(True)
+            self.on_solicitar_sync(reset_zoom=True)
 
     def on_cambio_esquema_opciones(self, e) -> None:
+        sel = self.selector_pieza_hoja.selected[0] if self.selector_pieza_hoja.selected else "superior"
+        if sel == "pico":
+            return
         modo = self.dd_modo_esquema.value or "repeticion"
         self.txt_ciclo_personalizado.visible = (modo == "personalizado")
         self.txt_tam_grupo.visible = (modo != "personalizado")
@@ -391,14 +415,14 @@ class PestanaHoja(PestanaBase):
         ciclo = self.txt_ciclo_personalizado.value or ""
         self.controlador.actualizar_esquema(modo=modo, tam_grupo=tam_g, ciclo_texto=ciclo)
         if self.on_solicitar_sync:
-            self.on_solicitar_sync(True)
+            self.on_solicitar_sync(reset_zoom=True)
 
     def on_cambio_hoja_opciones(self, e) -> None:
         hoja = self.dd_hoja.value or "carta"
         escala = self.dd_escala.value or "auto"
         self.controlador.actualizar_opciones_hoja(tipo=hoja, escala=escala)
         if self.on_solicitar_sync:
-            self.on_solicitar_sync(True)
+            self.on_solicitar_sync(reset_zoom=True)
 
     async def on_exportar_hoja(self, e) -> None:
         if not self.controlador.svg_hoja:

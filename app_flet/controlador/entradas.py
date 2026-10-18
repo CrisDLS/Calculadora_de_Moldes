@@ -130,9 +130,11 @@ class ControladorEntradasMixin:
         res_esq: List[str] = []
         items_compra: List[ItemCompra] = []
         try:
-            esq = self._construir_esquema()
+            sec_esq = self.hoja_pieza if self.hoja_pieza != "pico" else "superior"
+            esq = self._construir_esquema(sec_esq)
             if self.resultado and self.entrada_actual and not self.desactualizado:
-                res_esq = resumen_esquema(esq, self.entrada_actual, self.resultado)
+                if self.hoja_pieza != "pico":
+                    res_esq = resumen_esquema(esq, self.entrada_actual, self.resultado)
                 items_compra = lista_de_compra(
                     entrada=self.entrada_actual,
                     resultado=self.resultado,
@@ -143,7 +145,8 @@ class ControladorEntradasMixin:
                     pliegos_por_paquete=self.pliegos_por_paquete,
                 )
         except Exception as e:
-            esquema_err = str(e)
+            if self.hoja_pieza != "pico":
+                esquema_err = str(e)
         return esquema_err, res_esq, items_compra
 
     def _derivar_resumen_pico(self) -> Optional[str]:
@@ -196,7 +199,7 @@ class ControladorEntradasMixin:
             capa_seleccionada_id=self.capa_seleccionada_id,
             diseno_seccion=self.diseno_seccion,
             diseno_variante=self.diseno_variante,
-            diseno_lienzo_modo=cfg_diseno.dibujar,
+            diseno_lienzo_modo=self.diseno_pico_modo if self.diseno_seccion == "pico" else cfg_diseno.dibujar,
             mantener_proporcion=self.mantener_proporcion,
             recursos_faltantes=list(self.recursos_faltantes),
             diseno_ver_cuadricula=self.diseno_ver_cuadricula,
@@ -206,4 +209,6 @@ class ControladorEntradasMixin:
             config_secciones={k: ConfigSeccion.from_dict(v.a_dict()) for k, v in self.config_secciones.items()},
             puede_usar_mitad=puede_mitad,
             motivo_no_mitad=motivo_no,
+            mostrar_diseno_3d=getattr(self, "mostrar_diseno_3d", True),
+            hay_diseno_visible=self.hay_capas_visibles_diseno() if hasattr(self, "hay_capas_visibles_diseno") else False,
         )

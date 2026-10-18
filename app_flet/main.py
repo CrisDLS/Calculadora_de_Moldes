@@ -18,8 +18,18 @@ def main(page: ft.Page):
     page.title = "Calculadora de moldes"
     page.theme = tema.tema_oscuro
     page.theme_mode = ft.ThemeMode.DARK
-    page.window_min_width = 800
-    page.window_min_height = 600
+
+    # Configuración de tamaño de ventana con API Flet 1.0.4 (ft.Window)
+    if hasattr(page, "window") and page.window is not None:
+        page.window.min_width = 1100
+        page.window.min_height = 700
+        page.window.width = 1200
+        page.window.height = 760
+
+    page.window_min_width = 1100
+    page.window_min_height = 700
+    page.window_width = 1200
+    page.window_height = 760
     page.padding = 0
     
     vista = VistaTrompo()

@@ -7,30 +7,30 @@ REPORTE DE MÉTRICAS DE CÓDIGO (LÍNEA BASE)
 
 2. FUNCIONES / MÉTODOS QUE SUPERAN 90 LÍNEAS (17 encontrados):
 --------------------------------------------------------------------------------
-   451 líneas : logic/exportacion/svg_abanico.py:12 -> svg_abanico()
+   377 líneas : logic/exportacion/svg_abanico.py:182 -> svg_abanico()
+   237 líneas : logic/exportacion/svg_diseno.py:17 -> svg_gajo()
    230 líneas : logic/exportacion/svg_moldes.py:149 -> svg_hoja()
    208 líneas : logic/exportacion/svg_moldes.py:381 -> svg_conjunto()
-   200 líneas : logic/exportacion/svg_diseno.py:17 -> svg_gajo()
    187 líneas : logic/exportacion/svg_perfil.py:9 -> svg_perfil()
    141 líneas : logic/exportacion/svg_moldes.py:5 -> svg_pieza()
-   136 líneas : logic/diseno/lienzo.py:155 -> _validar_y_procesar_svg()
+   136 líneas : logic/diseno/lienzo.py:156 -> _validar_y_procesar_svg()
    129 líneas : logic/geometria/perfil.py:46 -> perfil_armado()
    124 líneas : logic/exportacion/paquete.py:126 -> generar_paquete()
-   118 líneas : logic/diseno/lienzo.py:385 -> ajustar_capa()
+   118 líneas : logic/diseno/lienzo.py:386 -> ajustar_capa()
    118 líneas : logic/geometria/malla_trompo.py:56 -> construir_malla()
    104 líneas : logic/geometria/abanico.py:79 -> abanico()
    100 líneas : logic/diseno/paleta.py:129 -> importar_csv()
     99 líneas : logic/geometria/abanico.py:198 -> contorno_abanico()
-    99 líneas : logic/proyecto/modelo.py:72 -> from_dict()
+    99 líneas : logic/proyecto/modelo.py:73 -> from_dict()
     96 líneas : logic/calculators/trompo_estrella.py:54 -> calcular()
     93 líneas : logic/exportacion/escena3d.py:8 -> escena_a_dict()
 
-3. NOMBRES DE FUNCIONES COMPARTIDOS EN VARIOS MÓDULOS (96 casos):
+3. NOMBRES DE FUNCIONES COMPARTIDOS EN VARIOS MÓDULOS (98 casos):
 --------------------------------------------------------------------------------
+  - actualizar() en 10 archivos: app_flet/vistas/barra_proyecto.py (3 lin), app_flet/vistas/componentes/marco_edicion.py (21 lin), app_flet/vistas/pestanas/base.py (3 lin), app_flet/vistas/pestanas/diseno.py (44 lin), app_flet/vistas/pestanas/diseno_inspector.py (78 lin), app_flet/vistas/pestanas/hoja.py (41 lin), app_flet/vistas/pestanas/moldes2d.py (14 lin), app_flet/vistas/pestanas/resumen.py (4 lin), app_flet/vistas/pestanas/tablas.py (8 lin), app_flet/vistas/pestanas/vista3d.py (11 lin)
   - construir() en 9 archivos: app_flet/vistas/barra_proyecto.py (2 lin), app_flet/vistas/panel_entradas.py (2 lin), app_flet/vistas/pestanas/base.py (3 lin), app_flet/vistas/pestanas/diseno.py (2 lin), app_flet/vistas/pestanas/hoja.py (2 lin), app_flet/vistas/pestanas/moldes2d.py (2 lin), app_flet/vistas/pestanas/resumen.py (2 lin), app_flet/vistas/pestanas/tablas.py (2 lin), app_flet/vistas/pestanas/vista3d.py (2 lin)
-  - actualizar() en 9 archivos: app_flet/vistas/barra_proyecto.py (3 lin), app_flet/vistas/pestanas/base.py (3 lin), app_flet/vistas/pestanas/diseno.py (26 lin), app_flet/vistas/pestanas/diseno_inspector.py (78 lin), app_flet/vistas/pestanas/hoja.py (41 lin), app_flet/vistas/pestanas/moldes2d.py (14 lin), app_flet/vistas/pestanas/resumen.py (4 lin), app_flet/vistas/pestanas/tablas.py (8 lin), app_flet/vistas/pestanas/vista3d.py (11 lin)
+  - _crear_controles() en 5 archivos: app_flet/vistas/barra_proyecto.py (61 lin), app_flet/vistas/componentes/marco_edicion.py (16 lin), app_flet/vistas/componentes/visor_svg.py (3 lin), app_flet/vistas/panel_entradas.py (61 lin), app_flet/vistas/pestanas/diseno_inspector.py (78 lin)
   - calcular() en 4 archivos: app_flet/controlador/entradas.py (16 lin), logic/calculators/trompo_estrella.py (96 lin), logic/interfaces.py (6 lin), referencia/trompo_estrella.py (65 lin)
-  - _crear_controles() en 4 archivos: app_flet/vistas/barra_proyecto.py (61 lin), app_flet/vistas/componentes/visor_svg.py (3 lin), app_flet/vistas/panel_entradas.py (61 lin), app_flet/vistas/pestanas/diseno_inspector.py (72 lin)
   - aplicar_tema() en 4 archivos: app_flet/vistas/panel_entradas.py (3 lin), app_flet/vistas/pestanas/base.py (3 lin), app_flet/vistas/pestanas/resumen.py (3 lin), app_flet/vistas/pestanas/tablas.py (4 lin)
   - controlador() en 4 archivos: app_flet/vistas/pestanas/diseno.py (2 lin), app_flet/vistas/pestanas/diseno.py (6 lin), app_flet/vistas/trompo.py (2 lin), app_flet/vistas/trompo.py (10 lin)
   - _id_recomposicion_diseno() en 4 archivos: app_flet/vistas/pestanas/diseno.py (2 lin), app_flet/vistas/pestanas/diseno.py (2 lin), app_flet/vistas/trompo_compat.py (1 lin), app_flet/vistas/trompo_compat.py (1 lin)
@@ -40,14 +40,15 @@ REPORTE DE MÉTRICAS DE CÓDIGO (LÍNEA BASE)
   - zona_alto() en 4 archivos: app_flet/vistas/pestanas/diseno_visor.py (2 lin), app_flet/vistas/pestanas/diseno_visor.py (2 lin), app_flet/vistas/trompo_compat.py (1 lin), app_flet/vistas/trompo_compat.py (2 lin)
   - from_dict() en 4 archivos: logic/diseno/config_seccion.py (37 lin), logic/diseno/lienzo.py (27 lin), logic/diseno/lienzo.py (7 lin), logic/proyecto/modelo.py (99 lin)
   - get_y() en 4 archivos: logic/exportacion/svg_diseno.py (4 lin), logic/exportacion/svg_moldes.py (6 lin), logic/exportacion/svg_moldes.py (6 lin), logic/exportacion/svg_moldes.py (5 lin)
-  - _construir_layout() en 3 archivos: app_flet/vistas/panel_entradas.py (41 lin), app_flet/vistas/pestanas/diseno.py (72 lin), app_flet/vistas/trompo.py (39 lin)
+  - _construir_layout() en 3 archivos: app_flet/vistas/panel_entradas.py (41 lin), app_flet/vistas/pestanas/diseno.py (73 lin), app_flet/vistas/trompo.py (39 lin)
+  - arrastrando_capa() en 3 archivos: app_flet/vistas/pestanas/diseno_visor.py (2 lin), app_flet/vistas/trompo_compat.py (1 lin), app_flet/vistas/trompo_compat.py (1 lin)
   - limpiar() en 2 archivos: app_flet/controlador/entradas.py (6 lin), app_flet/vistas/componentes/visor_svg.py (6 lin)
   - guardar() en 2 archivos: app_flet/controlador/proyecto.py (14 lin), app_flet/vistas/pestanas/dialogos_catalogo.py (28 lin)
   - on_proyecto_nuevo() en 2 archivos: app_flet/vistas/barra_proyecto.py (5 lin), app_flet/vistas/trompo_compat.py (1 lin)
   - on_proyecto_abrir() en 2 archivos: app_flet/vistas/barra_proyecto.py (16 lin), app_flet/vistas/trompo_compat.py (1 lin)
   - on_proyecto_guardar() en 2 archivos: app_flet/vistas/barra_proyecto.py (10 lin), app_flet/vistas/trompo_compat.py (1 lin)
   - on_proyecto_guardar_como() en 2 archivos: app_flet/vistas/barra_proyecto.py (15 lin), app_flet/vistas/trompo_compat.py (1 lin)
-  - ajustar_vista() en 2 archivos: app_flet/vistas/componentes/visor_svg.py (9 lin), app_flet/vistas/pestanas/diseno_visor.py (2 lin)
+  - ajustar_vista() en 2 archivos: app_flet/vistas/componentes/visor_svg.py (9 lin), app_flet/vistas/pestanas/diseno_visor.py (7 lin)
   - on_change_input() en 2 archivos: app_flet/vistas/panel_entradas.py (4 lin), app_flet/vistas/trompo_compat.py (1 lin)
   - on_switch_avanzado() en 2 archivos: app_flet/vistas/panel_entradas.py (5 lin), app_flet/vistas/trompo_compat.py (1 lin)
   - on_calcular() en 2 archivos: app_flet/vistas/panel_entradas.py (6 lin), app_flet/vistas/trompo_compat.py (1 lin)
@@ -58,15 +59,14 @@ REPORTE DE MÉTRICAS DE CÓDIGO (LÍNEA BASE)
   - on_toggle_ver_rotulos() en 2 archivos: app_flet/vistas/pestanas/diseno.py (3 lin), app_flet/vistas/trompo_compat.py (1 lin)
   - on_toggle_ver_costuras() en 2 archivos: app_flet/vistas/pestanas/diseno.py (3 lin), app_flet/vistas/trompo_compat.py (1 lin)
   - on_toggle_mostrar_reflejo() en 2 archivos: app_flet/vistas/pestanas/diseno.py (3 lin), app_flet/vistas/trompo_compat.py (1 lin)
+  - cambiar_modo_interaccion() en 2 archivos: app_flet/vistas/pestanas/diseno.py (4 lin), app_flet/vistas/pestanas/diseno_visor.py (56 lin)
   - on_exportar_abanico_click() en 2 archivos: app_flet/vistas/pestanas/diseno.py (14 lin), app_flet/vistas/trompo_compat.py (1 lin)
   - on_exportar_gajos_click() en 2 archivos: app_flet/vistas/pestanas/diseno.py (8 lin), app_flet/vistas/trompo_compat.py (1 lin)
   - on_exportar_hoja_diseno_click() en 2 archivos: app_flet/vistas/pestanas/diseno.py (14 lin), app_flet/vistas/trompo_compat.py (1 lin)
+  - pagina() en 2 archivos: app_flet/vistas/pestanas/diseno_inspector.py (2 lin), app_flet/vistas/pestanas/vista3d.py (2 lin)
   - on_anadir_capa_click() en 2 archivos: app_flet/vistas/pestanas/diseno_inspector.py (16 lin), app_flet/vistas/trompo_compat.py (1 lin)
   - on_nombre_capa_change() en 2 archivos: app_flet/vistas/pestanas/diseno_inspector.py (3 lin), app_flet/vistas/trompo_compat.py (1 lin)
   - on_pos_x_change() en 2 archivos: app_flet/vistas/pestanas/diseno_inspector.py (9 lin), app_flet/vistas/trompo_compat.py (1 lin)
-  - on_pos_y_change() en 2 archivos: app_flet/vistas/pestanas/diseno_inspector.py (9 lin), app_flet/vistas/trompo_compat.py (1 lin)
-  - on_ancho_capa_change() en 2 archivos: app_flet/vistas/pestanas/diseno_inspector.py (13 lin), app_flet/vistas/trompo_compat.py (1 lin)
-  - on_alto_capa_change() en 2 archivos: app_flet/vistas/pestanas/diseno_inspector.py (13 lin), app_flet/vistas/trompo_compat.py (1 lin)
 
 4. IMPORTACIONES CIRCULARES (0 ciclos encontrados):
 --------------------------------------------------------------------------------
@@ -74,38 +74,51 @@ REPORTE DE MÉTRICAS DE CÓDIGO (LÍNEA BASE)
 
 5. RESUMEN COMPLETO POR ARCHIVO (ORDENADO POR LÍNEAS):
 --------------------------------------------------------------------------------
+    696 líneas |  36 funciones/métodos : app_flet/vistas/componentes/marco_edicion.py
+         * _crear_tiradores() : 73 líneas (L123-L195)
+         * _posicionar_marco_y_tiradores() : 51 líneas (L322-L372)
     650 líneas |  37 funciones/métodos : app_flet/vistas/pestanas/vista3d.py
          * _construir_panel_contenido_3d() : 75 líneas (L271-L345)
          * _crear_controles_compra_y_visor() : 70 líneas (L200-L269)
          * _actualizar_dropdowns_patrones() : 54 líneas (L390-L443)
          * _crear_controles_picos() : 53 líneas (L121-L173)
-    590 líneas |  11 funciones/métodos : logic/diseno/lienzo.py
-         * _validar_y_procesar_svg() : 136 líneas (L155-L290)
-         * ajustar_capa() : 118 líneas (L385-L502)
-         * importar_recurso() : 86 líneas (L505-L590)
-         * obtener_fragmento_capa() : 55 líneas (L328-L382)
+    633 líneas |  13 funciones/métodos : logic/diseno/lienzo.py
+         * _validar_y_procesar_svg() : 136 líneas (L156-L291)
+         * ajustar_capa() : 118 líneas (L386-L503)
+         * importar_recurso() : 78 líneas (L556-L633)
+         * obtener_fragmento_capa() : 55 líneas (L329-L383)
+    622 líneas |   7 funciones/métodos : logic/exportacion/svg_abanico.py
+         * svg_abanico() : 377 líneas (L182-L558)
+         * calcular_parametros_proyeccion_abanico() : 87 líneas (L93-L179)
+         * _renderizar_capa_en_abanico() : 61 líneas (L561-L621)
     588 líneas |   7 funciones/métodos : logic/exportacion/svg_moldes.py
          * svg_hoja() : 230 líneas (L149-L378)
          * svg_conjunto() : 208 líneas (L381-L588)
          * svg_pieza() : 141 líneas (L5-L145)
-    518 líneas |   4 funciones/métodos : logic/exportacion/svg_abanico.py
-         * svg_abanico() : 451 líneas (L12-L462)
-         * _renderizar_capa_en_abanico() : 53 líneas (L465-L517)
+    513 líneas |  22 funciones/métodos : logic/diseno/gestos_lienzo.py
+         * estirar() : 65 líneas (L409-L473)
     447 líneas |  19 funciones/métodos : app_flet/vistas/pestanas/hoja.py
          * _crear_panel_parametros_hoja() : 67 líneas (L113-L179)
-    386 líneas |  24 funciones/métodos : app_flet/vistas/componentes/visor_svg.py
-    380 líneas |  24 funciones/métodos : app_flet/vistas/pestanas/diseno.py
-         * _crear_selectores_y_herramientas() : 72 líneas (L123-L194)
-         * _construir_layout() : 72 líneas (L201-L272)
-         * _crear_subcomponentes() : 57 líneas (L59-L115)
+    436 líneas |  32 funciones/métodos : app_flet/vistas/pestanas/diseno_inspector.py
+         * _crear_controles() : 78 líneas (L32-L109)
+         * actualizar() : 78 líneas (L111-L188)
+    412 líneas |  25 funciones/métodos : app_flet/vistas/pestanas/diseno.py
+         * _construir_layout() : 73 líneas (L203-L275)
+         * _crear_selectores_y_herramientas() : 72 líneas (L125-L196)
+         * _crear_subcomponentes() : 59 líneas (L59-L117)
+    409 líneas |  24 funciones/métodos : app_flet/vistas/componentes/visor_svg.py
+    369 líneas |  29 funciones/métodos : app_flet/vistas/pestanas/diseno_visor.py
+         * _inicializar_visor_y_marco() : 56 líneas (L45-L100)
+         * cambiar_modo_interaccion() : 56 líneas (L185-L240)
+    368 líneas |  32 funciones/métodos : app_flet/controlador/diseno.py
     360 líneas | 116 funciones/métodos : app_flet/vistas/trompo_compat.py
          * _conectar_proxies_diseno() : 59 líneas (L135-L193)
-    346 líneas |  29 funciones/métodos : app_flet/vistas/pestanas/diseno_visor.py
-         * __init__() : 74 líneas (L25-L98)
-         * _on_gesture_pan_update() : 53 líneas (L171-L223)
-    330 líneas |  27 funciones/métodos : app_flet/vistas/pestanas/diseno_inspector.py
-         * actualizar() : 78 líneas (L99-L176)
-         * _crear_controles() : 72 líneas (L26-L97)
+    332 líneas |  10 funciones/métodos : logic/proyecto/modelo.py
+         * from_dict() : 99 líneas (L73-L171)
+    312 líneas |   4 funciones/métodos : logic/exportacion/svg_diseno.py
+         * svg_gajo() : 237 líneas (L17-L253)
+         * exportar_diseno() : 57 líneas (L256-L312)
+         * _render_capa_gajo() : 53 líneas (L140-L192)
     299 líneas |   4 funciones/métodos : logic/geometria/abanico.py
          * abanico() : 104 líneas (L79-L182)
          * contorno_abanico() : 99 líneas (L198-L296)
@@ -113,14 +126,8 @@ REPORTE DE MÉTRICAS DE CÓDIGO (LÍNEA BASE)
          * calcular() : 65 líneas (L162-L226)
     287 líneas |   6 funciones/métodos : logic/exportacion/paquete.py
          * generar_paquete() : 124 líneas (L126-L249)
-    280 líneas |  28 funciones/métodos : app_flet/controlador/diseno.py
-    275 líneas |   3 funciones/métodos : logic/exportacion/svg_diseno.py
-         * svg_gajo() : 200 líneas (L17-L216)
-         * exportar_diseno() : 57 líneas (L219-L275)
     264 líneas |  15 funciones/métodos : app_flet/vistas/trompo.py
          * _crear_componentes() : 51 líneas (L64-L114)
-    256 líneas |   7 funciones/métodos : logic/proyecto/modelo.py
-         * from_dict() : 99 líneas (L72-L170)
     245 líneas |   6 funciones/métodos : app_flet/vistas/pestanas/vista3d_aux.py
          * actualizar_vista_previa_2d() : 65 líneas (L12-L76)
     243 líneas |  10 funciones/métodos : presentacion/trompo_estrella.py

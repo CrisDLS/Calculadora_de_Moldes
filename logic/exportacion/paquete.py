@@ -170,7 +170,7 @@ def generar_paquete(
         lienzo_inf = cfg_inf.lienzo if cfg_inf else lienzo
 
         dibujar_sup = cfg_sup.dibujar if cfg_sup else dibujar
-        dibujar_pico = "completo"
+        dibujar_pico = cfg_pico.dibujar if cfg_pico else dibujar
         dibujar_inf = cfg_inf.dibujar if cfg_inf else dibujar
 
         esc_sup = cfg_sup.escala if (cfg_sup and cfg_sup.escala != "auto") else escala_comun

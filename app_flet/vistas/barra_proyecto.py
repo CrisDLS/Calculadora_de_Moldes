@@ -115,7 +115,11 @@ class BarraProyecto:
             if ok:
                 self.on_proyecto_cargado()
                 self.on_solicitar_sync(reset_zoom=True)
-                self.on_mostrar_snackbar(f"Proyecto abierto: {os.path.basename(ruta)}")
+                if self.controlador.recursos_faltantes:
+                    faltantes_str = ", ".join(self.controlador.recursos_faltantes)
+                    self.on_mostrar_snackbar(f"Proyecto abierto con recursos faltantes: {faltantes_str}")
+                else:
+                    self.on_mostrar_snackbar(f"Proyecto abierto: {os.path.basename(ruta)}")
             else:
                 self.on_mostrar_snackbar(f"Error al abrir: {msg}")
 

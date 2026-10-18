@@ -1,5 +1,6 @@
 import io
 import base64
+import hashlib
 import re
 import uuid
 import math
@@ -502,6 +503,56 @@ def ajustar_capa(
     )
 
 
+def _determinar_destino_recurso(
+    origen: Path,
+    destino_dir: Path,
+    stem_limpio: str,
+    uid: str,
+    ext: str,
+) -> Tuple[str, Path, bool]:
+    """Calcula hash SHA-256 y determina si reutilizar un archivo existente o generar nuevo nombre."""
+    hash_origen = hashlib.sha256(origen.read_bytes()).hexdigest()
+    if destino_dir.exists():
+        for f in destino_dir.iterdir():
+            if f.is_file() and not f.name.startswith("."):
+                try:
+                    if f.stat().st_size == origen.stat().st_size:
+                        if hashlib.sha256(f.read_bytes()).hexdigest() == hash_origen:
+                            return f.name, f, True
+                except Exception:
+                    pass
+
+    candidato = f"{stem_limpio}_{hash_origen[:8]}{ext}"
+    if not (destino_dir / candidato).exists():
+        nombre_archivo = candidato
+    else:
+        nombre_archivo = f"{stem_limpio}_{uid}{ext}"
+    return nombre_archivo, destino_dir / nombre_archivo, False
+
+
+def _procesar_y_guardar_raster(
+    origen: Path,
+    ruta_destino: Path,
+    ext: str,
+    ya_existe: bool,
+) -> Tuple[float, float, Tuple[float, float, float, float], int, int, bool, Optional[str]]:
+    """Procesa y valida una imagen raster, guardándola si no existe previamente."""
+    ancho_cm, alto_cm, img, w_px, h_px = _validar_y_procesar_raster(origen)
+    tam_bytes = origen.stat().st_size
+    num_elem = 1
+    vb = (0.0, 0.0, float(w_px), float(h_px))
+    complejo = (w_px > 4000 or h_px > 4000 or tam_bytes > 5 * 1024 * 1024)
+    aviso = "Imagen muy grande: se usa vista previa optimizada en pantalla" if complejo else None
+
+    if not ya_existe:
+        if ext in (".png", ".jpg", ".jpeg", ".webp"):
+            img.save(ruta_destino)
+        else:
+            img.save(ruta_destino, format="PNG")
+
+    return ancho_cm, alto_cm, vb, num_elem, tam_bytes, complejo, aviso
+
+
 def importar_recurso(
     ruta_origen: Union[str, Path],
     carpeta_recursos: Union[str, Path],
@@ -526,30 +577,22 @@ def importar_recurso(
 
     uid = id_capa or uuid.uuid4().hex[:8]
     stem_limpio = re.sub(r"[^a-zA-Z0-9_\-]", "_", origen.stem)[:30] or "capa"
-    nombre_archivo = f"{stem_limpio}_{uid}{ext}"
-    ruta_destino = destino_dir / nombre_archivo
+
+    nombre_archivo, ruta_destino, ya_existe = _determinar_destino_recurso(
+        origen, destino_dir, stem_limpio, uid, ext
+    )
 
     if es_svg:
         ancho_cm, alto_cm, contenido, vb, num_elem, tam_bytes, complejo, aviso, hijos_xml = _validar_y_procesar_svg(origen, id_capa=uid)
-        with open(ruta_destino, "w", encoding="utf-8") as f:
-            f.write(contenido)
+        if not ya_existe:
+            with open(ruta_destino, "w", encoding="utf-8") as f:
+                f.write(contenido)
         CACHE_FRAGMENTOS_CAPA[(uid, nombre_archivo, "svg", True)] = (hijos_xml, vb)
         CACHE_FRAGMENTOS_CAPA[(uid, nombre_archivo, "svg", False)] = (hijos_xml, vb)
     else:
-        ancho_cm, alto_cm, img, w_px, h_px = _validar_y_procesar_raster(origen)
-        tam_bytes = origen.stat().st_size
-        num_elem = 1
-        vb = (0.0, 0.0, float(w_px), float(h_px))
-        complejo = (w_px > 4000 or h_px > 4000 or tam_bytes > 5 * 1024 * 1024)
-        aviso = "Imagen muy grande: se usa vista previa optimizada en pantalla" if complejo else None
-
-        if ext in (".png", ".jpg", ".jpeg", ".webp"):
-            img.save(ruta_destino)
-        else:
-            # Convertir otros formatos raster a PNG
-            nombre_archivo = f"{stem_limpio}_{uid}.png"
-            ruta_destino = destino_dir / nombre_archivo
-            img.save(ruta_destino, format="PNG")
+        ancho_cm, alto_cm, vb, num_elem, tam_bytes, complejo, aviso = _procesar_y_guardar_raster(
+            origen, ruta_destino, ext, ya_existe
+        )
 
     capa = CapaDiseno(
         id=uid,
