@@ -190,3 +190,67 @@ def test_reactividad_inmediata_cambio_esquema_hoja():
     assert vista.img_svg_hoja.src != ""
 
 
+def test_independencia_grupo_g_secciones_y_deshabilitado_en_pico():
+    """Verifica que cambiar G en el cono superior no cambie el G de inferior ni de pico,
+    que en pico el campo G muestre 4 y esté deshabilitado, y al volver a un cono
+    se habilite con su valor propio."""
+    picker = MockFilePicker()
+    vista = VistaTrompo(servicio_file_picker=picker)
+    vista.on_calcular(None)
+
+    # 1. Por defecto, superior tiene G=5
+    assert vista.controlador.hoja_pieza == "superior"
+    assert vista.txt_tam_grupo.value == "5"
+    assert vista.txt_tam_grupo.disabled is False
+
+    # 2. Cambiar G a 8 en cono superior
+    vista.txt_tam_grupo.value = "8"
+    vista.on_cambio_esquema_opciones(None)
+
+    # Debe ser 8 en superior, pero inferior debe conservar su valor propio (5)
+    assert vista.controlador.config_secciones["superior"].esquema.tam_grupo == 8
+    assert vista.controlador.config_secciones["inferior"].esquema.tam_grupo == 5
+
+    # 3. Seleccionar pico
+    vista.selector_pieza_hoja.selected = ["pico"]
+    vista.on_cambio_pieza_hoja(None)
+
+    # El campo G en el pico debe mostrar 4 y estar deshabilitado (no editable)
+    assert vista.controlador.hoja_pieza == "pico"
+    assert vista.txt_tam_grupo.value == "4"
+    assert vista.txt_tam_grupo.disabled is True
+
+    # Cambiar G en cono superior no debió alterar pico, ni cambiar G en pico debe afectar superior
+    assert vista.controlador.config_secciones["superior"].esquema.tam_grupo == 8
+    assert vista.controlador.config_secciones["inferior"].esquema.tam_grupo == 5
+
+    # 4. Volver a cono superior
+    vista.selector_pieza_hoja.selected = ["superior"]
+    vista.on_cambio_pieza_hoja(None)
+
+    # Debe habilitarse con su valor propio (8)
+    assert vista.controlador.hoja_pieza == "superior"
+    assert vista.txt_tam_grupo.value == "8"
+    assert vista.txt_tam_grupo.disabled is False
+
+    # 5. Ir a cono inferior
+    vista.selector_pieza_hoja.selected = ["inferior"]
+    vista.on_cambio_pieza_hoja(None)
+
+    # Debe habilitarse con su valor propio (5)
+    assert vista.controlador.hoja_pieza == "inferior"
+    assert vista.txt_tam_grupo.value == "5"
+    assert vista.txt_tam_grupo.disabled is False
+
+    # 6. Proyecto viejo con G!=4 en pico: se ignora al mostrarlo y no se borra
+    from logic.diseno.esquema import EsquemaDiseno
+    vista.controlador.config_secciones["pico"].esquema = EsquemaDiseno("repeticion", 7)
+    vista.selector_pieza_hoja.selected = ["pico"]
+    vista.on_cambio_pieza_hoja(None)
+    assert vista.txt_tam_grupo.value == "4"
+    assert vista.txt_tam_grupo.disabled is True
+    # No se borra del objeto
+    assert vista.controlador.config_secciones["pico"].esquema.tam_grupo == 7
+
+
+

@@ -18,6 +18,9 @@ class ControladorHojaMixin:
         return self.config_secciones[sec]
 
     def _construir_esquema(self, seccion: Optional[str] = None) -> EsquemaDiseno:
+        sec = seccion or self.hoja_pieza
+        if sec == "pico":
+            return EsquemaDiseno("repeticion", 4)
         if seccion is not None and seccion != self.hoja_pieza:
             cfg = self.config_secciones.get(seccion)
             if cfg and cfg.esquema:
@@ -33,6 +36,9 @@ class ControladorHojaMixin:
         tam_grupo: Optional[int] = None,
         ciclo_texto: Optional[str] = None,
     ) -> None:
+        if self.hoja_pieza == "pico":
+            return
+
         if modo is not None:
             self.esquema_modo = modo
         if tam_grupo is not None:
@@ -40,7 +46,7 @@ class ControladorHojaMixin:
         if ciclo_texto is not None:
             self.esquema_ciclo_texto = ciclo_texto
 
-        sec = self.hoja_pieza if self.hoja_pieza != "pico" else "superior"
+        sec = self.hoja_pieza
         cfg = self.obtener_config_seccion(sec)
         if self.esquema_modo == "personalizado":
             try:
@@ -70,7 +76,9 @@ class ControladorHojaMixin:
         if pieza is not None:
             self.hoja_pieza = pieza
             cfg = self.obtener_config_seccion(pieza)
-            if cfg.esquema:
+            if pieza == "pico":
+                self.esquema_tam_grupo = 4
+            elif cfg.esquema:
                 self.esquema_modo = cfg.esquema.modo
                 self.esquema_tam_grupo = cfg.esquema.tam_grupo
                 if cfg.esquema.ciclo:
@@ -125,7 +133,9 @@ class ControladorHojaMixin:
     def cambiar_seccion_hoja(self, seccion: str) -> None:
         self.hoja_pieza = seccion
         cfg = self.obtener_config_seccion(seccion)
-        if cfg.esquema:
+        if seccion == "pico":
+            self.esquema_tam_grupo = 4
+        elif cfg.esquema:
             self.esquema_modo = cfg.esquema.modo
             self.esquema_tam_grupo = cfg.esquema.tam_grupo
             if cfg.esquema.ciclo:

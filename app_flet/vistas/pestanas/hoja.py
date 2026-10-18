@@ -265,6 +265,9 @@ class PestanaHoja(PestanaBase):
         sel_hoja = self.selector_pieza_hoja.selected[0] if self.selector_pieza_hoja.selected else "superior"
         self.panel_diseno_pico_hoja.visible = (sel_hoja == "pico")
         self.btn_sincronizar_conos.visible = (sel_hoja != "pico")
+        self.txt_tam_grupo.disabled = (sel_hoja == "pico")
+        if sel_hoja == "pico":
+            self.txt_tam_grupo.value = "4"
         cfg_hoja = vm.config_secciones.get(sel_hoja)
         if cfg_hoja:
             puede_h, mot_h = cfg_hoja.puede_usar_mitad()
@@ -313,15 +316,22 @@ class PestanaHoja(PestanaBase):
         self.controlador.actualizar_opciones_hoja(pieza=sel)
         self.panel_diseno_pico_hoja.visible = (sel == "pico")
         cfg = self.controlador.obtener_config_seccion(sel)
-        if cfg.esquema:
-            self.dd_modo_esquema.value = cfg.esquema.modo
-            self.txt_tam_grupo.value = str(cfg.esquema.tam_grupo)
-            if cfg.esquema.ciclo:
-                self.txt_ciclo_personalizado.value = ", ".join(f"{m}{'E' if esp else ''}" for m, esp in cfg.esquema.ciclo)
-            else:
-                self.txt_ciclo_personalizado.value = ""
-            self.txt_ciclo_personalizado.visible = (cfg.esquema.modo == "personalizado")
-            self.txt_tam_grupo.visible = (cfg.esquema.modo != "personalizado")
+        if sel == "pico":
+            self.txt_tam_grupo.value = "4"
+            self.txt_tam_grupo.disabled = True
+            self.txt_ciclo_personalizado.visible = False
+            self.txt_tam_grupo.visible = True
+        else:
+            self.txt_tam_grupo.disabled = False
+            if cfg.esquema:
+                self.dd_modo_esquema.value = cfg.esquema.modo
+                self.txt_tam_grupo.value = str(cfg.esquema.tam_grupo)
+                if cfg.esquema.ciclo:
+                    self.txt_ciclo_personalizado.value = ", ".join(f"{m}{'E' if esp else ''}" for m, esp in cfg.esquema.ciclo)
+                else:
+                    self.txt_ciclo_personalizado.value = ""
+                self.txt_ciclo_personalizado.visible = (cfg.esquema.modo == "personalizado")
+                self.txt_tam_grupo.visible = (cfg.esquema.modo != "personalizado")
         self.dd_escala.value = str(cfg.escala)
         self.selector_lienzo.selected = [cfg.lienzo]
         self.selector_modo_dibujo.selected = [cfg.dibujar]
@@ -334,11 +344,16 @@ class PestanaHoja(PestanaBase):
             origen = "superior"
         self.controlador.sincronizar_conos(origen)
         cfg = self.controlador.obtener_config_seccion(self.controlador.hoja_pieza)
-        if cfg.esquema:
-            self.dd_modo_esquema.value = cfg.esquema.modo
-            self.txt_tam_grupo.value = str(cfg.esquema.tam_grupo)
-            if cfg.esquema.ciclo:
-                self.txt_ciclo_personalizado.value = ", ".join(f"{m}{'E' if esp else ''}" for m, esp in cfg.esquema.ciclo)
+        if self.controlador.hoja_pieza == "pico":
+            self.txt_tam_grupo.value = "4"
+            self.txt_tam_grupo.disabled = True
+        else:
+            self.txt_tam_grupo.disabled = False
+            if cfg.esquema:
+                self.dd_modo_esquema.value = cfg.esquema.modo
+                self.txt_tam_grupo.value = str(cfg.esquema.tam_grupo)
+                if cfg.esquema.ciclo:
+                    self.txt_ciclo_personalizado.value = ", ".join(f"{m}{'E' if esp else ''}" for m, esp in cfg.esquema.ciclo)
         if self.on_solicitar_sync:
             self.on_solicitar_sync(reset_zoom=True)
         if self.on_mostrar_snackbar:
@@ -348,11 +363,16 @@ class PestanaHoja(PestanaBase):
         destino = self.controlador.hoja_pieza
         self.controlador.copiar_configuracion_seccion(origen, destino)
         cfg = self.controlador.obtener_config_seccion(destino)
-        if cfg.esquema:
-            self.dd_modo_esquema.value = cfg.esquema.modo
-            self.txt_tam_grupo.value = str(cfg.esquema.tam_grupo)
-            if cfg.esquema.ciclo:
-                self.txt_ciclo_personalizado.value = ", ".join(f"{m}{'E' if esp else ''}" for m, esp in cfg.esquema.ciclo)
+        if destino == "pico":
+            self.txt_tam_grupo.value = "4"
+            self.txt_tam_grupo.disabled = True
+        else:
+            self.txt_tam_grupo.disabled = False
+            if cfg.esquema:
+                self.dd_modo_esquema.value = cfg.esquema.modo
+                self.txt_tam_grupo.value = str(cfg.esquema.tam_grupo)
+                if cfg.esquema.ciclo:
+                    self.txt_ciclo_personalizado.value = ", ".join(f"{m}{'E' if esp else ''}" for m, esp in cfg.esquema.ciclo)
         self.dd_escala.value = str(cfg.escala)
         self.selector_lienzo.selected = [cfg.lienzo]
         self.selector_modo_dibujo.selected = [cfg.dibujar]
@@ -380,6 +400,9 @@ class PestanaHoja(PestanaBase):
             self.on_solicitar_sync(reset_zoom=True)
 
     def on_cambio_esquema_opciones(self, e) -> None:
+        sel = self.selector_pieza_hoja.selected[0] if self.selector_pieza_hoja.selected else "superior"
+        if sel == "pico":
+            return
         modo = self.dd_modo_esquema.value or "repeticion"
         self.txt_ciclo_personalizado.visible = (modo == "personalizado")
         self.txt_tam_grupo.visible = (modo != "personalizado")
