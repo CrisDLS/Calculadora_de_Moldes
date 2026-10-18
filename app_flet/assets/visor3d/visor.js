@@ -111,13 +111,82 @@ function animate() {
   renderer.render(scene, camera);
 }
 
-function cargarModelo(data) {
+// Cache de texturas creadas: clave -> { hashSvg: string, texture: THREE.CanvasTexture }
+const textureCache = {};
+
+function crearTexturaDesdeSvg(clave, info) {
+  return new Promise((resolve) => {
+    if (!info || !info.svg) {
+      resolve(null);
+      return;
+    }
+    const svgStr = info.svg;
+    const px = info.px || [1024, 1024];
+    const w = px[0];
+    const h = px[1];
+
+    if (textureCache[clave] && textureCache[clave].svgStr === svgStr) {
+      resolve(textureCache[clave].texture);
+      return;
+    }
+
+    const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+
+      const texture = new THREE.CanvasTexture(canvas);
+      if (THREE.sRGBEncoding) {
+        texture.encoding = THREE.sRGBEncoding;
+      }
+      texture.wrapS = THREE.ClampToEdgeWrapping;
+      texture.wrapT = THREE.ClampToEdgeWrapping;
+      texture.minFilter = THREE.LinearFilter;
+      texture.magFilter = THREE.LinearFilter;
+      texture.flipY = false;
+      texture.needsUpdate = true;
+
+      if (textureCache[clave] && textureCache[clave].texture) {
+        textureCache[clave].texture.dispose();
+      }
+      textureCache[clave] = { svgStr: svgStr, texture: texture };
+      resolve(texture);
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      console.warn('Error cargando textura SVG para:', clave);
+      resolve(null);
+    };
+
+    img.src = url;
+  });
+}
+
+async function cargarModelo(data) {
   if (!data || !data.vertices || !data.caras) return;
   currentMetadata = data.metadata;
 
   if (currentMetadata) {
     const txt = `Altura: ${currentMetadata.altura_total.toFixed(1)} cm · Ancho con picos: ${currentMetadata.ancho_con_picos.toFixed(1)} cm · ${currentMetadata.num_gajos} gajos`;
     document.getElementById('txt-dimensiones').innerText = txt;
+  }
+
+  // Cargar texturas asíncronamente si existen en data.texturas
+  const mapaTexturas = {};
+  if (data.texturas && Object.keys(data.texturas).length > 0) {
+    const promesas = Object.keys(data.texturas).map(async (k) => {
+      const tex = await crearTexturaDesdeSvg(k, data.texturas[k]);
+      if (tex) mapaTexturas[k] = tex;
+    });
+    await Promise.all(promesas);
   }
 
   // Limpiar grupos anteriores
@@ -139,20 +208,31 @@ function cargarModelo(data) {
   const verts = data.vertices;
   const caras = data.caras;
 
-  // Agrupar triángulos por color
-  const gruposPorColor = {};
+  // Agrupar triángulos por material (textura + color)
+  // Clave del grupo: "tex:<clave_textura>|<color>" o "col:<color>"
+  const grupos = {};
   caras.forEach(c => {
-    const col = c.color.toLowerCase();
-    if (!gruposPorColor[col]) gruposPorColor[col] = [];
-    gruposPorColor[col].push(c);
+    const col = (c.color || '#ffffff').toLowerCase();
+    const texKey = (c.textura && mapaTexturas[c.textura]) ? c.textura : null;
+    const groupKey = texKey ? `tex:${texKey}|${col}` : `col:${col}`;
+    if (!grupos[groupKey]) {
+      grupos[groupKey] = {
+        color: col,
+        textura: texKey,
+        caras: [],
+      };
+    }
+    grupos[groupKey].caras.push(c);
   });
 
-  Object.keys(gruposPorColor).forEach(hexColor => {
-    const carasColor = gruposPorColor[hexColor];
+  Object.keys(grupos).forEach(key => {
+    const grpInfo = grupos[key];
+    const carasGrupo = grpInfo.caras;
     const positions = [];
     const normals = [];
+    const uvs = [];
 
-    carasColor.forEach(c => {
+    carasGrupo.forEach(c => {
       const idx = c.indices;
       const v0 = verts[idx[0]];
       const v1 = verts[idx[1]];
@@ -166,19 +246,39 @@ function cargarModelo(data) {
       normals.push(n[0], n[1], n[2]);
       normals.push(n[0], n[1], n[2]);
       normals.push(n[0], n[1], n[2]);
+
+      if (grpInfo.textura && c.uv && c.uv.length >= 3) {
+        const u0 = c.uv[0];
+        const u1 = c.uv[1];
+        const u2 = c.uv[2];
+        uvs.push(u0[0], u0[1]);
+        uvs.push(u1[0], u1[1]);
+        uvs.push(u2[0], u2[1]);
+      }
     });
 
     const geom = new THREE.BufferGeometry();
     geom.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
     geom.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+    if (grpInfo.textura && uvs.length > 0) {
+      geom.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+    }
 
-    const mat = new THREE.MeshStandardMaterial({
-      color: new THREE.Color(hexColor),
+    const matConfig = {
       side: THREE.DoubleSide,
       roughness: 0.85,
       metalness: 0.05,
       flatShading: true,
-    });
+    };
+
+    if (grpInfo.textura) {
+      matConfig.color = new THREE.Color(grpInfo.color);
+      matConfig.map = mapaTexturas[grpInfo.textura];
+    } else {
+      matConfig.color = new THREE.Color(grpInfo.color);
+    }
+
+    const mat = new THREE.MeshStandardMaterial(matConfig);
 
     const mesh = new THREE.Mesh(geom, mat);
     mesh.castShadow = true;
@@ -190,7 +290,7 @@ function cargarModelo(data) {
     const wireMat = new THREE.LineBasicMaterial({
       color: 0x555566,
       transparent: true,
-      opacity: 0.35
+      opacity: 0.35,
     });
     const wireMesh = new THREE.LineSegments(wireGeom, wireMat);
     wireMesh.visible = showWireframe;
@@ -202,7 +302,7 @@ function cargarModelo(data) {
       color: 0x222228,
       linewidth: 1.5,
       transparent: true,
-      opacity: 0.75
+      opacity: 0.75,
     });
     const seamsMesh = new THREE.LineSegments(edgesGeom, seamsMat);
     seamsMesh.visible = showSeams;
@@ -343,7 +443,8 @@ function startAutoPoll() {
     fetch('/api/escena')
       .then(r => r.json())
       .then(data => {
-        const hash = JSON.stringify(data.metadata || {});
+        const texKeys = data.texturas ? Object.keys(data.texturas).sort().join(',') : '';
+        const hash = JSON.stringify(data.metadata || {}) + `|tex:${texKeys}`;
         if (hash !== ultimoHash) {
           const primerCargue = (ultimoHash === '');
           ultimoHash = hash;

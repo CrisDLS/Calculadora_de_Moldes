@@ -18,11 +18,17 @@ class Controlador3DMixin:
         if self.servidor_3d and self.resultado and self.entrada_actual:
             try:
                 esq = self._construir_esquema()
+                cfgs = getattr(self, "config_secciones", None)
+                dis = getattr(self, "disenos", None)
+                carp = self.obtener_carpeta_recursos_activa() if hasattr(self, "obtener_carpeta_recursos_activa") else None
                 escena = escena_a_dict(
                     self.entrada_actual,
                     self.resultado,
                     esquema_pintura=self.pintura,
                     esquema_diseno=esq,
+                    configuraciones=cfgs,
+                    disenos=dis,
+                    carpeta_recursos=carp,
                 )
                 self.servidor_3d.actualizar_datos_escena(escena)
             except Exception:
@@ -32,11 +38,17 @@ class Controlador3DMixin:
         if not (self.resultado and self.entrada_actual):
             raise ValueError("Calcula el modelo antes de exportar el visor 3D")
         esq = self._construir_esquema()
+        cfgs = getattr(self, "config_secciones", None)
+        dis = getattr(self, "disenos", None)
+        carp = self.obtener_carpeta_recursos_activa() if hasattr(self, "obtener_carpeta_recursos_activa") else None
         escena = escena_a_dict(
             self.entrada_actual,
             self.resultado,
             esquema_pintura=self.pintura,
             esquema_diseno=esq,
+            configuraciones=cfgs,
+            disenos=dis,
+            carpeta_recursos=carp,
         )
         exportar_visor_autocontenido(escena, ruta)
 
