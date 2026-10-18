@@ -127,6 +127,7 @@ class VistaTrompoCompat:
         self.lbl_aviso_colores = v3.lbl_aviso_colores
         self.btn_abrir_visor_3d = v3.btn_abrir_visor_3d
         self.btn_exportar_visor_3d = v3.btn_exportar_visor_3d
+        self.sw_mostrar_diseno_3d = v3.sw_mostrar_diseno_3d
         self.btn_copiar_compra = v3.btn_copiar_compra
         self.tabla_compra = v3.tabla_compra
         self.lbl_vacio_3d = v3.lbl_vacio_3d

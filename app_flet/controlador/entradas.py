@@ -209,4 +209,6 @@ class ControladorEntradasMixin:
             config_secciones={k: ConfigSeccion.from_dict(v.a_dict()) for k, v in self.config_secciones.items()},
             puede_usar_mitad=puede_mitad,
             motivo_no_mitad=motivo_no,
+            mostrar_diseno_3d=getattr(self, "mostrar_diseno_3d", True),
+            hay_diseno_visible=self.hay_capas_visibles_diseno() if hasattr(self, "hay_capas_visibles_diseno") else False,
         )

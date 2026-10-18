@@ -239,6 +239,13 @@ class PestanaVista3D(PestanaBase):
             icon=ft.Icons.FILE_DOWNLOAD_OUTLINED,
             on_click=self.on_exportar_visor_3d,
         )
+        self.sw_mostrar_diseno_3d = ft.Switch(
+            label="Mostrar diseño en 3D",
+            value=True,
+            disabled=True,
+            tooltip="Muestra el diseño gráfico sobre las caras en el visor 3D",
+            on_change=self.on_toggle_mostrar_diseno_3d,
+        )
         self.btn_copiar_compra = ft.FilledButton(
             "Copiar lista de compra",
             icon=ft.Icons.COPY,
@@ -318,7 +325,11 @@ class PestanaVista3D(PestanaBase):
                 ft.Divider(color=ft.Colors.OUTLINE),
                 ft.Text("Visor 3D interactivo (three.js)", size=14, weight=ft.FontWeight.BOLD),
                 ft.Text("Abre el modelo 3D en tu navegador local con luces realistas, rotación orbital, azimut/elevación y modos día/noche.", size=12, color=ft.Colors.ON_SURFACE_VARIANT),
-                ft.Row(controls=[self.btn_abrir_visor_3d, self.btn_exportar_visor_3d], spacing=10),
+                ft.Row(
+                    controls=[self.btn_abrir_visor_3d, self.btn_exportar_visor_3d, self.sw_mostrar_diseno_3d],
+                    spacing=12,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                ),
                 ft.Divider(color=ft.Colors.OUTLINE),
                 ft.Row(
                     controls=[
@@ -366,6 +377,8 @@ class PestanaVista3D(PestanaBase):
             self.panel_contenido_3d.visible = True
             self.txt_pliegos_paquete.value = str(self.controlador.pliegos_por_paquete)
             self._actualizar_dropdowns_patrones()
+            self.sw_mostrar_diseno_3d.value = vm.mostrar_diseno_3d
+            self.sw_mostrar_diseno_3d.disabled = not vm.hay_diseno_visible
 
             poblar_tabla_compra(self.tabla_compra, vm.items_compra)
         else:
@@ -648,3 +661,9 @@ class PestanaVista3D(PestanaBase):
             self.pagina,
             self.on_mostrar_snackbar,
         )
+
+    def on_toggle_mostrar_diseno_3d(self, e) -> None:
+        val = bool(self.sw_mostrar_diseno_3d.value)
+        self.controlador.cambiar_mostrar_diseno_3d(val)
+        if self.on_solicitar_sync:
+            self.on_solicitar_sync()

@@ -125,6 +125,7 @@ class ControladorTrompo(
         self.pliego_ancho: float = 50.0
         self.pliego_alto: float = 70.0
         self.servidor_3d: Optional[ServidorVisor] = None
+        self.mostrar_diseno_3d: bool = True
 
 
 __all__ = [

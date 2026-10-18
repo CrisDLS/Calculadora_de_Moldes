@@ -2395,9 +2395,17 @@
                                           "visible": true,
                                           "disabled": false,
                                           "icon": 68339
+                                        },
+                                        {
+                                          "tipo": "Switch",
+                                          "value": true,
+                                          "label": "Mostrar diseño en 3D",
+                                          "visible": true,
+                                          "disabled": true,
+                                          "tooltip": "Muestra el diseño gráfico sobre las caras en el visor 3D"
                                         }
                                       ],
-                                      "num_hijos": 2
+                                      "num_hijos": 3
                                     },
                                     {
                                       "tipo": "Divider",

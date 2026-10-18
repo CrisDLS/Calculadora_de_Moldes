@@ -14,13 +14,30 @@ class Controlador3DMixin:
         self._actualizar_servidor_3d()
         return self.servidor_3d
 
+    def hay_capas_visibles_diseno(self) -> bool:
+        if not hasattr(self, "disenos") or not self.disenos:
+            return False
+        for dis in self.disenos.values():
+            if any(getattr(capa, "visible", True) for capa in dis.capas):
+                return True
+        return False
+
+    def cambiar_mostrar_diseno_3d(self, valor: bool) -> None:
+        self.mostrar_diseno_3d = bool(valor)
+        self._actualizar_servidor_3d()
+
     def _actualizar_servidor_3d(self) -> None:
         if self.servidor_3d and self.resultado and self.entrada_actual:
             try:
                 esq = self._construir_esquema()
-                cfgs = getattr(self, "config_secciones", None)
-                dis = getattr(self, "disenos", None)
-                carp = self.obtener_carpeta_recursos_activa() if hasattr(self, "obtener_carpeta_recursos_activa") else None
+                mostrar_tex = getattr(self, "mostrar_diseno_3d", True)
+                cfgs = getattr(self, "config_secciones", None) if mostrar_tex else None
+                dis = getattr(self, "disenos", None) if mostrar_tex else None
+                carp = (
+                    self.obtener_carpeta_recursos_activa()
+                    if (hasattr(self, "obtener_carpeta_recursos_activa") and mostrar_tex)
+                    else None
+                )
                 escena = escena_a_dict(
                     self.entrada_actual,
                     self.resultado,
@@ -38,9 +55,14 @@ class Controlador3DMixin:
         if not (self.resultado and self.entrada_actual):
             raise ValueError("Calcula el modelo antes de exportar el visor 3D")
         esq = self._construir_esquema()
-        cfgs = getattr(self, "config_secciones", None)
-        dis = getattr(self, "disenos", None)
-        carp = self.obtener_carpeta_recursos_activa() if hasattr(self, "obtener_carpeta_recursos_activa") else None
+        mostrar_tex = getattr(self, "mostrar_diseno_3d", True)
+        cfgs = getattr(self, "config_secciones", None) if mostrar_tex else None
+        dis = getattr(self, "disenos", None) if mostrar_tex else None
+        carp = (
+            self.obtener_carpeta_recursos_activa()
+            if (hasattr(self, "obtener_carpeta_recursos_activa") and mostrar_tex)
+            else None
+        )
         escena = escena_a_dict(
             self.entrada_actual,
             self.resultado,
