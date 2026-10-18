@@ -1,7 +1,10 @@
 from dataclasses import dataclass, field
-from typing import Dict, List
+from typing import Dict, List, Optional, Tuple, TYPE_CHECKING
 from logic.models import BalloonInput, BalloonCalculationResult
 from logic.diseno.pintura import VariantePico, variante_de_piramide
+
+if TYPE_CHECKING:
+    from logic.diseno.config_seccion import ConfigSeccion
 
 @dataclass
 class EsquemaDisenoPico:
@@ -28,7 +31,7 @@ class ResumenPico:
 def resumen_pico(
     esquema: EsquemaDisenoPico,
     entrada: BalloonInput,
-    resultado: BalloonCalculationResult
+    resultado: Optional[BalloonCalculationResult] = None,
 ) -> ResumenPico:
     """Calcula el conteo exacto de pirámides, triángulos y variantes del pico."""
     H = entrada.num_hileras_picos
@@ -72,3 +75,63 @@ def resumen_pico(
         cuatro_caras_iguales_b=iguales_b,
         conteo_colores=conteo_col,
     )
+
+
+def repeticiones_por_cara(
+    seccion: str,
+    entrada: BalloonInput,
+    config_seccion: "ConfigSeccion",
+) -> Dict[Tuple[Optional[str], int], int]:
+    """Calcula cuántas veces aparece en el globo completo cada cara o motivo del lienzo 2D.
+
+    Retorna:
+    - dict[(variante, indice), int]
+      - Para conos ("superior", "inferior"):
+        variante es None, indice es el número de motivo (0..M-1).
+        El valor es la cantidad de caras completas de ese motivo en el globo.
+      - Para picos ("pico", "pico_A", "pico_B"):
+        variante es "A" o "B", indice es la cara del lienzo (0 para 'una_cara'/'mitad', o 0..3 para 'completo').
+        El valor es la cantidad de caras completas en el globo.
+        En modo 'mitad', la mitad activa + su reflejo en espejo = 1 cara completa.
+    """
+    from logic.geometria.textura import num_caras_lienzo
+
+    if seccion in ("superior", "inferior"):
+        esquema = config_seccion.esquema
+        if esquema is None:
+            from logic.diseno.esquema import EsquemaDiseno
+            esquema = EsquemaDiseno(modo="repeticion", tam_grupo=5)
+
+        asignaciones = esquema.asignar(entrada.num_gajos)
+        res_motivos = esquema.resumen_motivos(asignaciones)
+
+        resultado_dict: Dict[Tuple[Optional[str], int], int] = {}
+        for motivo, (total_gajos, _en_espejo, _sin_espejo) in res_motivos.items():
+            resultado_dict[(None, motivo)] = total_gajos
+        return resultado_dict
+
+    # Sección de pico ("pico", "pico_A", "pico_B")
+    esquema_pico = config_seccion.esquema_pico or EsquemaDisenoPico()
+    res = resumen_pico(esquema_pico, entrada)
+    p_a = res.piramides_a
+    p_b = res.piramides_b
+
+    # Modo de dibujo y número de caras del lienzo para pico
+    modo_dibujar = getattr(config_seccion, "diseno_modo", getattr(config_seccion, "dibujar", "una_cara"))
+    n_caras = num_caras_lienzo("pico", dibujar=modo_dibujar)
+
+    # Si n_caras == 1 ('una_cara' o 'mitad'), cada pirámide de 4 caras usa esa cara 4 veces.
+    # Si n_caras == 4 ('completo'), cada cara k aparece 1 vez por pirámide (cara sub k).
+    factor_caras = 4 if n_caras == 1 else 1
+
+    resultado_dict = {}
+    incluir_a = seccion != "pico_B"
+    incluir_b = seccion != "pico_A"
+
+    for k in range(n_caras):
+        if incluir_a:
+            resultado_dict[("A", k)] = p_a * factor_caras
+        if incluir_b:
+            resultado_dict[("B", k)] = p_b * factor_caras
+
+    return resultado_dict
