@@ -239,9 +239,44 @@ def copiar_recursos_proyecto(ruta_origen: Union[str, Path], ruta_destino: Union[
             if item.is_file():
                 shutil.copy2(item, carp_destino / item.name)
 
-def guardar_proyecto(proyecto: Proyecto, ruta: str, ruta_anterior: Optional[str] = None) -> None:
-    if ruta_anterior and Path(ruta_anterior).resolve() != Path(ruta).resolve():
+def guardar_proyecto(
+    proyecto: Proyecto,
+    ruta: str,
+    ruta_anterior: Optional[str] = None,
+    carpeta_recursos_origen: Optional[Union[str, Path]] = None,
+) -> None:
+    p_dest = Path(ruta)
+    carp_destino = obtener_carpeta_recursos(p_dest)
+
+    # 1. Si hay ruta anterior distinta, copiar los recursos preexistentes
+    if ruta_anterior and Path(ruta_anterior).resolve() != p_dest.resolve():
         copiar_recursos_proyecto(ruta_anterior, ruta)
+
+    # 2. Asegurar que todos los recursos referenciados por capas existan en carp_destino
+    archivos_capas: Set[str] = set()
+    for diseno in proyecto.disenos.values():
+        for capa in diseno.capas:
+            if capa.archivo:
+                archivos_capas.add(capa.archivo)
+
+    if archivos_capas:
+        carp_destino.mkdir(parents=True, exist_ok=True)
+        fuentes_busqueda: List[Path] = []
+        if carpeta_recursos_origen:
+            fuentes_busqueda.append(Path(carpeta_recursos_origen))
+        if ruta_anterior:
+            fuentes_busqueda.append(obtener_carpeta_recursos(ruta_anterior))
+        fuentes_busqueda.append(obtener_carpeta_datos() / "recursos_temp")
+
+        for arch_nombre in archivos_capas:
+            dest_file = carp_destino / arch_nombre
+            if not dest_file.exists():
+                for fuente_dir in fuentes_busqueda:
+                    src_file = fuente_dir / arch_nombre
+                    if src_file.exists() and src_file.is_file():
+                        shutil.copy2(src_file, dest_file)
+                        break
+
     with open(ruta, "w", encoding="utf-8") as f:
         json.dump(asdict(proyecto), f, indent=4, ensure_ascii=False)
 

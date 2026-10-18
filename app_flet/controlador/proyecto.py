@@ -183,9 +183,17 @@ class ControladorProyectoMixin:
             nombre = os.path.splitext(os.path.basename(destino))[0]
             self.nombre_proyecto = nombre
             proy = self.a_proyecto()
-            guardar_proyecto(proy, destino)
+            carp_origen = self.obtener_carpeta_recursos_activa() if hasattr(self, "obtener_carpeta_recursos_activa") else None
+            guardar_proyecto(
+                proy,
+                destino,
+                ruta_anterior=self.ruta_proyecto,
+                carpeta_recursos_origen=carp_origen,
+            )
             self.ruta_proyecto = destino
             self.sin_guardar = False
+            if hasattr(self, "_actualizar_svg_diseno"):
+                self._actualizar_svg_diseno()
             return True, destino
         except Exception as e:
             return False, str(e)
