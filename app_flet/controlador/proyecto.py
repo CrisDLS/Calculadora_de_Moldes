@@ -139,9 +139,11 @@ class ControladorProyectoMixin:
                 self.hoja_lienzo = cfg_sup.lienzo
             cfg_pico = self.config_secciones.get("pico")
             if cfg_pico:
-                if cfg_pico.dibujar == "mitad":
+                if cfg_pico.diseno_modo in ("una_cara", "mitad", "completo"):
+                    self.diseno_pico_modo = cfg_pico.diseno_modo
+                else:
                     self.diseno_pico_modo = "una_cara"
-                    cfg_pico.dibujar = "completo"
+                cfg_pico.dibujar = "completo"
         elif proy.esquema:
             self.esquema_modo = proy.esquema.modo
             self.esquema_tam_grupo = proy.esquema.tam_grupo

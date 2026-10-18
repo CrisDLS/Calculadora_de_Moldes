@@ -54,11 +54,14 @@ def generar_svg_referencia_abanico(
     """
     cfg = proy.config_secciones.get(seccion)
     esquema = cfg.esquema if (cfg and cfg.esquema) else proy.esquema
-    dibujar = cfg.dibujar if (cfg and seccion != "pico") else "completo"
+    if seccion == "pico":
+        dibujar = "mitad" if (cfg and (cfg.diseno_modo == "mitad" or cfg.espejo)) else (cfg.diseno_modo if cfg else "una_cara")
+    else:
+        dibujar = cfg.dibujar if cfg else "completo"
     clave_dis = "pico_A" if seccion == "pico" else seccion
     diseno = proy.disenos.get(clave_dis)
 
-    n = num_caras_lienzo(seccion, esquema=esquema, num_gajos=proy.entrada.num_gajos)
+    n = num_caras_lienzo(seccion, esquema=esquema, num_gajos=proy.entrada.num_gajos, dibujar=dibujar)
     pz = pieza_a_geometria_plana(res, proy.entrada, seccion)
     ab = abanico(pz, n=n, centrado=True)
 
@@ -431,6 +434,11 @@ def ejecutar_diagnostico():
 
     data = json.loads(ruta_json.read_text(encoding="utf-8"))
     proy = Proyecto.from_dict(data)
+    # Paso 4 del prompt: con el pico en modo espejo, el diagnóstico debe dar < 5% de diferencia en el pico
+    if "pico" in proy.config_secciones:
+        proy.config_secciones["pico"].diseno_modo = "mitad"
+        proy.config_secciones["pico"].espejo = True
+        proy.config_secciones["pico"].dibujar = "mitad"
     carpeta_recursos, _tmp_holder = _preparar_carpeta_recursos_lectura(ruta_json)
 
     calc = TrompoEstrellaCalculator()

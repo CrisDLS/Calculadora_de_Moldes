@@ -145,6 +145,7 @@ class PestanaDiseno(PestanaBase):
         self.segmento_completo_diseno = ft.Segment(value="completo", label=ft.Text("Lienzo completo"))
         self.segmento_mitad_diseno = ft.Segment(value="mitad", label=ft.Text("Mitad (espejo)"))
         self.segmento_una_cara_pico = ft.Segment(value="una_cara", label=ft.Text("Una cara"))
+        self.segmento_mitad_pico = ft.Segment(value="mitad", label=ft.Text("Mitad (espejo)"))
         self.segmento_completo_pico = ft.Segment(value="completo", label=ft.Text("Lienzo completo"))
         self.selector_lienzo_diseno = ft.SegmentedButton(
             selected=["completo"],
@@ -288,6 +289,7 @@ class PestanaDiseno(PestanaBase):
         if sec == "pico":
             self.selector_lienzo_diseno.segments = [
                 self.segmento_una_cara_pico,
+                self.segmento_mitad_pico,
                 self.segmento_completo_pico,
             ]
         else:

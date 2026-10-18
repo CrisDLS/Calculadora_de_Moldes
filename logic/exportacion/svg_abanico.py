@@ -200,6 +200,7 @@ def svg_abanico(
     overlay_capa_activa: Optional[CapaDiseno] = None,
     vista_previa: bool = True,
     modo_fantasma: bool = False,
+    espejo: bool = False,
 ) -> str:
     """Genera un SVG con la hoja de trazo en abanico para impresión o Inkscape."""
     geom = calcular_parametros_proyeccion_abanico(
@@ -360,12 +361,13 @@ def svg_abanico(
                 lines.append('    </g>')
         elif seccion == "pico" and n == 4:
             x_apex, y_apex = to_svg(0.0, 0.0)
+            capas_pico = construir_grupo(diseno, None, modo_lienzo="mitad") if espejo else list(diseno.capas)
             for idx_c in range(4):
                 theta_i = (idx_c - 1.5) * psi
                 deg = math.degrees(theta_i)
                 lines.append(f'    <g id="diseno-pico-cara-{idx_c}" clip-path="url(#clip-pico-cara-{idx_c})">')
                 lines.append(f'      <g transform="rotate({deg:.4f} {x_apex:.2f} {y_apex:.2f})">')
-                for c in diseno.capas:
+                for c in capas_pico:
                     elem_svg = _renderizar_capa_en_abanico(
                         c, to_svg, factor, carp_rec, opacidad_mult=1.0, vista_previa=vista_previa, modo_fantasma=modo_fantasma
                     )
@@ -508,7 +510,12 @@ def svg_abanico(
         }
         nombre_sec_str = nombres_sec.get(seccion, seccion.capitalize())
         if seccion == "pico" and diseno is not None:
-            modo_str = "Lienzo completo" if dibujar == "completo" else "Una cara"
+            if dibujar == "mitad":
+                modo_str = "Mitad (espejo)"
+            elif dibujar == "completo":
+                modo_str = "Lienzo completo"
+            else:
+                modo_str = "Una cara"
         else:
             modo_str = "Abanico completo" if dibujar == "completo" else "Medio abanico (espejo)"
 

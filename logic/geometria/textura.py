@@ -375,11 +375,18 @@ def svg_textura(
     cfg = config_seccion
     esquema = cfg.esquema if (cfg and seccion != "pico") else None
     esquema_pico = cfg.esquema_pico if (cfg and seccion == "pico") else None
-    dibujar = cfg.dibujar if (cfg and seccion != "pico") else "una_cara"
+    if seccion == "pico":
+        espejo_pico = bool(cfg and (cfg.diseno_modo == "mitad" or cfg.espejo))
+        dibujar = "mitad" if espejo_pico else "una_cara"
+    else:
+        dibujar = cfg.dibujar if cfg else "completo"
 
     pz = pieza_a_geometria_plana(resultado, entrada, seccion)
     n = num_caras_lienzo(seccion, esquema=esquema, num_gajos=entrada.num_gajos, dibujar=dibujar)
 
+    # La textura 3D siempre abarca la cara completa (n=1 centrada) o el abanico completo;
+    # en modo mitad, el clipPath 'clip-textura' recorta la mitad derecha activa (x >= 0)
+    # y 'clip-textura-reflejo' recorta la mitad izquierda reflejada (x <= 0).
     ab = abanico(pz, n=n, centrado=True)
     xmin = ab.caja_min_x
     ymin = ab.caja_min_y

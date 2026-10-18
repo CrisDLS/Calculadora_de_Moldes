@@ -280,8 +280,8 @@ def test_lienzo_pico_una_sola_cara_misma_caja_y_clippath(controlador_calculado):
     c.cambiar_diseno_seccion("pico", "A")
     vista._sync_controlador_a_vista(c.get_view_model())
     assert vista.selector_lienzo_diseno.visible is True
-    assert [s.value for s in vista.selector_lienzo_diseno.segments] == ["una_cara", "completo"]
-    assert [s.label.value for s in vista.selector_lienzo_diseno.segments] == ["Una cara", "Lienzo completo"]
+    assert [s.value for s in vista.selector_lienzo_diseno.segments] == ["una_cara", "mitad", "completo"]
+    assert [s.label.value for s in vista.selector_lienzo_diseno.segments] == ["Una cara", "Mitad (espejo)", "Lienzo completo"]
 
     c.cambiar_diseno_seccion("superior")
     vista._sync_controlador_a_vista(c.get_view_model())
@@ -546,3 +546,138 @@ def test_lienzo_completo_pico_4_caras_identicas_y_sin_replicas_en_json(tmp_path)
 
 
 
+
+SVG_ASIMETRICO_PICO = (
+    '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">'
+    '<rect x="0" y="0" width="100" height="100" fill="#FFEB3B"/>'
+    '<rect x="0" y="0" width="35" height="35" fill="#1565C0"/>'
+    '<polygon points="10,40 90,20 60,95" fill="#E91E63"/>'
+    '<circle cx="80" cy="80" r="12" fill="#2E7D32"/>'
+    '</svg>'
+)
+
+
+def _rasterizar_svg(svg_txt: str):
+    import io
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch(headless=True)
+        page = browser.new_page(viewport={"width": 1400, "height": 1400})
+        page.set_content(
+            '<body style="margin:0;padding:0;background:#ffffff;">'
+            f'<div id="cont" style="display:inline-block;line-height:0;">{svg_txt}</div></body>'
+        )
+        png = page.locator("#cont").screenshot()
+        browser.close()
+    return Image.open(io.BytesIO(png)).convert("RGB")
+
+
+def _pct_asimetria_horizontal(img) -> float:
+    """% de píxeles con diseño cuya imagen especular (eje vertical central) difiere."""
+    import numpy as np
+    from PIL import ImageFilter, ImageOps
+
+    arr = np.array(img).astype(int)
+    arr_esp = np.array(ImageOps.mirror(img)).astype(int)
+
+    def _sat(a):
+        return np.abs(a[:, :, 0] - a[:, :, 1]) + np.abs(a[:, :, 1] - a[:, :, 2]) + np.abs(a[:, :, 2] - a[:, :, 0])
+
+    mascara = (_sat(arr) > 30) | (_sat(arr_esp) > 30)
+    # Erosión para ignorar el suavizado de bordes (anti-aliasing)
+    mascara = np.array(Image.fromarray((mascara * 255).astype(np.uint8)).filter(ImageFilter.MinFilter(5))) > 0
+    assert mascara.sum() > 500, "La cara no contiene diseño visible suficiente"
+    diff = np.abs(arr[mascara] - arr_esp[mascara]).sum(axis=1)
+    return float((diff > 60).sum()) / float(mascara.sum()) * 100.0
+
+
+def test_pico_mitad_espejo_refleja_la_cara(tmp_path):
+    """
+    Modo "Mitad (espejo)" del pico:
+    1. El lienzo de la cara (textura de la cara, misma caja y clip que Diseño) es simétrico:
+       su mitad derecha es el reflejo exacto de la izquierda (diferencia < 5%) con un diseño asimétrico.
+    2. Diseño muestra la mitad activa, el reflejo recortado y el eje de espejo.
+    3. "Lienzo completo" conserva el espejo; "Una cara" lo desactiva.
+    4. El proyecto guarda solo las capas de una cara y el modo (nunca la réplica) y lo restaura al abrir.
+    """
+    from dataclasses import asdict
+    from logic.diseno.lienzo import CapaDiseno, limpiar_cache_fragmentos
+    from logic.geometria.textura import svg_textura
+
+    limpiar_cache_fragmentos()
+    (tmp_path / "asimetrico.svg").write_text(SVG_ASIMETRICO_PICO, encoding="utf-8")
+
+    c = ControladorTrompo()
+    c.calcular()
+    c.carpeta_recursos = str(tmp_path)
+    c.cambiar_diseno_seccion("pico", "A")
+    c.obtener_diseno_activo().capas = [
+        CapaDiseno(
+            id="capa_asim", nombre="Asimétrica", tipo="svg", archivo="asimetrico.svg",
+            ancho_natural=100.0, alto_natural=100.0,
+            x=-34.0, y=-1.0, ancho=68.0, alto=80.0,
+        )
+    ]
+
+    c.cambiar_diseno_lienzo_modo("mitad")
+
+    # 1. Simetría por píxeles del lienzo de la cara
+    svg_cara = svg_textura(
+        clave="pico_A",
+        entrada=c.entrada_actual,
+        resultado=c.resultado,
+        diseno=c.obtener_diseno_activo(),
+        config_seccion=c.obtener_config_seccion("pico"),
+        carpeta_recursos=tmp_path,
+        max_px=600,
+    )
+    pct = _pct_asimetria_horizontal(_rasterizar_svg(svg_cara))
+    print(f"Asimetría del lienzo de la cara del pico en modo espejo: {pct:.2f}%")
+    assert pct < 5.0, f"La mitad derecha no es el reflejo de la izquierda: {pct:.2f}% distinto (máx 5%)"
+
+    # 2. Diseño en mitad: mitad activa + reflejo recortado + eje de espejo
+    vm = c.get_view_model()
+    assert vm.diseno_lienzo_modo == "mitad"
+    assert 'id="diseno-mitad-activa"' in c.svg_diseno
+    assert 'id="diseno-mitad-reflejo"' in c.svg_diseno
+    assert 'id="eje-espejo-recto"' in c.svg_diseno
+
+    # Interruptor del pico con 3 opciones en orden; los conos sin cambios
+    vista = VistaTrompo()
+    vista.controlador = c
+    vista._sync_controlador_a_vista(c.get_view_model())
+    assert [s.value for s in vista.selector_lienzo_diseno.segments] == ["una_cara", "mitad", "completo"]
+    assert [s.label.value for s in vista.selector_lienzo_diseno.segments] == [
+        "Una cara", "Mitad (espejo)", "Lienzo completo"
+    ]
+    assert vista.selector_lienzo_diseno.selected == ["mitad"]
+
+    # 3. Lienzo completo respeta el espejo; Una cara lo desactiva
+    c.cambiar_diseno_lienzo_modo("completo")
+    assert c.obtener_config_seccion("pico").espejo is True
+    assert "capa_asim_reflejo" in c.svg_diseno
+
+    # 4. JSON: solo una capa y el modo
+    datos = asdict(c.a_proyecto())
+    capas = datos["disenos"]["pico_A"]["capas"]
+    assert [k["id"] for k in capas] == ["capa_asim"]
+    assert datos["config_secciones"]["pico"]["diseno_modo"] == "completo"
+    assert datos["config_secciones"]["pico"]["espejo"] is True
+
+    ruta = tmp_path / "proy_espejo.json"
+    ok, msg = c.guardar(str(ruta))
+    assert ok is True, msg
+    texto = ruta.read_text(encoding="utf-8")
+    assert "capa_asim_reflejo" not in texto
+
+    c2 = ControladorTrompo()
+    ok2, msg2 = c2.abrir(str(ruta))
+    assert ok2 is True, msg2
+    cfg2 = c2.obtener_config_seccion("pico")
+    assert cfg2.diseno_modo == "completo" and cfg2.espejo is True
+    assert cfg2.dibujar == "completo"  # la hoja de trazo del pico no cambia
+
+    c.cambiar_diseno_lienzo_modo("una_cara")
+    assert c.obtener_config_seccion("pico").espejo is False
+    assert "capa_asim_reflejo" not in c.svg_diseno

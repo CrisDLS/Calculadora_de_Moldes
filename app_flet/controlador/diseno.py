@@ -275,12 +275,14 @@ class ControladorDisenoMixin:
     def cambiar_diseno_seccion(self, seccion: str, variante: str = "A") -> None:
         self.diseno_seccion = seccion
         self.diseno_variante = variante
+        cfg = self.obtener_config_seccion(seccion)
         if seccion == "pico":
-            if self.diseno_pico_modo not in ("una_cara", "completo"):
+            if cfg.diseno_modo in ("una_cara", "mitad", "completo"):
+                self.diseno_pico_modo = cfg.diseno_modo
+            elif self.diseno_pico_modo not in ("una_cara", "mitad", "completo"):
                 self.diseno_pico_modo = "una_cara"
             self.diseno_lienzo_modo = self.diseno_pico_modo
         else:
-            cfg = self.obtener_config_seccion(seccion)
             self.diseno_lienzo_modo = cfg.dibujar
         dis = self.obtener_diseno_activo()
         self.capa_seleccionada_id = dis.capas[0].id if dis.capas else None
@@ -289,8 +291,15 @@ class ControladorDisenoMixin:
     def cambiar_diseno_lienzo_modo(self, modo: str) -> None:
         cfg = self.obtener_config_seccion(self.diseno_seccion)
         if self.diseno_seccion == "pico":
-            self.diseno_pico_modo = modo if modo in ("una_cara", "completo") else "una_cara"
-            self.diseno_lienzo_modo = self.diseno_pico_modo
+            valido = modo if modo in ("una_cara", "mitad", "completo") else "una_cara"
+            self.diseno_pico_modo = valido
+            self.diseno_lienzo_modo = valido
+            cfg.diseno_modo = valido
+            if valido == "mitad":
+                cfg.espejo = True
+            elif valido == "una_cara":
+                cfg.espejo = False
+            # En "completo", cfg.espejo conserva su valor anterior
         else:
             puede, _ = cfg.puede_usar_mitad()
             cfg.dibujar = modo if (puede or modo == "completo") else "completo"
@@ -311,6 +320,7 @@ class ControladorDisenoMixin:
             capa_sel = self.obtener_capa_seleccionada()
             overlay = None if modo_fantasma else (capa_sel if (capa_sel and not capa_sel.bloqueada) else None)
             modo_dib = self.diseno_pico_modo if sec == "pico" else cfg.dibujar
+            espejo_val = bool(cfg and cfg.espejo) if sec == "pico" else False
             self.svg_diseno = svg_abanico(
                 resultado=self.resultado,
                 entrada=self.entrada_actual,
@@ -327,6 +337,7 @@ class ControladorDisenoMixin:
                 ver_costuras=self.diseno_ver_costuras,
                 overlay_capa_activa=overlay,
                 modo_fantasma=modo_fantasma,
+                espejo=espejo_val,
             )
         except Exception as e:
             warnings.warn(f"Error generando SVG de diseño: {e}")
@@ -362,6 +373,7 @@ class ControladorDisenoMixin:
         dis = self.obtener_diseno_activo()
         carp_rec = self.obtener_carpeta_recursos_activa()
         modo_dib = self.diseno_pico_modo if sec == "pico" else cfg.dibujar
+        espejo_val = bool(cfg and cfg.espejo) if sec == "pico" else False
         svg_txt = svg_abanico(
             resultado=self.resultado,
             entrada=self.entrada_actual,
@@ -376,6 +388,7 @@ class ControladorDisenoMixin:
             ver_cuadricula=self.diseno_ver_cuadricula,
             ver_rotulos=self.diseno_ver_rotulos,
             ver_costuras=self.diseno_ver_costuras,
+            espejo=espejo_val,
         )
         with open(ruta_destino, "w", encoding="utf-8") as f:
             f.write(svg_txt)

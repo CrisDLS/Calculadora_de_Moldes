@@ -13,15 +13,24 @@ class ConfigSeccion:
     seccion: str  # "superior" | "inferior" | "pico"
     esquema: Optional[EsquemaDiseno] = None  # Para conos superior e inferior
     esquema_pico: Optional[EsquemaDisenoPico] = None  # Exclusivo para pico
-    dibujar: str = "completo"  # "completo" | "mitad" para conos; "una_cara" | "completo" para pico
+    dibujar: str = "completo"  # Hoja de trazo: "completo" | "mitad" para conos; siempre "completo" para pico
     lienzo: str = "abanico"    # "abanico" | "separadas"
     escala: Union[str, int, float] = "auto"
+    # Solo pico (pestaña Diseño): vista del lienzo y espejo por el eje vertical de la cara.
+    diseno_modo: str = "una_cara"  # "una_cara" | "mitad" | "completo"
+    espejo: bool = False  # True: se dibuja una mitad de la cara y la otra se refleja
 
     def __post_init__(self):
         if self.seccion == "pico":
             self.dibujar = "completo"
             if self.esquema_pico is None:
                 self.esquema_pico = EsquemaDisenoPico()
+            if self.diseno_modo not in ("una_cara", "mitad", "completo"):
+                self.diseno_modo = "una_cara"
+            if self.diseno_modo == "mitad":
+                self.espejo = True
+            elif self.diseno_modo == "una_cara":
+                self.espejo = False
         else:
             if self.esquema is None:
                 self.esquema = EsquemaDiseno(modo="repeticion", tam_grupo=5)
@@ -51,6 +60,9 @@ class ConfigSeccion:
             self.lienzo = otra.lienzo
             self.escala = otra.escala
             self.dibujar = "completo"
+            if otra.seccion == "pico":
+                self.diseno_modo = otra.diseno_modo
+                self.espejo = otra.espejo
         else:
             if otra.esquema:
                 self.esquema = EsquemaDiseno(
@@ -78,6 +90,9 @@ class ConfigSeccion:
             }
         if self.esquema_pico is not None:
             res["esquema_pico"] = asdict(self.esquema_pico)
+        if self.seccion == "pico":
+            res["diseno_modo"] = self.diseno_modo
+            res["espejo"] = self.espejo
         return res
 
     @classmethod
@@ -117,4 +132,6 @@ class ConfigSeccion:
             dibujar=data.get("dibujar", "completo"),
             lienzo=data.get("lienzo", "abanico"),
             escala=data.get("escala", "auto"),
+            diseno_modo=data.get("diseno_modo", "una_cara"),
+            espejo=bool(data.get("espejo", False)),
         )
