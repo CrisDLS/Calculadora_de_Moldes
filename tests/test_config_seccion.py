@@ -64,12 +64,12 @@ def test_mitad_desactivado_sin_espejo_y_en_pico():
     cfg_rep.__post_init__()
     assert cfg_rep.dibujar == "completo"
 
-    # Pico: siempre falso y siempre completo
+    # Pico: admite mitad (espejo) sobre la cara
     cfg_pico = ConfigSeccion(seccion="pico", dibujar="mitad")
     puede_pico, motivo_pico = cfg_pico.puede_usar_mitad()
-    assert puede_pico is False
-    assert cfg_pico.dibujar == "completo"
-    assert "pico" in motivo_pico.lower()
+    assert puede_pico is True
+    assert cfg_pico.dibujar == "mitad"
+    assert "simetría" in motivo_pico.lower()
 
     # Central espejo y espejo total: admiten mitad
     cfg_central = ConfigSeccion(seccion="superior", esquema=EsquemaDiseno("central_espejo", 5))

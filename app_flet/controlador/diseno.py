@@ -297,14 +297,22 @@ class ControladorDisenoMixin:
             cfg.diseno_modo = valido
             if valido == "mitad":
                 cfg.espejo = True
+                cfg.dibujar = "mitad"
             elif valido == "una_cara":
                 cfg.espejo = False
-            # En "completo", cfg.espejo conserva su valor anterior
+                cfg.dibujar = "completo"
+            elif valido == "completo":
+                cfg.dibujar = "mitad" if cfg.espejo else "completo"
+            if self.hoja_pieza == "pico":
+                self.hoja_dibujar = cfg.dibujar
         else:
             puede, _ = cfg.puede_usar_mitad()
             cfg.dibujar = modo if (puede or modo == "completo") else "completo"
             self.diseno_lienzo_modo = cfg.dibujar
+            if self.hoja_pieza == self.diseno_seccion:
+                self.hoja_dibujar = cfg.dibujar
         self.sin_guardar = True
+        self._generar_svg_hoja()
         self._actualizar_svg_diseno()
 
     def _actualizar_svg_diseno(self, modo_fantasma: bool = False) -> None:

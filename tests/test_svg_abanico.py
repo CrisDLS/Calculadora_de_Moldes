@@ -46,18 +46,22 @@ def test_modo_mitad_vs_completo_conos():
     gajos_mitad = re.findall(r'Gajo \d+', svg_mitad)
     assert len(gajos_mitad) == 3
 
-def test_pico_4_caras_y_2_caras():
+def test_pico_hoja_una_cara_completo_y_mitad():
     calc = TrompoEstrellaCalculator()
     inp = BalloonInput(950.0, 30, 2, 1.0)
     res = calc.calcular(inp)
 
     svg_pico_comp = svg_abanico(res, inp, "pico", dibujar="completo")
     caras_comp = re.findall(r'Cara \d+', svg_pico_comp)
-    assert len(caras_comp) == 4
+    assert len(caras_comp) == 1
+    assert "Cara 1" in caras_comp
+    assert 'id="eje-espejo-recto"' not in svg_pico_comp
 
     svg_pico_mitad = svg_abanico(res, inp, "pico", dibujar="mitad")
     caras_mitad = re.findall(r'Cara \d+', svg_pico_mitad)
-    assert len(caras_mitad) == 2
+    assert len(caras_mitad) == 1
+    assert "Cara 1" in caras_mitad
+    assert 'id="eje-espejo-recto"' in svg_pico_mitad
 
 def test_escala_auto_cabe_en_carta_y_a4():
     calc = TrompoEstrellaCalculator()

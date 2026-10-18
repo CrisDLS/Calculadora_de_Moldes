@@ -13,7 +13,7 @@ class ConfigSeccion:
     seccion: str  # "superior" | "inferior" | "pico"
     esquema: Optional[EsquemaDiseno] = None  # Para conos superior e inferior
     esquema_pico: Optional[EsquemaDisenoPico] = None  # Exclusivo para pico
-    dibujar: str = "completo"  # Hoja de trazo: "completo" | "mitad" para conos; siempre "completo" para pico
+    dibujar: str = "completo"  # Hoja de trazo: "completo" | "mitad"
     lienzo: str = "abanico"    # "abanico" | "separadas"
     escala: Union[str, int, float] = "auto"
     # Solo pico (pestaña Diseño): vista del lienzo y espejo por el eje vertical de la cara.
@@ -22,15 +22,21 @@ class ConfigSeccion:
 
     def __post_init__(self):
         if self.seccion == "pico":
-            self.dibujar = "completo"
             if self.esquema_pico is None:
                 self.esquema_pico = EsquemaDisenoPico()
-            if self.diseno_modo not in ("una_cara", "mitad", "completo"):
-                self.diseno_modo = "una_cara"
             if self.diseno_modo == "mitad":
+                self.dibujar = "mitad"
                 self.espejo = True
-            elif self.diseno_modo == "una_cara":
-                self.espejo = False
+            elif self.diseno_modo == "completo":
+                pass
+            else:
+                if self.dibujar == "mitad":
+                    self.diseno_modo = "mitad"
+                    self.espejo = True
+                else:
+                    self.diseno_modo = "una_cara"
+                    self.dibujar = "completo"
+                    self.espejo = False
         else:
             if self.esquema is None:
                 self.esquema = EsquemaDiseno(modo="repeticion", tam_grupo=5)
@@ -42,7 +48,7 @@ class ConfigSeccion:
     def puede_usar_mitad(self) -> Tuple[bool, str]:
         """Determina si la sección actual admite el modo 'mitad' (espejo)."""
         if self.seccion == "pico":
-            return False, "En los picos no aplica simetría de espejo (las pirámides se arman con caras cerradas)."
+            return True, "Trazo sobre papel doblado en simetría"
         return tiene_simetria_espejo(self.esquema)
 
     def copiar_desde(self, otra: "ConfigSeccion") -> None:
@@ -57,12 +63,11 @@ class ConfigSeccion:
                     variante_b=VariantePico(**asdict(otra.esquema_pico.variante_b)),
                     motivos_por_cara=list(otra.esquema_pico.motivos_por_cara),
                 )
-            self.lienzo = otra.lienzo
-            self.escala = otra.escala
-            self.dibujar = "completo"
-            if otra.seccion == "pico":
                 self.diseno_modo = otra.diseno_modo
                 self.espejo = otra.espejo
+                self.dibujar = otra.dibujar
+            self.lienzo = otra.lienzo
+            self.escala = otra.escala
         else:
             if otra.esquema:
                 self.esquema = EsquemaDiseno(

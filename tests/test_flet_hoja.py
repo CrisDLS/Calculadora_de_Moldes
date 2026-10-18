@@ -103,3 +103,51 @@ async def test_vista_trompo_exportar_hoja_y_paquete(tmp_path):
     archivos = os.listdir(carpeta_paquete)
     assert len(archivos) >= 3
     assert "Paquete exportado" in vista.ultimo_mensaje_snackbar
+
+
+def test_hoja_trazo_pico_una_cara_y_sincronizacion_con_diseno():
+    import re
+    picker = MockFilePicker()
+    vista = VistaTrompo(servicio_file_picker=picker)
+    vista.on_calcular(None)
+
+    # 1. Cambiar a pico en Hoja de trazo
+    vista.selector_pieza_hoja.selected = ["pico"]
+    vista.on_cambio_pieza_hoja(None)
+    assert vista.controlador.hoja_pieza == "pico"
+
+    # La hoja de trazo del pico debe contener 1 sola cara (no 4)
+    svg_pico = vista.controlador.svg_hoja
+    caras_en_hoja = re.findall(r'Cara \d+', svg_pico)
+    assert len(caras_en_hoja) == 1, f"La hoja de trazo del pico debe tener 1 cara, tiene {len(caras_en_hoja)}"
+
+    # 2. Con 'Mitad (espejo)' activo en Diseño, la hoja muestra la mitad con eje recto
+    vista.controlador.cambiar_diseno_seccion("pico")
+    vista.controlador.cambiar_diseno_lienzo_modo("mitad")
+    vista.pestana_hoja.actualizar(vista.controlador.get_view_model())
+
+    assert vista.controlador.hoja_dibujar == "mitad"
+    assert vista.pestana_hoja.selector_modo_dibujo.selected == ["mitad"]
+    svg_mitad = vista.controlador.svg_hoja
+    assert 'id="eje-espejo-recto"' in svg_mitad
+    assert "Cara 1" in svg_mitad
+
+    # 3. Y viceversa: cambiar en la hoja se refleja en Diseño
+    # Cambiar a completo (cara completa) desde la hoja
+    vista.pestana_hoja.selector_modo_dibujo.selected = ["completo"]
+    vista.pestana_hoja.on_cambio_modo_dibujo(None)
+    vista.pestana_diseno.actualizar(vista.controlador.get_view_model())
+
+    assert vista.controlador.diseno_lienzo_modo == "una_cara"
+    assert vista.pestana_diseno.selector_lienzo_diseno.selected == ["una_cara"]
+    assert 'id="eje-espejo-recto"' not in vista.controlador.svg_hoja
+
+    # Cambiar a mitad desde la hoja
+    vista.pestana_hoja.selector_modo_dibujo.selected = ["mitad"]
+    vista.pestana_hoja.on_cambio_modo_dibujo(None)
+    vista.pestana_diseno.actualizar(vista.controlador.get_view_model())
+
+    assert vista.controlador.diseno_lienzo_modo == "mitad"
+    assert vista.pestana_diseno.selector_lienzo_diseno.selected == ["mitad"]
+    assert 'id="eje-espejo-recto"' in vista.controlador.svg_hoja
+

@@ -111,7 +111,7 @@ def calcular_parametros_proyeccion_abanico(
 
     from logic.geometria.textura import num_caras_lienzo
     if seccion == "pico" and not modo_diseno:
-        n = 4
+        n = 1
     else:
         n = num_caras_lienzo(seccion, esquema=esquema, num_gajos=entrada.num_gajos, unir_grupos=unir_grupos, dibujar=dibujar)
 
@@ -509,13 +509,13 @@ def svg_abanico(
             "inferior": "Cono inferior"
         }
         nombre_sec_str = nombres_sec.get(seccion, seccion.capitalize())
-        if seccion == "pico" and diseno is not None:
+        if seccion == "pico":
             if dibujar == "mitad":
                 modo_str = "Mitad (espejo)"
-            elif dibujar == "completo":
+            elif n == 4:
                 modo_str = "Lienzo completo"
             else:
-                modo_str = "Una cara"
+                modo_str = "Cara completa"
         else:
             modo_str = "Abanico completo" if dibujar == "completo" else "Medio abanico (espejo)"
 

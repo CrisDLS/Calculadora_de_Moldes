@@ -91,8 +91,18 @@ class ControladorHojaMixin:
             cfg.lienzo = lienzo
         if dibujar is not None:
             if sec == "pico":
-                cfg.dibujar = "completo"
-                self.hoja_dibujar = "completo"
+                cfg.dibujar = dibujar
+                if dibujar == "mitad":
+                    cfg.diseno_modo = "mitad"
+                    cfg.espejo = True
+                    self.diseno_pico_modo = "mitad"
+                else:
+                    cfg.diseno_modo = "una_cara"
+                    cfg.espejo = False
+                    self.diseno_pico_modo = "una_cara"
+                self.hoja_dibujar = dibujar
+                if getattr(self, "diseno_seccion", None) == "pico":
+                    self.diseno_lienzo_modo = cfg.diseno_modo
             else:
                 puede, _ = cfg.puede_usar_mitad()
                 if dibujar == "mitad" and not puede:
@@ -152,17 +162,27 @@ class ControladorHojaMixin:
     def cambiar_dibujar_seccion(self, seccion: str, dibujar: str) -> None:
         cfg = self.obtener_config_seccion(seccion)
         if cfg.seccion == "pico":
-            cfg.dibujar = "completo"
+            cfg.dibujar = dibujar
+            if dibujar == "mitad":
+                cfg.diseno_modo = "mitad"
+                cfg.espejo = True
+                self.diseno_pico_modo = "mitad"
+            else:
+                cfg.diseno_modo = "una_cara"
+                cfg.espejo = False
+                self.diseno_pico_modo = "una_cara"
+            if getattr(self, "diseno_seccion", None) == "pico":
+                self.diseno_lienzo_modo = cfg.diseno_modo
         else:
             puede, _ = cfg.puede_usar_mitad()
             if dibujar == "mitad" and not puede:
                 cfg.dibujar = "completo"
             else:
                 cfg.dibujar = dibujar
+            if getattr(self, "diseno_seccion", None) == seccion:
+                self.diseno_lienzo_modo = cfg.dibujar
         if self.hoja_pieza == seccion:
             self.hoja_dibujar = cfg.dibujar
-        if getattr(self, "diseno_seccion", None) == seccion:
-            self.diseno_lienzo_modo = cfg.dibujar
         self.sin_guardar = True
         self._generar_svg_hoja()
         self._actualizar_svg_diseno()
