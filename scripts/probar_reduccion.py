@@ -46,6 +46,12 @@ def main() -> None:
         default=800,
         help="Ancho en píxeles para redimensionar manteniendo proporción (por defecto: 800)",
     )
+    parser.add_argument(
+        "--suavizado",
+        type=int,
+        default=3,
+        help="Tamaño de ventana del filtro de mediana para grano (por defecto: 3, 0 para desactivar)",
+    )
 
     args = parser.parse_args()
 
@@ -67,7 +73,9 @@ def main() -> None:
 
     # 2. Aplicar reducción de colores y medir tiempo
     t0 = time.perf_counter()
-    img_reducida = reducir_colores(img_redim, max_colores=args.colores, modo=args.modo)
+    img_reducida = reducir_colores(
+        img_redim, max_colores=args.colores, modo=args.modo, suavizado=args.suavizado
+    )
     t_ms = (time.perf_counter() - t0) * 1000.0
 
     # 3. Guardar archivos en scripts/_salida/

@@ -176,3 +176,53 @@ def test_reparto_degradado_tres_tonos_areas_desiguales() -> None:
     assert dist_der < 60.0, f"Extremo azul perdió su tono: orig={ext_der_orig}, res={ext_der_res}, dist={dist_der:.2f}"
     assert dist_min_color >= 25.0, f"Hay colores demasiado parecidos entre sí: dist_min={dist_min_color:.2f}"
     assert dist_min_gris >= 15, f"Hay niveles de gris casi idénticos: {colores_g} (diff_min={dist_min_gris})"
+
+
+def test_conserva_azul_en_fondo_con_grano() -> None:
+    """Imagen sintética 400x600: fondo grande cálido con grano (6 tonos base con ruido +-25 por canal)
+    y una zona azul sólida de ~8 %. Con max_colores=6 debe quedar al menos un color azul
+    (matiz 190°–250°, saturación > 0.35).
+    """
+    import colorsys
+    import numpy as np
+
+    np.random.seed(42)
+    w, h = 400, 600
+    arr = np.zeros((h, w, 4), dtype=np.uint8)
+
+    tonos_base = [
+        [220, 140, 80],
+        [200, 110, 60],
+        [230, 170, 100],
+        [180, 80, 40],
+        [240, 190, 120],
+        [190, 100, 50],
+    ]
+    indices = np.random.randint(0, 6, size=(h, w))
+    base = np.array(tonos_base, dtype=np.int16)[indices]
+    ruido = np.random.randint(-25, 26, size=(h, w, 3), dtype=np.int16)
+    fondo = np.clip(base + ruido, 0, 255).astype(np.uint8)
+
+    arr[:, :, :3] = fondo
+    arr[:, :, 3] = 255
+
+    # Zona azul sólida de ~8 % (160 x 120 = 19 200 px de 240 000 px = 8.0 %)
+    arr[200:320, 120:280, :3] = [20, 80, 220]
+
+    im = Image.fromarray(arr, mode="RGBA")
+    res = reducir_colores(im, max_colores=6, modo="color")
+
+    colores = sorted({p[:3] for p in res.getdata() if p[3] == 255})
+    print(f"\n[Fondo con grano] Colores resultantes ({len(colores)}):")
+    hay_azul = False
+    for r, g, b in colores:
+        h_norm, s, _ = colorsys.rgb_to_hsv(r / 255.0, g / 255.0, b / 255.0)
+        matiz = h_norm * 360.0
+        print(f"  RGB: ({r}, {g}, {b}) -> Matiz: {matiz:.1f}°, Sat: {s:.2f}")
+        if 190.0 <= matiz <= 250.0 and s > 0.35:
+            hay_azul = True
+
+    assert hay_azul, (
+        f"Se perdió la zona azul entre el grano del fondo cálido. Colores resultantes: {colores}"
+    )
+
