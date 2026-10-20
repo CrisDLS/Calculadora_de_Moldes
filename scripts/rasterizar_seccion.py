@@ -119,7 +119,8 @@ def procesar_seccion(
         mascara = mask_act
         area_exacta = area_poligono(pts_contorno)
 
-    area_mask = float(np.sum(mascara) * (cm_por_px ** 2))
+    num_px_true = int(np.sum(mascara))
+    area_mask = float(num_px_true * (cm_por_px ** 2))
     diff_pct = abs(area_mask - area_exacta) / area_exacta * 100.0
 
     # Carpeta de recursos del proyecto
@@ -157,9 +158,10 @@ def procesar_seccion(
 
     img_rgba.save(ruta_seccion_png, format="PNG")
 
-    silueta_rgba = np.zeros((h_px, w_px, 4), dtype=np.uint8)
-    silueta_rgba[mascara] = [255, 255, 255, 255]
-    Image.fromarray(silueta_rgba, mode="RGBA").save(ruta_silueta_png, format="PNG")
+    # Guardar silueta visible (negro dentro, blanco fuera)
+    silueta_arr = np.full((h_px, w_px, 3), 255, dtype=np.uint8)
+    silueta_arr[mascara] = [0, 0, 0]
+    Image.fromarray(silueta_arr, mode="RGB").save(ruta_silueta_png, format="PNG")
 
     return {
         "seccion": seccion,
@@ -169,10 +171,13 @@ def procesar_seccion(
         "cm_por_px": cm_por_px,
         "area_exacta_cm2": area_exacta,
         "area_mascara_cm2": area_mask,
+        "num_px_true": num_px_true,
         "diff_pct": diff_pct,
         "t_raster_s": t_raster,
         "ruta_seccion": ruta_seccion_png,
         "ruta_silueta": ruta_silueta_png,
+        "img_rgba": img_rgba,
+        "mascara": mascara,
     }
 
 
@@ -204,6 +209,7 @@ def main() -> None:
     print(f"RASTERIZADO DE SECCIÓN: {res['seccion']}")
     print("=" * 62)
     print(f"Tamaño en píxeles      : {w_px} × {h_px} px")
+    print(f"Píxeles True en máscara: {res['num_px_true']} px ({res['num_px_true'] / (w_px * h_px) * 100:.2f} %)")
     print(f"cm_por_px (X)          : {res['cm_por_px_x']:.5f} cm/px")
     print(f"cm_por_px (Y)          : {res['cm_por_px_y']:.5f} cm/px")
     print(f"cm_por_px (nominal)    : {res['cm_por_px']:.5f} cm/px")
